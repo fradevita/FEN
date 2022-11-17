@@ -13,8 +13,7 @@ FEN = Fortran Environment for Numerics. It is as a Fortran environment for perfo
 
 ### Dependency
 
-FEN uses the [2decomp&FFT](http://www.hector.ac.uk/cse/distributedcse/reports/incompact3d/UserGuide.html) library for the domain decomposition and 
-[FFTW3](http://www.fftw.org/) library for the solution of the Poisson equation.
+FEN uses the [2decomp&FFT](http://www.hector.ac.uk/cse/distributedcse/reports/incompact3d/UserGuide.html) library for the domain decomposition and [FFTW3](http://www.fftw.org/) library for the solution of the Poisson equation.
 
 Add to your `$HOME/.bashrc` the following lines
 
