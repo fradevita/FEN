@@ -1,0 +1,81 @@
+# Fortran compiler
+FC = mpif90
+
+# Flags
+override BIG=#-mcmodel=large
+override DBG=#-g -Wall -fcheck=bounds -ffpe-trap=invalid,zero,overflow
+override PROF=#-pg
+override OPT=#-O3
+override CNNFLAGS+=-cpp
+override FLAGS = $(BIG) $(DBG) $(PROF) $(OPT) $(CNNFLAGS)
+
+# Libraries dir
+INCLUDE_2DECOMP = -I$(_2DECOMP_DIR)/include
+FFTW3_DIR = $(HOME)/local
+INCLUDE_FFTW3 = -I$(FFTW3_DIR)/include
+LIB_2DECOMP = -L$(_2DECOMP_DIR)/lib -l2decomp_fft
+LIB_FFTW3 = -L$(FFTW3_DIR)/lib -lfftw3
+LIBS = $(LIB_2DECOMP) $(LIB_FFTW3)
+
+override OBJ = precision.o constants.o io.o class_Grid.o halo.o class_Scalar.o class_Vector.o tensors.o fields.o Poisson.o \
+      			volume_of_fluid.o multiphase.o utils.o non_newtonian.o navier_stokes.o solver.o json.o
+
+target: code.e
+
+precision.o: $(REO_DIR)/src/precision.f90
+	$(FC) $(FLAGS) -c $<
+	
+constants.o: $(REO_DIR)/src/constants.f90
+	$(FC) $(FLAGS) -c $<
+
+io.o: $(REO_DIR)/src/io.f90
+	$(FC) $(FLAGS) -c $<
+	
+class_Grid.o: $(REO_DIR)/src/class_Grid.f90 precision.o constants.o io.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+halo.o: $(REO_DIR)/src/halo.f90 precision.o class_Grid.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+class_Scalar.o: $(REO_DIR)/src/class_Scalar.f90 class_Grid.o precision.o halo.o io.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+class_Vector.o: $(REO_DIR)/src/class_Vector.f90 class_Grid.o precision.o class_Scalar.o halo.o io.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+tensors.o: $(REO_DIR)/src/tensors.f90 class_Grid.o precision.o class_Scalar.o class_Vector.o halo.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+fields.o: $(REO_DIR)/src/fields.f90 precision.o class_Grid.o class_Scalar.o class_Vector.o tensors.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+Poisson.o: $(REO_DIR)/src/Poisson.f90 precision.o class_Grid.o class_Scalar.o io.o constants.o 
+	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
+
+volume_of_fluid.o: $(REO_DIR)/src/volume_of_fluid.f90 precision.o class_Scalar.o class_Vector.o io.o constants.o io.o utils.o
+	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
+
+multiphase.o: $(REO_DIR)/src/multiphase.f90 precision.o class_Scalar.o class_Vector.o io.o
+	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
+
+utils.o: $(REO_DIR)/src/utils.f90 precision.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+non_newtonian.o: $(REO_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o tensors.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+navier_stokes.o: $(REO_DIR)/src/navier_stokes.f90 precision.o constants.o class_Grid.o class_Scalar.o class_Vector.o tensors.o fields.o Poisson.o volume_of_fluid.o multiphase.o non_newtonian.o
+	$(FC) $(FLAGS) -c $<
+
+json.o: $(REO_DIR)/src/json.f90 class_Grid.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+solver.o: $(REO_DIR)/src/solver.f90 precision.o class_Grid.o Poisson.o navier_stokes.o volume_of_fluid.o multiphase.o
+	$(FC) $(FLAGS) -c $<
+
+clean:
+	rm -f *.o *.mod code.e
+
+clean_data:
+	rm -rf data/*
+
