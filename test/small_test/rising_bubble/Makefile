@@ -1,4 +1,4 @@
-include $(REO_DIR)/src/Makefile.defs
+include $(FEN_DIR)/src/Makefile.defs
 
 override DBG += -g -Wall -fcheck=all -ffpe-trap=invalid,zero,overflow
 override CNNFLAGS += -DMF

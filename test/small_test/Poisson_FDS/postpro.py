@@ -35,6 +35,7 @@ scaling = np.zeros(np.size(N))
 for i in range(0,np.size(N)):
   scaling[i] = np.exp(b)*N[i]**a
 
+plt.figure()
 plt.plot(N, emax, 'o', label = 'data')
 plt.plot(N, scaling, 'black', linestyle='solid', label = '$N^{%2.2f}$' % a)
 plt.xlabel("N")
@@ -46,6 +47,7 @@ plt.xticks(N, N)
 plt.legend()
 plt.savefig("plot_NN.png")
 if (display): plt.show()
+plt.close()
 
 # Plot for the second test
 data = np.genfromtxt('error_PP')
@@ -69,6 +71,7 @@ scaling = np.zeros(np.size(N))
 for i in range(0,np.size(N)):
   scaling[i] = np.exp(b)*N[i]**a
 
+plt.figure()
 plt.plot(N, emax, 'o', label = 'data')
 plt.plot(N, scaling, 'black', linestyle='solid', label = '$N^{%2.2f}$' % a)
 plt.xlabel("N")
@@ -80,6 +83,7 @@ plt.xticks(N, N)
 plt.legend()
 plt.savefig("plot_PP.png")
 if (display): plt.show()
+plt.close()
 
 # Plot for the third test
 data = np.genfromtxt('error_PN')
@@ -103,6 +107,7 @@ scaling = np.zeros(np.size(N))
 for i in range(0,np.size(N)):
   scaling[i] = np.exp(b)*N[i]**a
 
+plt.figure()
 plt.plot(N, emax, 'o', label = 'data')
 plt.plot(N, scaling, 'black', linestyle='solid', label = '$N^{%2.2f}$' % a)
 plt.xlabel("N")
@@ -114,6 +119,7 @@ plt.xticks(N, N)
 plt.legend()
 plt.savefig("plot_PN.png")
 if (display): plt.show()
+plt.close()
 
 # Plot for the 3D test
 data = np.genfromtxt('error_PPP')
@@ -137,6 +143,7 @@ scaling = np.zeros(np.size(N))
 for i in range(0,np.size(N)):
   scaling[i] = np.exp(b)*N[i]**a
 
+plt.figure()
 plt.plot(N, emax, 'o', label = 'data')
 plt.plot(N, scaling, 'black', linestyle='solid', label = '$N^{%2.2f}$' % a)
 plt.xlabel("N")
@@ -148,3 +155,4 @@ plt.xticks(N, N)
 plt.legend()
 plt.savefig("plot_PPP.png")
 if (display): plt.show()
+plt.close()

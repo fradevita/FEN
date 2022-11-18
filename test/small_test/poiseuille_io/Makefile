@@ -1,4 +1,4 @@
-include $(REO_DIR)/src/Makefile.defs
+include $(FEN_DIR)/src/Makefile.defs
 
 DBG += -Wall -g -fcheck=all
 

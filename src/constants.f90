@@ -2,7 +2,7 @@
 module constants
 
   use precision, only : dp
-#ifdef DIM==3
+#if DIM==3
   integer , parameter :: Ndim = 3
 #else
   integer , parameter :: Ndim = 2 

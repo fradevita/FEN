@@ -18,59 +18,69 @@ LIB_FFTW3 = -L$(FFTW3_DIR)/lib -lfftw3
 LIBS = $(LIB_2DECOMP) $(LIB_FFTW3)
 
 override OBJ = precision.o constants.o io.o class_Grid.o halo.o class_Scalar.o class_Vector.o tensors.o fields.o Poisson.o \
-      			volume_of_fluid.o multiphase.o utils.o non_newtonian.o navier_stokes.o solver.o json.o
+      			volume_of_fluid.o multiphase.o utils.o non_newtonian.o navier_stokes.o solver.o json.o eulerian_ibm.o \
+				class_eulerian_solid.o ibm.o
 
 target: code.e
 
-precision.o: $(REO_DIR)/src/precision.f90
+precision.o: $(FEN_DIR)/src/precision.f90
 	$(FC) $(FLAGS) -c $<
 	
-constants.o: $(REO_DIR)/src/constants.f90
+constants.o: $(FEN_DIR)/src/constants.f90
 	$(FC) $(FLAGS) -c $<
 
-io.o: $(REO_DIR)/src/io.f90
+io.o: $(FEN_DIR)/src/io.f90
 	$(FC) $(FLAGS) -c $<
 	
-class_Grid.o: $(REO_DIR)/src/class_Grid.f90 precision.o constants.o io.o
+class_Grid.o: $(FEN_DIR)/src/class_Grid.f90 precision.o constants.o io.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-halo.o: $(REO_DIR)/src/halo.f90 precision.o class_Grid.o
+halo.o: $(FEN_DIR)/src/halo.f90 precision.o class_Grid.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-class_Scalar.o: $(REO_DIR)/src/class_Scalar.f90 class_Grid.o precision.o halo.o io.o
+class_Scalar.o: $(FEN_DIR)/src/class_Scalar.f90 class_Grid.o precision.o halo.o io.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-class_Vector.o: $(REO_DIR)/src/class_Vector.f90 class_Grid.o precision.o class_Scalar.o halo.o io.o
+class_Vector.o: $(FEN_DIR)/src/class_Vector.f90 class_Grid.o precision.o class_Scalar.o halo.o io.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-tensors.o: $(REO_DIR)/src/tensors.f90 class_Grid.o precision.o class_Scalar.o class_Vector.o halo.o
+class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-fields.o: $(REO_DIR)/src/fields.f90 precision.o class_Grid.o class_Scalar.o class_Vector.o tensors.o
+eulerian_ibm.o: $(FEN_DIR)/src/eulerian_ibm.f90 precision.o class_Vector.o class_Grid.o class_eulerian_solid.o utils.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-Poisson.o: $(REO_DIR)/src/Poisson.f90 precision.o class_Grid.o class_Scalar.o io.o constants.o 
+ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+tensors.o: $(FEN_DIR)/src/tensors.f90 class_Grid.o precision.o class_Scalar.o class_Vector.o halo.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+fields.o: $(FEN_DIR)/src/fields.f90 precision.o class_Grid.o class_Scalar.o class_Vector.o tensors.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+Poisson.o: $(FEN_DIR)/src/Poisson.f90 precision.o class_Grid.o class_Scalar.o io.o constants.o 
 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
 
-volume_of_fluid.o: $(REO_DIR)/src/volume_of_fluid.f90 precision.o class_Scalar.o class_Vector.o io.o constants.o io.o utils.o
+volume_of_fluid.o: $(FEN_DIR)/src/volume_of_fluid.f90 precision.o class_Scalar.o class_Vector.o io.o constants.o io.o utils.o
 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
 
-multiphase.o: $(REO_DIR)/src/multiphase.f90 precision.o class_Scalar.o class_Vector.o io.o
+multiphase.o: $(FEN_DIR)/src/multiphase.f90 precision.o class_Scalar.o class_Vector.o io.o
 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
 
-utils.o: $(REO_DIR)/src/utils.f90 precision.o
+utils.o: $(FEN_DIR)/src/utils.f90 precision.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-non_newtonian.o: $(REO_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o tensors.o
+non_newtonian.o: $(FEN_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o tensors.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-navier_stokes.o: $(REO_DIR)/src/navier_stokes.f90 precision.o constants.o class_Grid.o class_Scalar.o class_Vector.o tensors.o fields.o Poisson.o volume_of_fluid.o multiphase.o non_newtonian.o
+navier_stokes.o: $(FEN_DIR)/src/navier_stokes.f90 precision.o constants.o class_Grid.o class_Scalar.o class_Vector.o tensors.o fields.o Poisson.o volume_of_fluid.o multiphase.o non_newtonian.o ibm.o
 	$(FC) $(FLAGS) -c $<
 
-json.o: $(REO_DIR)/src/json.f90 class_Grid.o
+json.o: $(FEN_DIR)/src/json.f90 class_Grid.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-solver.o: $(REO_DIR)/src/solver.f90 precision.o class_Grid.o Poisson.o navier_stokes.o volume_of_fluid.o multiphase.o
+solver.o: $(FEN_DIR)/src/solver.f90 precision.o class_Grid.o Poisson.o navier_stokes.o volume_of_fluid.o multiphase.o
 	$(FC) $(FLAGS) -c $<
 
 clean:

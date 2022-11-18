@@ -1,4 +1,4 @@
-include $(REO_DIR)/src/Makefile.defs
+include $(FEN_DIR)/src/Makefile.defs
 
 code.e: $(SOURCE).o $(OBJ)
 	$(FC) $(FFLAGS) -o $@ $(SOURCE).o $(OBJ) $(LIBS)

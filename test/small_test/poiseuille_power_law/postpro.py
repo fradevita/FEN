@@ -41,5 +41,6 @@ for j in range(100):
 plt.figure()
 plt.plot(u_sim, y, 'o')
 plt.plot(ua, ya+0.5)
-plt.show()
+plt.savefig('plot.png')
+if(display): plt.show()
 plt.close()
