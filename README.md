@@ -1,12 +1,12 @@
 # FEN
 
-FEN = Fortran Environment for Numerics. It is as a Fortran environment for performing numerical simulations, mainly CFD.
+FEN = Fortran Environment for Numerics. It is as a Fortran environment for performing numerical simulations. It is developed for teaching and research activites but with a focus on HPC performances.
 
 ## Overview
 
-- Finite Difference solver for Navier-Stokes equations
+- Finite difference solver for the incompressible Navier-Stokes equations
 - Fast Direct Solver for the solution of the Poisson equation
-- Volume of Fluid solver (MTHIN) for multiphase simulations
+- Volume of Fluid solver (MTHINC) for multiphase simulations
 - Computaional parallelism by MPI
 
 ## Installing
@@ -32,3 +32,7 @@ sh INSTALL.sh
 ```
 
 After this step the requested libraries should be properly installed.
+
+## Acknowledgments
+
+FEN is the combinations of several methods / technique that I have learned during past years. The main sources of inspiration are the two open source solvers [Gerris](https://gfs.sourceforge.net/wiki/index.php/Main_Page) and [Basilisk](https://basilisk.fr) and the code used at KTH during my PostDoc, for which many contributions have been given by Pedro Simeon Costa and Marco Edoardo Rosti.
