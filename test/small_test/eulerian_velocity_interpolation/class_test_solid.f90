@@ -7,28 +7,35 @@ module class_test_solid
     implicit none
 
     ! Below, some usable solids are defined.
-    type, extends(eulerian_solid) :: circle
+    type, extends(eulerian_solid) :: test_solid
         real(dp) :: X(3) = 0.0_dp
         real(dp) :: R = 1.0_dp
         contains
             procedure, pass(self) :: distance
             procedure, pass(self) :: norm
             procedure, pass(self) :: velocity
-    end type circle
+    end type test_solid
 
 contains
 
     !=====================================================================================
     function distance(self, X) result(d)
 
-        use precision, only : dp
+        use precision , only : dp
+        use class_Grid, only : base_grid
 
-        class(circle), intent(in) :: self
+        class(test_solid), intent(in) :: self
         real(dp)     , intent(in) :: X(3)
         real(dp)                  :: d
 
-        d = sqrt((self%X(1) - X(1))**2 + (self%X(2) - X(2))**2 + (self%X(3) - X(3))**2) - &
-            self%R
+        ! Local variables
+        real(dp) :: dxp, dxm, dyp, dym
+
+#if DIM==3
+        d = sqrt((self%X(1) - X(1))**2 + (self%X(2) - X(2))**2 + (self%X(3) - X(3))**2) - self%R
+#else
+        d = sqrt((self%X(1) - X(1))**2 + (self%X(2) - X(2))**2 ) - self%R
+#endif
 
     end function distance
     !=====================================================================================
@@ -39,7 +46,7 @@ contains
         use precision, only : dp
         use constants, only : small
 
-        class(circle), intent(in) :: self
+        class(test_solid), intent(in) :: self
         real(dp)     , intent(in) :: X(3)
         real(dp)                  :: n(3)
 
@@ -47,9 +54,14 @@ contains
         integer :: i
         real(dp) :: modn
 
-        do i = 1,3
-            n(i) = self%X(i) - X(i)
+        do i = 1,2
+            n(i) = X(i) - self%X(i)
         end do
+#if DIM==3
+        n(3) = X(3) - self%X(3)
+#else
+        n(3) = 0.0_dp
+#endif     
         modn = sqrt(n(1)**2 + n(2)**2 + n(3)**2) + small
         n = n/modn
 
@@ -62,7 +74,7 @@ contains
         use precision, only : dp
         use constants, only : pi
 
-        class(circle), intent(in) :: self
+        class(test_solid), intent(in) :: self
         real(dp)     , intent(in) :: X(3)
         integer      , intent(in) :: dir
         real(dp)                  :: v

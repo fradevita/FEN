@@ -27,7 +27,7 @@ program main
 #endif
 
     ! Create one solid of type circle, it must be target
-    type(circle), target :: C
+    type(test_solid), target :: C
     type(eulerian_solid_pointer) :: solid_list(1)
 
     ! Initialize MPI
@@ -46,7 +46,7 @@ program main
     bc(6)%s = 'Periodic'
 #endif
 
-    C = circle(R = 0.25_dp)
+    C = test_solid(R = 0.25_dp)
     solid_list(1)%pS => C
 
     ! Perform computation for increasing resolution
@@ -91,7 +91,7 @@ program main
 
             ! Tag eulerian cells
             call tag_cells(solid_list)
-
+            
             ! Compute maximum error
             do k = base_grid%lo(3),base_grid%hi(3)
                 do j = base_grid%lo(2),base_grid%hi(2)

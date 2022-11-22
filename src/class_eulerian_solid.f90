@@ -82,8 +82,7 @@ contains
         real(dp)     , intent(in) :: X(3)
         real(dp)                  :: d
 
-        d = sqrt((self%X(1) - X(1))**2 + (self%X(2) - X(2))**2 + (self%X(3) - X(3))**2) - &
-            self%R
+        d = sqrt((self%X(1) - X(1))**2 + (self%X(2) - X(2))**2) - self%R
 
     end function distance
     !=====================================================================================
@@ -102,9 +101,10 @@ contains
         integer :: i
         real(dp) :: modn
 
-        do i = 1,3
-            n(i) = self%X(i) - X(i)
+        do i = 1,2
+            n(i) = X(i) - self%X(i)
         end do
+        n(3) = 0.0_dp
         modn = sqrt(n(1)**2 + n(2)**2 + n(3)**2) + small
         n = n/modn
 

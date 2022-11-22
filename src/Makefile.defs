@@ -50,7 +50,7 @@ class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o
 eulerian_ibm.o: $(FEN_DIR)/src/eulerian_ibm.f90 precision.o class_Vector.o class_Grid.o class_eulerian_solid.o utils.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o
+ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o eulerian_ibm.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 tensors.o: $(FEN_DIR)/src/tensors.f90 class_Grid.o precision.o class_Scalar.o class_Vector.o halo.o

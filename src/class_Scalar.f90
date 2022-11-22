@@ -159,6 +159,7 @@ contains
 
     ! Local variables
     integer :: lo(3), hi(3), error
+    real(dp) :: dV
 
     lo = base_grid%lo
     hi = base_grid%hi
@@ -169,6 +170,9 @@ contains
     if (base_grid%nranks > 1) then
        call mpi_allreduce(mpi_in_place,integral,1,mpi_real8,mpi_sum,mpi_comm_world,error)
     endif
+
+    dV = base_grid%delta**3
+    integral = integral*dV
 
   end function integral
   !========================================================================================
