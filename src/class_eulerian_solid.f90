@@ -59,6 +59,8 @@ module class_eulerian_circle
     use precision           , only : dp
     use class_eulerian_solid, only : eulerian_solid
 
+    implicit none
+
     ! Below, some usable solids are defined.
     type, extends(eulerian_solid) :: circle
         real(dp) :: X(3) = 0.0_dp
@@ -71,7 +73,7 @@ module class_eulerian_circle
 
 contains
 
-!=====================================================================================
+    !=====================================================================================
     function distance(self, X) result(d)
 
         use precision, only : dp
@@ -90,12 +92,21 @@ contains
     function norm(self, X) result(n)
 
         use precision, only : dp
+        use constants, only : small
 
         class(circle), intent(in) :: self
         real(dp)     , intent(in) :: X(3)
         real(dp)                  :: n(3)
 
-        n = 0.0_dp
+        ! Local variables
+        integer :: i
+        real(dp) :: modn
+
+        do i = 1,3
+            n(i) = self%X(i) - X(i)
+        end do
+        modn = sqrt(n(1)**2 + n(2)**2 + n(3)**2) + small
+        n = n/modn
 
     end function norm
     !=====================================================================================
@@ -116,7 +127,6 @@ contains
             print *, 'ERROR, the point does not lies on the solid boundary.'
         endif
 #endif
-
         v = 0.0_dp
 
     end function velocity

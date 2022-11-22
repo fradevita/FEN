@@ -10,8 +10,14 @@ program main
     use class_eulerian_circle
     use class_eulerian_solid
     use eulerian_ibm
+    use json
 
     implicit none
+
+    ! Parameters
+    real(dp), parameter :: xc = 0.525_dp
+    real(dp), parameter :: yc = 0.484_dp
+    real(dp), parameter :: rc = 0.25_dp
 
     ! Variables
     integer       :: ierror, Nx, Ny, Nz
@@ -27,8 +33,8 @@ program main
     call mpi_init(ierror)
 
     ! The domain is a unit squared box
-    Nx = 8
-    Ny = 8
+    Nx = 16
+    Ny = 16
     Nz = 1
     Lx = 1.0_dp
     Ly = 1.0_dp
@@ -41,7 +47,7 @@ program main
     ! Create the grid
     call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1, bc)
 
-    C = circle(X = [0.5_dp, 0.5_dp, 0.0_dp], R = 0.25_dp)
+    C = circle(X = [xc, yc, 0.0_dp], R = rc)
     solid_list(1)%pS => C
 
     ! Setup eulerian fields for IBM
@@ -49,12 +55,16 @@ program main
 
     ! Print eulerian fields
     call temp%allocate(1)
+    temp%f = ibm_index(:,:,:,0)
+    call temp%write('tag_c.raw')
     temp%f = ibm_index(:,:,:,1)
-    call temp%write('tag_c')
+    call temp%write('tag_x.raw')
     temp%f = ibm_index(:,:,:,2)
-    call temp%write('tag_x')
-    temp%f = ibm_index(:,:,:,3)
-    call temp%write('tag_y')
+    call temp%write('tag_y.raw')
+
+    ! Print json file for prostprocessing use
+    call print_setup_json(0.0_dp)
+    call case_setup
 
     ! free memory
     call base_grid%destroy()
@@ -64,4 +74,25 @@ program main
    ! Finalize the simulation
    call MPI_FINALIZE(ierror)
 
+contains 
+  !=======================================================================================
+   subroutine case_setup()
+
+    integer :: json_case_id
+
+    if (base_grid%rank == 0) then
+      open(newunit = json_case_id, file = 'case.json')
+      write(json_case_id,'(A1)') '{'
+      write(json_case_id,'(4x,A9)') '"Case": {'
+      write(json_case_id,'(8x,A6,1x,E16.8,A1)') '"xc": ', xc, ','
+      write(json_case_id,'(8x,A6,1x,E16.8,A1)') '"yc": ', yc, ','
+      write(json_case_id,'(8x,A6,1x,E16.8)'   ) '"rc": ', rc
+      write(json_case_id,'(4x,A3)') '}'
+      write(json_case_id,'(A1)') '}'
+      flush(json_case_id)
+      close(json_case_id)
+    endif
+
+  end subroutine case_setup
+  !=======================================================================================
 end program main

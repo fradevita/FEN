@@ -84,7 +84,7 @@ solver.o: $(FEN_DIR)/src/solver.f90 precision.o class_Grid.o Poisson.o navier_st
 	$(FC) $(FLAGS) -c $<
 
 clean:
-	rm -f *.o *.mod code.e
+	rm -f *.o *.mod code.e *.json
 
 clean_data:
 	rm -rf data/*
