@@ -7,6 +7,7 @@ FEN = Fortran Environment for Numerics. It is a Fortran environment for performi
 - Finite difference solver for the incompressible Navier-Stokes equations
 - Fast Direct Solver for the solution of the Poisson equation
 - Volume of Fluid solver (MTHINC) for multiphase simulations
+- Direct forcing Immersed Boundary Method for simulation of flow around solid objects.
 - Computaional parallelism by MPI
 
 ## Installing
