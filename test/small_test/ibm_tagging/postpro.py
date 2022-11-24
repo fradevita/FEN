@@ -125,5 +125,6 @@ ax[2].contour(yy*Ny - 1, xx*Nx - 0.5, phi, [0.0], colors = 'black')
 ax[2].set_aspect('equal')
 
 plt.tight_layout()
-plt.show()
+plt.savefig('plot.png')
+if (display): plt.show()
 plt.close()

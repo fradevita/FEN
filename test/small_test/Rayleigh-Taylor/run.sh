@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running Rayleigh-Taylor instability test case..."
 
 mkdir -p data

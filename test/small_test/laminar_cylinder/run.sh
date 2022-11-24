@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running laminar cylinder at Re = 20 test case with Eulerian IBM"
 
 make SOURCE=cylinder > compilation_log 2> compilation_warning

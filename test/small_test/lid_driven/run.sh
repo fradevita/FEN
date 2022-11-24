@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running lid driven test case ..."
 
 make code.e > compilation_log 2> compilation_warning

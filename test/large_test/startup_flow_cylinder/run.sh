@@ -1,8 +1,10 @@
-echo "Running porous medium test case ..."
+#!/bin/bash
 
-make > compilation_log 2> compilation_warning
+echo "Running startup flow around a cylinder at Re = 1000 test case ..."
+
+make SOURCE=main > compilation_log 2> compilation_warning
  
-mpirun -n 1 ./code.e > log 2> error.err
+mpirun -n 8 ./code.e > log 2> error.err
 
 python3 postpro.py $1
 

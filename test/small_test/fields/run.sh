@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running test field ..."
 
 make SOURCE=test_fields > compilation_log 2> compilation_warning

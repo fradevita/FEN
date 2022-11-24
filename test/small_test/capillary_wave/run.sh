@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running capillary wave test case..."
 
 mkdir -p data_08 data_16 data_32 data_64

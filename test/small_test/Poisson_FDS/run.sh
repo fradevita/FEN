@@ -1,3 +1,5 @@
+#!/run/bash
+
 echo "Running test case for the Fast Direct Solver of the Poisson equation ..."
 
 make SOURCE=test_Poisson_FDS_2D > compilation_log 2> compilation_warning

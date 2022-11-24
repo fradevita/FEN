@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running Poiseuille test case with power law model ..."
 
 make SOURCE=power_law > compilation_log 2> compilation_warning

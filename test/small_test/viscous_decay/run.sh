@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running viscous decay test case..."
 
 make SOURCE=viscous_decay > compilation_log 2> compilation_warning

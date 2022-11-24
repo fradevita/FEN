@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running rising bubble test case..."
 
 make SOURCE=rising_bubble > compilation_log 2> compilation_warning

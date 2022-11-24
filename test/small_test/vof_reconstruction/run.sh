@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running VoF reconstruction test case"
 
 make SOURCE=vof_reconstruction > compilation_log 2> compilation_warning

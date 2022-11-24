@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running Eulerian tagging test case ..."
 
 make SOURCE=main > compilation_log 2> compilation_warning

@@ -1,4 +1,8 @@
+#!/bin/bash
+
 echo "Running vof reversed advection test case ..."
+
+mkdir -p data
 
 make SOURCE=vof_reversed > compilation_log 2> compilation_warning
  

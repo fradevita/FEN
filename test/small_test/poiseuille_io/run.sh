@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running Poiseuille InOut test case ..."
 
 make SOURCE=test_Poiseuille_io > compilation_log 2> compilation_warning

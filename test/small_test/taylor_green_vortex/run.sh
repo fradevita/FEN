@@ -1,3 +1,5 @@
+#!/bin/bash
+
 echo "Running Taylor Green Vortex test case ..."
 
 make SOURCE=test_TGV > compilation_log 2> compilation_warning
