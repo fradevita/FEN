@@ -1,6 +1,6 @@
 # FEN
 
-FEN = Fortran Environment for Numerics. It is as a Fortran environment for performing numerical simulations. It is developed for teaching and research activites but with a focus on HPC performances.
+FEN = Fortran Environment for Numerics. It is a Fortran environment for performing numerical simulations. It is developed for teaching and research activites but with a focus on HPC performances.
 
 ## Overview
 

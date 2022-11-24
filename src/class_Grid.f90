@@ -164,46 +164,29 @@ contains
       ! 2 = y face
       ! 3 = z face
 
-      use io, only : print_error_message
+      use constants, only : stagger
 
       ! In/Out variables
-      class(Grid), intent(in) :: self
-      integer    , intent(in) :: ind
-      real(dp)   , intent(in) :: xl(:)
+      class(Grid), intent(in) :: self     !< Grid object
+      integer    , intent(in) :: ind      !< location on the cell
+      real(dp)   , intent(in) :: xl(:)    !< given points in the grid.
+      integer                 :: ie(Ndim) !< Output indexes
 
-      ! Local variables
-      integer  :: ie(Ndim)
-      real(dp) :: stagger(Ndim)
-
-      select case (ind)
-       case(0)
-         stagger = 0.0_dp
-       case(1)
+      if (ind == 0) then
+         ! self%x is already the proper location
+         ie(1) = minloc(abs(self%x(1:base_grid%Nx) - xl(1)),1)
+         ie(2) = minloc(abs(self%y(1:base_grid%Ny) - xl(2)),1)
 #if DIM==3
-         stagger = [self%delta*0.5_dp, 0.0_dp, 0.0_dp]
-#else
-         stagger = [self%delta*0.5_dp, 0.0_dp]
-#endif
-       case(2)
-#if DIM==3
-         stagger = [0.0_dp, self%delta*0.5_dp, 0.0_dp]
-#else
-         stagger = [0.0_dp, self%delta*0.5_dp]
+         ie(3) = minloc(abs(self%z(1:base_grid%Nz) - xl(3)),1)
 #endif
 
+      else
+         ie(1) = minloc(abs(self%x(1:base_grid%Nx) - stagger(1, ind)*self%delta - xl(1)),1)
+         ie(2) = minloc(abs(self%y(1:base_grid%Ny) - stagger(2, ind)*self%delta - xl(2)),1)
 #if DIM==3
-       case(3)
-         stagger = [0.0_dp, 0.0_dp, self%delta*0.5_dp]
+         ie(3) = minloc(abs(self%z(1:base_grid%Nz) - stagger(3, ind)*self%delta - xl(3)),1)
 #endif
-       case default
-         call print_error_message('ERROR IN CLOSEST GRID NODE')
-      end select
-
-      ie(1) = minloc(abs(self%x + stagger(1) - xl(1)),1)
-      ie(2) = minloc(abs(self%y + stagger(2) - xl(2)),1)
-#if DIM==3
-      ie(3) = minloc(abs(self%z + stagger(3) - xl(3)),1)
-#endif
+      endif
 
    end function closest_grid_node
    !========================================================================================

@@ -44,6 +44,9 @@ contains
       use multiphase     , only : rho_0, rho_1, rhomin, irhomin, advect_interface
       use volume_of_fluid, only : allocate_vof_fields, get_vof_from_distance, vof, advect_vof
 #endif
+#ifdef IBM
+      use ibm
+#endif
 
       ! Allocate fields for solving Navier-Stokes equation
       call allocate_navier_stokes_fields()
@@ -70,6 +73,9 @@ contains
       rhomin = min(rho_0, rho_1)
       irhomin = 1.0_dp/rhomin
       advect_interface => advect_vof
+#endif
+#ifdef IBM
+      call init_ibm
 #endif
 
    end subroutine init_solver

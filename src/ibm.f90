@@ -15,9 +15,14 @@ contains
    !========================================================================================
    subroutine init_ibm
 
-        ! Allocate memory for the forcing field that will be added to the RHS of the
-        ! momentum equation.
-        call Fe%allocate()
+      use eulerian_ibm
+      
+      ! Allocate memory for the forcing field that will be added to the RHS of the
+      ! momentum equation.
+      call Fe%allocate()
+
+      ! If the list of eulerian solid has been created, initialize the eulerian ibm variables 
+      if (allocated(Eulerian_Solid_list)) call init_eulerian_ibm(Eulerian_Solid_list)
 
    end subroutine init_ibm
    !========================================================================================
@@ -25,7 +30,7 @@ contains
     !========================================================================================
    subroutine compute_ibm_forcing(v, RHS, dt, F)
 
-        use eulerian_ibm        , only : compute_eulerian_ibm_forcing => compute_ibm_forcing
+        use eulerian_ibm, only : compute_eulerian_ibm_forcing => compute_ibm_forcing
 
         ! In/Out variables
         type(vector), intent(in   ) :: v   !< Velocity field to be forced
