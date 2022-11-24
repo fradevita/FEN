@@ -23,6 +23,7 @@ module polynomial_reconstruction
 
     private
     public :: init
+    public :: ap
     public :: get_coefficients
     public :: P2nd
     public :: destroy
