@@ -21,6 +21,11 @@ module fields
      module procedure divergence_of_tensor
   end interface divergence
 
+  interface laplacian
+     module procedure laplacian_of_scalar
+     module procedure laplacian_of_vector
+  end interface laplacian
+
 contains
 
   !========================================================================================
@@ -199,7 +204,48 @@ contains
   !========================================================================================
 
   !========================================================================================
-  subroutine laplacian(v, lap_v)
+  subroutine laplacian_of_scalar(s, lap_s)
+
+    ! Compute the laplacian lap_v of the vector v.
+
+    ! In/Out variables
+    type(scalar), intent(in   ) :: s
+    type(scalar), intent(inout) :: lap_s
+
+    ! Local variables
+    integer :: i, ip, im, j, jp, jm, k
+#if DIM==3
+    integer :: kp, km
+#endif
+    real(dp) :: idelta2
+
+    idelta2 = 1.0_dp/base_grid%delta**2 
+    
+    do k = base_grid%lo(3),base_grid%hi(3)
+#if DIM==3
+       kp = k + 1
+       km = k - 1
+#endif
+       do j = base_grid%lo(2),base_grid%hi(2)
+          jp = j + 1
+          jm = j - 1
+          do i = base_grid%lo(1),base_grid%hi(1)
+             ip = i + 1
+             im = i - 1
+             lap_s%f(i,j,k) = ((s%f(ip,j,k) - 2.0_dp*s%f(i,j,k) + s%f(im,j,k)) + &
+                               (s%f(i,jp,k) - 2.0_dp*s%f(i,j,k) + s%f(i,jm,k)))*idelta2
+#if DIM==3
+             lap_s%f(i,j,k) = lap_s%f(i,j,k) + (s%f(i,j,kp) - 2.0_dp*s%f(i,j,k) + s%f(i,j,km))*idelta2
+#endif
+          end do
+       end do
+    end do
+
+  end subroutine laplacian_of_scalar
+  !========================================================================================
+
+  !========================================================================================
+  subroutine laplacian_of_vector(v, lap_v)
 
     ! Compute the laplacian lap_v of the vector v.
 
@@ -244,7 +290,7 @@ contains
        end do
     end do
 
-  end subroutine laplacian
+  end subroutine laplacian_of_vector
   !========================================================================================
   
   !========================================================================================
