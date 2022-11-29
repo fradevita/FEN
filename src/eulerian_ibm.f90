@@ -280,8 +280,8 @@ contains
     end subroutine compute_ibm_forcing
     !======================================================================================
 
-   !======================================================================================
-   function velocity_interpolation_2D(i, j, k, f, solid, dir) result(fl)
+    !======================================================================================
+    function velocity_interpolation_2D(i, j, k, f, solid, dir) result(fl)
 
         ! This function compute the interpolated velocity component (f) on the forcing point
         ! with coordinates (i,j,k)
@@ -289,7 +289,7 @@ contains
         use constants           , only : stagger
         use class_Grid          , only : base_grid
         use class_Eulerian_Solid, only : eulerian_solid
-        use utils               , only : bilinear
+        use utils               , only : linear, bilinear
 
         ! In/Out variables
         integer , intent(in) :: i, j, k, dir
@@ -300,7 +300,7 @@ contains
 
         ! Local variables
         integer  :: i2, j2
-        real(dp) :: delta, x, y, s, a, b, q, fl, xl, yl, xx, yy, velb, xb, yb, nx, ny, x2, y2, dist, nn(3)
+        real(dp) :: delta, x, y, s, a, b, q, fl, xl, yl, xx, yy, velb, xb, yb, nx, ny, x2, y2, nn(3)
 
         delta = base_grid%delta
 
@@ -330,14 +330,16 @@ contains
         y2 = (j2 - stagger(2,dir))*delta
 
         ! If one norm component is zero interpolate along cartesian directions
-        if (nx == 0.0_dp) then
-            ! Interpolate in y
+        if (abs(nx) <= 0.0_dp) then
+            ! Auxiliary point in (x,y2)
             q = f(i,j2,k)
-            fl = velb + (q - velb)*s/(s + delta)
-        elseif (ny == 0) then
-            ! Interpolate in x
+            ! Inerpolate in the forcing point
+            fl = linear(s/delta, 0.0_dp, delta, velb, q)
+        elseif (abs(ny) <= 0) then
+            ! Auxiliary point in (x2,y)
             q = f(i2,j,k)
-            fl = velb + (q - velb)*s/(s + delta)
+            ! Interpolate in the forcing point
+            fl = linear(s/delta, 0.0_dp, delta, velb, q)
         else
 
             ! Norm line equation
@@ -345,35 +347,29 @@ contains
             b = y - a*x
 
             if (ibm_index(i2,j,k,dir) < 2) then
-                ! Virtual point with interpolation in y
-
-                ! Intersezione tra retta normale e retta a z = z2 ha coordinate yy e z2
+                ! Intersection between normal line and line at y = y2: (xx, y2)
                 xx = (y2 - b)/a
 
-                ! Valore della velocità nel punto virtuale
-                q = f(min(i,i2),j2,k) + (f(max(i,i2),j2,k) - f(min(i,i2),j2,k))*(xx - min(x,x2))/delta
+                ! Valocity in the auxiliary point
+                q = linear(xx, min(x,x2), max(x,x2), f(min(i,i2),j2,k), f(max(i,i2),j2,k))
 
-                ! Interpolazione nel punto di forzaggio
-                dist = sqrt((xx - xb)**2 + (y2 - yb)**2)
-                fl = velb + (q - velb)*s/dist
+                ! Interpolation in forcing point
+                fl = linear(s, 0.0_dp, solid%distance([xx, y2, 0.0_dp]), velb, q)
 
             elseif (ibm_index(i,j2,k,dir) < 2) then
-                ! Punto virutale con interpolazione in y
-
-                ! Intersezione tra retta normale e retta a y = y2 ha coordinate y2 e zz
+                ! Intersection between normal line and line at x = x2: (x2, yy)
                 yy = a*x2 + b
 
-                ! Valore della velocità nel punto virtuale
-                q = f(i2,min(j,j2),k) + (f(i2,max(j,j2),k) - f(i2,min(j,j2),k))*(yy - min(y,y2))/delta
+                ! Velocity in the auxiliary point
+                q = linear(yy, min(y,y2), max(y,y2), f(i2,min(j,j2),k), f(i2,max(j,j2),k))
 
-                ! Interpolazione nel punto di forzaggio
-                dist = sqrt( (x2 - xb)**2 + (yy - yb)**2 )
-                fl = velb + (q - velb)*s/dist
+                ! Interpolation in the forcing point
+                fl = linear(s, 0.0_dp, solid%distance([x2, yy, 0.0_dp]), velb, q)
 
             else
                 ! Bilinear interpolation
 
-                ! Virtual point in
+                ! Auxiliary point at distance s in normal direction
                 xl = x + nx*s
                 yl = y + ny*s
 
@@ -384,7 +380,8 @@ contains
                 q = bilinear(xl, yl, f(min(i,i2),min(j,j2),k), f(max(i,i2),min(j,j2),k), &
                                      f(min(i,i2),max(j,j2),k), f(max(i,i2),max(j,j2),k))
 
-                fl = velb + (q - velb)*0.5_dp
+                ! Interpolation in the forcing point
+                fl = linear(s, 0.0_dp, 2.0_dp*s, velb, q)
             end if
 
         endif
