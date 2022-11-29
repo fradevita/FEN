@@ -59,13 +59,12 @@ program laminar_cylinder
     C = circle(X = [0.2_dp, 0.2_dp, 0.0_dp], R = radius)
     allocate(Eulerian_Solid_list(1))
     Eulerian_solid_list(1)%pS => C
+
     ! Set the viscoisty
     viscosity = Umean*L/Re
     
     ! Initialize the solver
     call init_solver
-    call init_ibm
-    call init_eulerian_ibm(Eulerian_solid_list)
     step = 0
     time = 0.0_dp
     call set_timestep(dt, Umax)
@@ -86,7 +85,6 @@ program laminar_cylinder
     ! Print initial fields
     call save_fields(0)
     
-    print *, v%x%bc%type_r
     !==== Start Time loop ===================================================================
     time_loop: do while (time < 3.0_dp)
 
