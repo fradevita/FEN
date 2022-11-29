@@ -9,6 +9,7 @@ module eulerian_ibm
     ! closest: an integer field which gives the closest solid body
     ! ibm_index: an integer field which gives the tagging of the point.
     ! Tag legend
+    ! -1 = extrapolation point
     !  0 = solid point
     !  1 = interface interpolation point
     !  2 = fluid point
@@ -145,8 +146,15 @@ contains
 
                         ! Tag cell
                         if (phi(i,j,k,dir) <= 0.0_dp) then
-                            ! Solid point
-                            ibm_index(i,j,k,dir) = 0
+
+                            if (phi(ip,j,k,dir) > 0.0_dp .or. phi(im,j,k,dir) > 0.0_dp .or. &
+                                phi(i,jp,k,dir) > 0.0_dp .or. phi(i,jm,k,dir) > 0.0_dp) then
+                                ! extrapolation point
+                                ibm_index(i,j,k,dir) = -1
+                            else
+                                ! Solid point
+                                ibm_index(i,j,k,dir) = 0
+                            endif
                         else
 #if DIM==3
                         if (phi(ip,j,k,dir) < 0.0_dp .or. phi(im,j,k,dir) < 0.0_dp .or. &
@@ -663,33 +671,25 @@ contains
       ! X direction
       if (base_grid%periodic_bc(1)) then
          f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
-         !f(base_grid%lo(1)-2,:,:) = f(base_grid%hi(1)-1,:,:)
          f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
-         !f(base_grid%hi(1)+2,:,:) = f(base_grid%lo(1)+1,:,:)
       else
          f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
-         !f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1)+1,:,:)
          f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
-         !f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1)-1,:,:)
       endif
 
       ! If using periodic bc in y and 1 proc need to overwrite the physical bc
       if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
          f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
-         !f(:,base_grid%lo(2)-2,:) = f(:,base_grid%hi(2)-1,:)
          f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
-         !f(:,base_grid%hi(2)+2,:) = f(:,base_grid%lo(2)+1,:)
       endif
 
       ! If non periodic in y select physical bc
       if (base_grid%periodic_bc(2) .eqv. .false.) then
          if (nrank == 0) then
             f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
-            !f(:,base_grid%lo(2)-2,:) = f(:,base_grid%lo(2)+1,:)
          endif
          if (base_grid%rank == base_grid%nranks - 1) then
             f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
-            !f(:,base_grid%hi(2)+2,:) = f(:,base_grid%hi(2)-1,:)
          endif
       endif
 
