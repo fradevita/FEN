@@ -9,7 +9,7 @@ module navier_stokes
    use precision   , only : dp
    use class_Scalar
    use class_Vector
-   use tensors
+   use class_Tensor
 
    implicit none
 
@@ -61,6 +61,10 @@ contains
       use multiphase     , only : advect_interface, update_material_properties
       use multiphase     , only : p_hat, p_o, rhomin
 #endif
+#ifdef IBM
+      use ibm
+      use eulerian_ibm
+#endif
 
       ! In/Out variables
       integer , intent(in   ) :: step
@@ -90,6 +94,12 @@ contains
       ! Update boundary condtiions for the approximate pressure
       call p_hat%apply_bc()
 #endif
+
+! #ifdef FSI
+!       ! Pressure extrapolation inside the solid phase is necessary only for FSI problems
+!       ! when using the eulerian ibm.
+!       call pressure_extrapolation(p, rho, g, eulerian_solid_list)
+! #endif
 
       ! Compute the predicted velocity field
       call predicted_velocity_field(dt)

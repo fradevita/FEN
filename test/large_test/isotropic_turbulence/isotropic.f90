@@ -56,7 +56,7 @@ program isotropic
   ! Compute the timestep
   call set_timestep(dt, 1.0_dp)
   constant_CFL = .true.
-  CFL = 0.3_dp
+  CFL = 0.9_dp
   
   ! Initial condition
   call init_fields

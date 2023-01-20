@@ -11,7 +11,7 @@ program laminar_cylinder
     use class_eulerian_circle, only : Circle
     use ibm                
     use eulerian_ibm
-    use navier_stokes        , only : v, set_timestep, viscosity
+    use navier_stokes        , only : v, set_timestep, viscosity, p, mu, rho, g
     use solver
     use json
 
@@ -31,6 +31,7 @@ program laminar_cylinder
     type(Circle), target :: C
     character(len=3)     :: sn
     character(len=11)    :: outfile
+    character(len=12)    :: mesh_file
 
     ! Initialize MPI
     call mpi_init(ierror)
@@ -56,9 +57,12 @@ program laminar_cylinder
     call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 8, 1, bc)
 
     ! Init the solid object
-    C = circle(X = [0.2_dp, 0.2_dp, 0.0_dp], R = radius)
+    C = circle(X = [0.2_dp, 0.2_dp, 0.0_dp], R = radius, name = 'C')
     allocate(Eulerian_Solid_list(1))
     Eulerian_solid_list(1)%pS => C
+    write(sn,'(I0.3)') Nx
+    mesh_file = 'mesh_'//sn//'.txt'
+    call C%load_surface_points(mesh_file)
 
     ! Set the viscoisty
     viscosity = Umean*L/Re
@@ -75,15 +79,11 @@ program laminar_cylinder
     end do
 
     ! Open output file
-    write(sn,'(I0.3)') Nx
     outfile = 'out_'//sn//'.txt'
     open(newunit = out_id, file = outfile)
 
     ! Print setup json file
     call print_setup_json(dt)
-    
-    ! Print initial fields
-    call save_fields(0)
     
     !==== Start Time loop ===================================================================
     time_loop: do while (time < 3.0_dp)
@@ -97,16 +97,16 @@ program laminar_cylinder
         ! Advance solver status to log file
         call print_solver_status(stdout, step, time, dt)
 
-        ! Output fields
-        if (mod(step,1) == 0) call save_fields(step)
-
         ! Output force coefficients per unit lenght in z direction
         block 
             real(dp) :: Cd, Cl
             if (mod(step,10) == 0) then
+                ! Evaluate forces as integral of eulerain forcing Fe
                 Cl = 2.0_dp*Fe%x%integral()/Umean**2/L/Lz
                 Cd = 2.0_dp*Fe%y%integral()/Umean**2/L/Lz
-                if (base_grid%rank == 0) write(out_id,*) time, Cd, Cl 
+                ! Evalute forces with probes
+                call compute_hydrodynamic_loads(C, v, p, mu, rho, g)
+                if (base_grid%rank == 0) write(out_id,*) time, Cd, Cl, 2.0_dp*C%hF(2)/Umean**2/L, 2.0_dp*C%hF(1)/Umean**2/L
             endif
         end block
    

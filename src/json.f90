@@ -32,13 +32,18 @@ contains
 
       write(json_id,'(4x,A12)') '"Solvers": {'
 #ifdef MF
-      write(json_id,'(8x,A7)') '"MF": 1'
+      write(json_id,'(8x,A8)') '"MF": 1,'
 #else
-      write(json_id,'(8x,A7)') '"MF": 0'
+      write(json_id,'(8x,A8)') '"MF": 0,'
+#endif
+#ifdef IBM
+      write(json_id,'(8x,A8)') '"IBM": 1'
+#else
+      write(json_id,'(8x,A8)') '"IBM": 0'
 #endif
       write(json_id,'(4x,A2)') '},'
       write(json_id,'(4x,A12,E18.6)') '"Timestep": ', dt
-      write(json_id,'(A2)') '}'
+      write(json_id,'(A1)') '}'
 
       flush(json_id)
       close(json_id)

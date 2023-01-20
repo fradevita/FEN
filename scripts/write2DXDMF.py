@@ -82,17 +82,7 @@ for n in range(nf):
         </DataItem>
         </Attribute>
         '''%(Ny, Nx, 'data/vof_'+str(step).zfill(7)+'.raw'))
-
-    if (IBM):
-         # Phi
-        f.write('''\n
-        <Attribute Name="Phi" AttributeType="Scalar" Center="Node">
-        <DataItem Dimensions="%d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
-        %s
-        </DataItem>
-        </Attribute>
-        '''%(Ny, Nx, 'data/phi_'+str(step).zfill(7)+'.raw'))
-    
+   
     # Pressure
     f.write('''\n
     <Attribute Name="P" AttributeType="Scalar" Center="Node">

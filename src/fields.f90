@@ -6,7 +6,7 @@ module fields
   use class_Grid  , only : base_grid
   use class_Scalar
   use class_Vector
-  use tensors     , only : tensor
+  use class_Tensor, only : tensor
 
   implicit none
 

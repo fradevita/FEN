@@ -1,4 +1,4 @@
-module tensors
+module class_Tensor
 
   ! This module contains the tensor type definition and procedures.
   ! Thetensor type is a type with three vectors.
@@ -156,4 +156,4 @@ contains
   end subroutine destroy
   !========================================================================================
 
-end module tensors
+end module class_Tensor

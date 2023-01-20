@@ -8,9 +8,10 @@ program main
     use class_Grid           , only : base_grid, bc_type
     use class_Vector         , only : vector
     use class_eulerian_circle, only : circle
-    use navier_stokes        , only : v, set_timestep, viscosity
+    use navier_stokes        , only : v, set_timestep, viscosity, p, mu, rho, g
     use fields               , only : curl
     use ibm
+    use eulerian_ibm         , only : compute_hydrodynamic_loads
     use solver
     use io                   , only : stdout
     use json
@@ -25,7 +26,7 @@ program main
 
     ! Variables
     integer              :: ierror, Nx, Ny, Nz, step, out_id
-    real(dp)             :: Lx, Ly, Lz, time, dt, origin(3), Cd, Cl
+    real(dp)             :: Lx, Ly, Lz, time, dt, origin(3), Cd
     type(vector)         :: omega
     type(bc_type)        :: bc(4)
     type(circle), target :: C
@@ -56,9 +57,12 @@ program main
     call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 8, 1, bc)
 
     ! Create the circle
-    C = circle(X = [6.0_dp, 6.0_dp, 6.0_dp], R = radius)
+    C = circle(X = [6.0_dp, 6.0_dp, 6.0_dp], R = radius, name = 'C')
     allocate(Eulerian_Solid_list(1))
     Eulerian_Solid_list(1)%pS => C
+    ! Need to create the surface mesh to use probes for hydrodynamic forces component 
+    ! evaluation
+    call C%load_surface_points('mesh.txt')
 
     ! Set the viscoisty
     viscosity = 1.0_dp/Re
@@ -107,9 +111,12 @@ program main
 
         ! Evaluate hydrodynamic forces
         if (mod(step,100) == 0) then
+            ! Drag coefficient can be computed integrating the eulerain Forcing Fe
             Cd = 2.0_dp*Fe%y%integral()/U**2/D/Lz
-            Cl = 2.0_dp*Fe%x%integral()/U**2/D/Lz
-            if (base_grid%rank == 0) write(out_id, *) time, Cd, Cl
+            ! Must use the probes to evaluate viscous contribution and 
+            call compute_hydrodynamic_loads(C, v, p, mu, rho, g)
+            ! Write output
+            if (base_grid%rank == 0) write(out_id, *) time, Cd, 2.0_dp*C%hFv(2)/U**2/D, 2.0_dp*C%hFp(2)/U**2/D
         endif
 
     end do time_loop

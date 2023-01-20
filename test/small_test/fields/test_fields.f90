@@ -1,12 +1,12 @@
 program test_fields
 
   use mpi
-  use precision , only : dp
-  use constants , only : pi
-  use class_Grid, only : base_grid, bc_type
+  use precision   , only : dp
+  use constants   , only : pi
+  use class_Grid  , only : base_grid, bc_type
   use class_Scalar
   use class_Vector
-  use tensors   , only : tensor
+  use class_Tensor, only : tensor
 
   implicit none
 

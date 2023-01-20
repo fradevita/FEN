@@ -18,11 +18,14 @@ fig, ax = plt.subplots()
 ax.set_title('Drag')
 ax.set_xlim([0, 3])
 ax.set_xlabel(r'$t$')
-ax.set_ylim([5, 6])
+ax.set_ylim([4, 6])
 ax.set_ylabel(r'$C_d$')
-ax.plot(data_064[:,0], -data_064[:,1], label = 'Ny = 64')
-ax.plot(data_128[:,0], -data_128[:,1], label = 'Ny = 128')
-ax.plot(data_256[:,0], -data_256[:,1], label = 'Ny = 256')
+ax.plot(data_064[:,0], -data_064[:,1], color = 'blue', label = 'Ny = 64')
+ax.plot(data_064[:,0],  data_064[:,3], 'o', color = 'blue', label = 'Ny = 64, probes')
+ax.plot(data_128[:,0], -data_128[:,1], color = 'green', label = 'Ny = 128')
+ax.plot(data_128[:,0],  data_128[:,3], 'o', color = 'green', label = 'Ny = 128, probes')
+ax.plot(data_256[:,0], -data_256[:,1], color = 'red', label = 'Ny = 256')
+ax.plot(data_256[:,0],  data_256[:,3], 'o', color = 'red', label = 'Ny =256, probes')
 ax.plot(data_128[:,0], Cdref*Cd, '--', color = 'black', label = r'reference $C_d$')
 plt.tight_layout()
 plt.legend()
@@ -30,10 +33,15 @@ plt.show()
 plt.close()
 
 # Compute error
-eCd = np.zeros(3)
-eCd[0] = abs(-data_064[-1,1] - Cd)/Cd
-eCd[1] = abs(-data_128[-1,1] - Cd)/Cd
-eCd[2] = abs(-data_256[-1,1] - Cd)/Cd
+eCd_eul = np.zeros(3)
+eCd_eul[0] = abs(-data_064[-1,1] - Cd)/Cd
+eCd_eul[1] = abs(-data_128[-1,1] - Cd)/Cd
+eCd_eul[2] = abs(-data_256[-1,1] - Cd)/Cd
+
+eCd_prb = np.zeros(3)
+eCd_prb[0] = abs(data_064[-1,3] - Cd)/Cd
+eCd_prb[1] = abs(data_128[-1,3] - Cd)/Cd
+eCd_prb[2] = abs(data_256[-1,3] - Cd)/Cd
 
 # Resolution
 N = [64, 128, 256]
@@ -48,7 +56,8 @@ for i in range(0,np.size(N)):
 plt.figure()
 plt.xlabel(r'$N$')
 plt.ylabel(r'$|C_d - C_d^{ref}|/C_d^{ref}$')
-plt.loglog(N, eCd, '-o', label = r'$C_d$')
+plt.loglog(N, eCd_eul, '-o', label = r'$C_d, eulerian$')
+plt.loglog(N, eCd_prb, '-s', label = r'$C_d, probes$')
 plt.loglog(N, scaling1, '--', color = 'black', label = '1/N')
 plt.loglog(N, scaling2, '-.', color = 'black', label = r'$1/N^{2}$')
 plt.legend()

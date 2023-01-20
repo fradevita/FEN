@@ -167,15 +167,16 @@ contains
       use constants, only : stagger
 
       ! In/Out variables
-      class(Grid), intent(in) :: self     !< Grid object
-      integer    , intent(in) :: ind      !< location on the cell
-      real(dp)   , intent(in) :: xl(:)    !< given points in the grid.
-      integer                 :: ie(Ndim) !< Output indexes
+      class(Grid), intent(in) :: self  !< Grid object
+      integer    , intent(in) :: ind   !< location on the cell
+      real(dp)   , intent(in) :: xl(3) !< given points in the grid.
+      integer                 :: ie(3) !< Output indexes
 
       if (ind == 0) then
          ! self%x is already the proper location
          ie(1) = minloc(abs(self%x(1:base_grid%Nx) - xl(1)),1)
          ie(2) = minloc(abs(self%y(1:base_grid%Ny) - xl(2)),1)
+         ie(3) = 1
 #if DIM==3
          ie(3) = minloc(abs(self%z(1:base_grid%Nz) - xl(3)),1)
 #endif
@@ -183,6 +184,7 @@ contains
       else
          ie(1) = minloc(abs(self%x(1:base_grid%Nx) - stagger(1, ind)*self%delta - xl(1)),1)
          ie(2) = minloc(abs(self%y(1:base_grid%Ny) - stagger(2, ind)*self%delta - xl(2)),1)
+         ie(3) = 1
 #if DIM==3
          ie(3) = minloc(abs(self%z(1:base_grid%Nz) - stagger(3, ind)*self%delta - xl(3)),1)
 #endif

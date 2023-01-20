@@ -11,7 +11,7 @@ module non_newtonian
    interface
       subroutine viscosity_model(mu, D)
          use class_Scalar
-         use tensors, only : tensor
+         use class_Tensor
          type(tensor), intent(in   ) :: D
          type(scalar), intent(inout) :: mu
       end subroutine viscosity_model
@@ -23,10 +23,10 @@ contains
    !========================================================================================
    subroutine power_law(mu, D)
 
-      use class_Grid, only : base_grid
+      use class_Grid  , only : base_grid
       use class_Scalar
-      use tensors   , only : tensor
-      use constants , only : small
+      use class_Tensor, only : tensor
+      use constants   , only : small
 
       ! Compute the local viscosity using the power law
 

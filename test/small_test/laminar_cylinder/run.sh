@@ -2,6 +2,8 @@
 
 echo "Running laminar cylinder at Re = 20 test case with Eulerian IBM"
 
+mkdir -p data
+
 make SOURCE=cylinder > compilation_log 2> compilation_warning
 mpirun -n 8 ./code.e > log 2> error.err
 

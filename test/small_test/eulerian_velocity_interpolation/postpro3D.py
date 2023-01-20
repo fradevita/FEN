@@ -34,7 +34,7 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(ewmax))
 e, f = pars
 
 if (-a > 1.8 and -c > 1.8 and -e > 1.8):
-  print('Test completed.')
+  print('3D test completed.')
 else:
   print('The convergence rate of the eulerian interpolation is less than second order')
  
@@ -55,9 +55,9 @@ plt.plot(N, scalingv, 'black', linestyle='solid', label = '$N^{%2.2f}$' % c)
 plt.plot(N, scalingw, 'black', linestyle='solid', label = '$N^{%2.2f}$' % e)
 plt.xlabel("N")
 plt.ylabel("error")
-plt.title("Convergence rate of the 2D velocity interpolation")
+plt.title("Convergence rate of the 3D velocity interpolation")
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()
-plt.savefig("plot.png")
+plt.savefig("plot3D.png")
 if (display): plt.show()

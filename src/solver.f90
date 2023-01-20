@@ -47,6 +47,10 @@ contains
 #ifdef IBM
       use ibm
 #endif
+#ifdef FSI
+      use navier_stokes  , only : g
+      use fsi
+#endif
 
       ! Allocate fields for solving Navier-Stokes equation
       call allocate_navier_stokes_fields()
@@ -54,11 +58,21 @@ contains
       ! Initialize the Poisson solver
       call init_Poisson_Solver(phi)
 
+      ! Select the solver
+#ifdef FSI      
+      ! Point to the weak coupling FSI solver
+      advance_solution => weak_coupling_solver
+
+      ! Point the Navier-Stokes solver print status
+      print_solver_status => print_navier_stokes_solver_status
+
+#else
       ! Point to the Navier-Stokes solver
       advance_solution => navier_stokes_solver
 
       ! Point the Navier-Stokes solver print status
       print_solver_status => print_navier_stokes_solver_status
+#endif
 
 #if defined(MF) || defined(NN)
       constant_viscosity = .false.
@@ -75,6 +89,16 @@ contains
       advect_interface => advect_vof
 #endif
 #ifdef IBM
+      block
+            integer :: i
+            do i = 1,size(Eulerian_Solid_list)
+                  call Eulerian_Solid_list(i)%pS%setup()
+#ifdef FSI
+                  ! If solving for FSI add gravity to external forces
+                  Eulerian_Solid_list(i)%pS%eF(1:3) = g*Eulerian_Solid_list(i)%pS%mass
+#endif
+            end do
+      end block
       call init_ibm
 #endif
 
@@ -91,7 +115,7 @@ contains
 #endif
 
       ! In/Out variables
-      integer :: step
+      integer, intent(in) :: step
 
       ! Local variables
       character(len=7 ) :: sn

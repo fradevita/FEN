@@ -10,7 +10,7 @@ program main
     
     implicit none
 
-    integer  :: ierror, Nx, Ny, Nz, i, ie(2), j, l, res, out_id
+    integer  :: ierror, Nx, Ny, Nz, i, ie(3), j, l, res, out_id
     real(dp) :: Lx, Ly, Lz, x, y, f(-1:1,-1:1), f_reconstructed, e, e_Linf, e_L2
     type(bc_type) :: bc(4)
 
@@ -43,7 +43,7 @@ program main
             y = rand()
 
             ! Find the closest grid cell center
-            ie = base_grid%closest_grid_node([x, y], 0)
+            ie = base_grid%closest_grid_node([x, y, 0.0_dp], 0)
 
             ! Build the support kernel for the polynomail interpolation   
             do j = -1,1
@@ -69,6 +69,9 @@ program main
         call destroy()
 
     end do resolution_loop
+
+   ! Finalize the simulation
+   call MPI_FINALIZE(ierror)
 
 contains
 

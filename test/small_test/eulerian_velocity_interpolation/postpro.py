@@ -30,7 +30,7 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(evmax))
 c, d = pars
 
 if (-a > 1.8 and -c > 1.8):
-  print('Test completed.')
+  print('2D test completed.')
 else:
   print('The convergence rate of the Poisson solver is less than second order')
  
@@ -51,5 +51,5 @@ plt.title("Convergence rate of the 2D velocity interpolation")
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()
-plt.savefig("plot.png")
+plt.savefig("plot2D.png")
 if (display): plt.show()
