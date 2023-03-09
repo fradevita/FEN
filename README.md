@@ -10,6 +10,21 @@ FEN = Fortran Environment for Numerics. It is a Fortran environment for performi
 - Direct forcing Immersed Boundary Method for simulation of flow around solid objects.
 - Computaional parallelism by MPI
 
+### Citing
+
+Please kindly cite this publication if the solver helps for yout research
+~~~
+@article{de2021fully,
+  title={A fully Eulerian solver for the simulation of multiphase flows with solid bodies: Application to surface gravity waves},
+  author={De Vita, Francesco and De Lillo, Filippo and Verzicco, Roberto and Onorato, Miguel},
+  journal={Journal of computational physics},
+  volume={438},
+  pages={110355},
+  year={2021},
+  publisher={Elsevier}
+}
+~~~
+
 ## Installing
 
 ### Dependency

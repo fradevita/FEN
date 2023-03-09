@@ -54,10 +54,10 @@ program laminar_cylinder
     bc(3)%s = 'Inflow'
     bc(4)%s = 'Outflow'
     origin = [0.0_dp, 0.0_dp, 0.0_dp]
-    call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 8, 1, bc)
+    call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
 
     ! Init the solid object
-    C = circle(X = [0.2_dp, 0.2_dp, 0.0_dp], R = radius, name = 'C')
+    C = circle(X = [0.2_dp, 0.2_dp, 0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp], R = radius, name = 'C')
     allocate(Eulerian_Solid_list(1))
     Eulerian_solid_list(1)%pS => C
     write(sn,'(I0.3)') Nx
