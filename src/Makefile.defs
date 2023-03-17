@@ -11,7 +11,6 @@ override FLAGS = $(BIG) $(DBG) $(PROF) $(OPT) $(CNNFLAGS)
 
 # Libraries dir
 INCLUDE_2DECOMP = -I$(_2DECOMP_DIR)/include
-FFTW3_DIR = $(HOME)/local
 INCLUDE_FFTW3 = -I$(FFTW3_DIR)/include
 LIB_2DECOMP = -L$(_2DECOMP_DIR)/lib -l2decomp_fft
 LIB_FFTW3 = -L$(FFTW3_DIR)/lib -lfftw3
