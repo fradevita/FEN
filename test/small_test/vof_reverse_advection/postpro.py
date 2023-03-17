@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
 import sys
+import json
+import glob
 
 if (len(sys.argv) > 1):
     if (sys.argv[1] == 'silent'):
@@ -14,31 +16,41 @@ if (len(sys.argv) > 1):
 else:
     display = 1
 
-Nx = 100 
-Ny = 100
-Nz = 1
-Sf = Nx*Ny*Nz
+###############################################################################
+# READ SETUP FILE
+###############################################################################
+setup_file = open('setup.json')
+setup = json.load(setup_file)
 
-Lx = math.pi 
-Ly = math.pi
+# Setup Grid
+Nx = setup["Grid"]["Nx"]
+Ny = setup["Grid"]["Ny"]
+Nz = setup["Grid"]["Nz"]
+Lx = setup["Grid"]["Lx"]
+Ly = setup["Grid"]["Ly"]
+Lz = setup["Grid"]["Lz"]
+x0 = setup["Grid"]["origin"][0]
+y0 = setup["Grid"]["origin"][1]
 dx = Lx/Nx
 dy = Ly/Ny
-X = np.arange(0, Lx, dx)
-Y = np.arange(0, Ly, dy)
+assert(dx == dy)
+X = np.linspace(dx/2, Lx - dx/2, Nx)
+Y = np.linspace(dy/2, Ly - dy/2, Ny)
 
-# Read data from file 
-data = np.fromfile('data/vof_0002000')
-data_raw = data[0:Sf]
-fmid = np.reshape(data_raw,(Nx,Ny,Nz))
-data = np.fromfile('data/vof_0004000')
-data_raw = data[0:Sf]
-fend = np.reshape(data_raw,(Nx,Ny,Nz))
+###############################################################################
+# Load data
+############################################################################### 
+filelist = glob.glob('data/vof_*')
+f0 = np.reshape(np.fromfile(sorted(filelist)[0]), (Nx,Ny), order = 'F' ) 
+f1 = np.reshape(np.fromfile(sorted(filelist)[int(len(filelist)/2)]), (Nx,Ny), order = 'F' ) 
+f2 = np.reshape(np.fromfile(sorted(filelist)[-1]), (Nx,Ny), order = 'F' ) 
 
 # Plot
 fig, ax = plt.subplots()
 X, Y = np.meshgrid(X, Y)
-plt.contour(X+0.5*dx, Y+0.5*dy, fmid[:,:,0],[0.05,0.5,0.95])
-plt.contour(X+0.5*dx, Y+0.5*dy, fend[:,:,0],[0.05,0.5,0.95])
+plt.contour(X, Y, np.transpose(f0), [0.5], colors = 'black', linestyles = 'solid')
+plt.contour(X, Y, np.transpose(f1), [0.5], colors = 'blue', linestyles = 'solid')
+plt.contour(X, Y, np.transpose(f2), [0.5], colors = 'red', linestyles = 'dashed')
 ax.set_aspect('equal', adjustable='box')
 plt.savefig("fig.png")
 if (display): plt.show()

@@ -8,7 +8,8 @@ program main
   use volume_of_fluid, only : allocate_vof_fields, get_h_from_vof, distance
   use volume_of_fluid, only : vof, get_vof_from_distance, advect_vof, check_vof_integral
   use io
-  use decomp_2d
+  use json      
+  use decomp_2d    
 
   implicit none
 
@@ -27,8 +28,8 @@ program main
   Ly = pi
   
   ! Set the resolution
-  Nx = 100
-  Ny = 100
+  Nx = 200
+  Ny = 200
   Nz = 1
   Lz = Lx*float(Nz)/float(Nx)
   origin = [0.0_dp, 0.0_dp, 0.0_dp]
@@ -53,34 +54,39 @@ program main
 
   step = 0
   time = 0.0_dp
-  dt = 0.0025_dp*pi
+  dt = 0.00125_dp*pi
   Tmax = 10*pi
-  Nstep = int(10.0_dp/0.0025_dp)
-  
+  Nstep = int(Tmax/dt)
+
+  write(ss,'(I0.7)') step
+  filename = 'data/vof_'//ss
+  call vof%write(filename)
+  call print_setup_json(dt)
+
   !==== Start Time loop ===================================================================
   do while(time < Tmax)
 
-     step = step + 1
-     time = time + dt
+    step = step + 1
+    time = time + dt
 
-     ! Advect the VoF interface
-     call advect_vof(v, dt)
+    ! Advect the VoF interface
+    call advect_vof(v, dt)
 
-     if (step == Nstep/2) then
-       v%x%f = -v%x%f
-       v%y%f = -v%y%f
-       call v%apply_bc()
-     endif
+    if (step == Nstep/2) then
+      v%x%f = -v%x%f
+      v%y%f = -v%y%f
+      call v%apply_bc()
+    endif
 
-     if (mod(step, 100) == 0) then
-       write(ss,'(I0.7)') step
-       filename = 'data/vof_'//ss
-       call vof%write(filename)
+    if (mod(step, 100) == 0) then
+      write(ss,'(I0.7)') step
+      filename = 'data/vof_'//ss
+      call vof%write(filename)
     endif
 
     call check_vof_integral(int_phase_1, int_phase_2)
 
-    if (nrank == 0) write(stdout,10) 'step: ', step, 'time: ', time, 'dt: ', dt, &
+    if (base_grid%rank == 0) write(stdout,10) 'step: ', step, 'time: ', time, 'dt: ', dt, &
       'phase 1 integral: ', int_phase_1, 'pahse 2 integral: ', int_phase_2
 10 format(A6,I7,1x,A6,E13.6,1x,A4,E13.6,1x,A18,E13.6,1x,A18,E13.6)
 
@@ -90,7 +96,6 @@ program main
   call mpi_barrier(mpi_comm_world, ierror)
   
   ! Free the memory allocated by the solver
-  !call free_vof()
   call v%destroy()
   
   ! Finalize the simulation

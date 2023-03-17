@@ -26,6 +26,9 @@ module volume_of_fluid
    ! Switch for the quadratic reconstruction
    logical :: quadratic = .true.
 
+   ! Switch for split advection order
+   logical :: x_first = .true.
+
    ! Two points Gaussian quadrature in the interval [0,1]
    real(dp), parameter :: rp = 0.5_dp*(1.0_dp + 1.0_dp/sqrt(3.0_dp))
    real(dp), parameter :: rm = 0.5_dp*(1.0_dp - 1.0_dp/sqrt(3.0_dp))
@@ -414,46 +417,96 @@ contains
       ! First reconstruct the hyperbolic tangent function
       call get_h_from_vof
 
-      ! X direction
-      do k = lo(3),hi(3)
-         do j = lo(2),hi(2)
-            do i = lo(1),hi(1)
-               fp = compute_flux(1, i  , j, k, v%x%f(i  ,j,k), dt, delta)
-               fm = compute_flux(1, i-1, j, k, v%x%f(i-1,j,k), dt, delta)
-               vof1%f(i,j,k) = (vof%f(i,j,k) - (fp - fm)/delta)/ &
-                  (1.0_dp - dt*(v%x%f(i,j,k) - v%x%f(i-1,j,k))/delta)
+      if (x_first) then
+
+         ! X direction
+         do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+               do i = lo(1),hi(1)
+                  fp = compute_flux(1, i  , j, k, v%x%f(i  ,j,k), dt, delta)
+                  fm = compute_flux(1, i-1, j, k, v%x%f(i-1,j,k), dt, delta)
+                  vof1%f(i,j,k) = (vof%f(i,j,k) - (fp - fm)/delta)/ &
+                                  (1.0_dp - dt*(v%x%f(i,j,k) - v%x%f(i-1,j,k))/delta)
+               end do
             end do
          end do
-      end do
 
-      vof = vof1
+         ! Get h from vof1
+         vof = vof1
+         call vof%apply_bc()
+         call get_h_from_vof
 
-      ! Get h from vof1
-      call vof%apply_bc()
-      call get_h_from_vof
-
-      ! y direction
-      do k = lo(3),hi(3)
-         do j = lo(2),hi(2)
-            do i = lo(1),hi(1)
-               fp = compute_flux(2, i, j  , k, v%y%f(i,j  ,k), dt, delta)
-               fm = compute_flux(2, i, j-1, k, v%y%f(i,j-1,k), dt, delta)
-               vof2%f(i,j,k) = (vof1%f(i,j,k) - (fp - fm)/delta)/ &
-                  (1.0_dp - dt*(v%y%f(i,j,k) - v%y%f(i,j-1,k))/delta)
+         ! y direction
+         do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+               do i = lo(1),hi(1)
+                  fp = compute_flux(2, i, j  , k, v%y%f(i,j  ,k), dt, delta)
+                  fm = compute_flux(2, i, j-1, k, v%y%f(i,j-1,k), dt, delta)
+                  vof2%f(i,j,k) = (vof1%f(i,j,k) - (fp - fm)/delta)/ &
+                                   (1.0_dp - dt*(v%y%f(i,j,k) - v%y%f(i,j-1,k))/delta)
+               end do
             end do
          end do
-      end do
 
-      ! Compute vof at time n+1
-      do k = lo(3),hi(3)
-         do j = lo(2),hi(2)
-            do i = lo(1),hi(1)
-               vof%f(i,j,k) = vof2%f(i,j,k) - dt*(                        &
-                  vof1%f(i,j,k)*(v%x%f(i,j,k) - v%x%f(i-1,j,k))/delta + &
-                  vof2%f(i,j,k)*(v%y%f(i,j,k) - v%y%f(i,j-1,k))/delta)
+         ! Compute vof at time n+1
+         do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+               do i = lo(1),hi(1)
+                  vof%f(i,j,k) = vof2%f(i,j,k) - dt*(                        &
+                     vof1%f(i,j,k)*(v%x%f(i,j,k) - v%x%f(i-1,j,k))/delta + &
+                     vof2%f(i,j,k)*(v%y%f(i,j,k) - v%y%f(i,j-1,k))/delta)
+               end do
             end do
          end do
-      end do
+
+         x_first = .false.
+
+      else
+
+         ! y direction
+         do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+               do i = lo(1),hi(1)
+                  fp = compute_flux(2, i, j  , k, v%y%f(i,j  ,k), dt, delta)
+                  fm = compute_flux(2, i, j-1, k, v%y%f(i,j-1,k), dt, delta)
+                  vof1%f(i,j,k) = (vof%f(i,j,k) - (fp - fm)/delta)/ &
+                     (1.0_dp - dt*(v%y%f(i,j,k) - v%y%f(i,j-1,k))/delta)
+               end do
+            end do
+         end do
+
+         ! Get h from vof1
+         vof = vof1
+         call vof%apply_bc()
+         call get_h_from_vof
+
+         ! X direction
+         do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+               do i = lo(1),hi(1)
+                  fp = compute_flux(1, i  , j, k, v%x%f(i  ,j,k), dt, delta)
+                  fm = compute_flux(1, i-1, j, k, v%x%f(i-1,j,k), dt, delta)
+                  vof2%f(i,j,k) = (vof1%f(i,j,k) - (fp - fm)/delta)/ &
+                     (1.0_dp - dt*(v%x%f(i,j,k) - v%x%f(i-1,j,k))/delta)
+               end do
+            end do
+         end do
+
+         ! Compute vof at time n+1
+         do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+               do i = lo(1),hi(1)
+                  vof%f(i,j,k) = vof2%f(i,j,k) - dt*(                        &
+                     vof2%f(i,j,k)*(v%x%f(i,j,k) - v%x%f(i-1,j,k))/delta + &
+                     vof1%f(i,j,k)*(v%y%f(i,j,k) - v%y%f(i,j-1,k))/delta)
+               end do
+            end do
+         end do
+      
+         x_first = .true.
+
+      endif
+
 
       ! Update halo and bc
       call vof%apply_bc()
