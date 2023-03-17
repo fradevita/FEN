@@ -49,6 +49,8 @@ sh INSTALL.sh
 
 After this step the requested libraries should be properly installed.
 
+Possible missing packages: *libblas-dev*, *liblapack-dev*, *gfortran*, *libopenmpi-dev*
+
 ## Acknowledgments
 
 FEN is the combinations of several methods / technique that I have learned during past years. The main sources of inspiration are the two open source solvers [Gerris](https://gfs.sourceforge.net/wiki/index.php/Main_Page) and [Basilisk](https://basilisk.fr) and the code used at KTH during my PostDoc, for which many contributions have been given by Pedro Simeon Costa and Marco Edoardo Rosti.
