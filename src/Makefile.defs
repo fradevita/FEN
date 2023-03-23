@@ -18,7 +18,7 @@ LIBS = $(LIB_2DECOMP) $(LIB_FFTW3) -llapack
 
 override OBJ = precision.o constants.o io.o class_Grid.o halo.o class_Scalar.o class_Vector.o class_Tensor.o fields.o Poisson.o \
       		   volume_of_fluid.o multiphase.o utils.o non_newtonian.o navier_stokes.o solver.o json.o eulerian_ibm.o \
-			   class_eulerian_solid.o ibm.o polynomial_reconstruction.o fsi.o
+			   class_eulerian_solid.o ibm.o polynomial_reconstruction.o fsi.o functions.o
 
 target: code.e
 
@@ -37,7 +37,10 @@ class_Grid.o: $(FEN_DIR)/src/class_Grid.f90 precision.o constants.o io.o
 halo.o: $(FEN_DIR)/src/halo.f90 precision.o class_Grid.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-class_Scalar.o: $(FEN_DIR)/src/class_Scalar.f90 class_Grid.o precision.o halo.o io.o
+functions.o: $(FEN_DIR)/src/functions.f90 precision.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
+
+class_Scalar.o: $(FEN_DIR)/src/class_Scalar.f90 class_Grid.o precision.o halo.o io.o functions.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 class_Vector.o: $(FEN_DIR)/src/class_Vector.f90 class_Grid.o precision.o class_Scalar.o halo.o io.o

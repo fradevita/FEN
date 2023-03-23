@@ -25,8 +25,8 @@ contains
     real(dp) function circle(x, args)
 
         ! In/Out variables
-        real(dp), intent(in) :: x(2)
-        real(dp), intent(in) :: args(3)
+        real(dp), intent(in) :: x(:)
+        real(dp), intent(in) :: args(:)
 
         ! Local variables
         real(dp) :: xc, yc, radius
@@ -35,7 +35,7 @@ contains
         yc = args(2)
         radius = args(3)
 
-        circle = radius - sqrt( (x(1) - xc)**2 + (x(1) - yc)**2 )
+        circle = radius - sqrt( (x(1) - xc)**2 + (x(2) - yc)**2 )
 
     end function circle
     !==============================================================================================
