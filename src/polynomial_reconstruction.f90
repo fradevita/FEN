@@ -3,6 +3,7 @@
 module polynomial_reconstruction
 
     use precision, only : dp
+    use functions
 
     implicit none
 
@@ -20,12 +21,19 @@ module polynomial_reconstruction
  
     ! The matrix A has size mxn which depends on the polynomial order
     integer :: m, n
+    
+    ! The kernel size (ks) depends on the polynomial order
+    integer :: ks
+
+    ! Pointer to the polynomial function
+    procedure(function_procedure), pointer :: P => null()
 
     private
     public :: init
     public :: ap
+    public :: ks
     public :: get_coefficients
-    public :: P2nd
+    public :: P
     public :: destroy
 
 contains
@@ -47,9 +55,21 @@ contains
 
 
         ! Select matrix dimension based on polynomial order
-        if (order == 2) then
+        if (order == 1) then
+            m = 9
+            n = 3
+            ks = 1
+            P => P1st
+        elseif (order == 2) then
             m = 9
             n = 6
+            ks = 1
+            P => P2nd
+        elseif (order == 4) then
+            m = 25
+            n = 15
+            ks = 2
+            P => P4th
         else
             print *, 'ERROR: for now only 2nd order polynomial are allowd'
             stop
@@ -64,14 +84,24 @@ contains
   
         ! Build the matrix A
         row = 1
-        do j = -1,1
-           yc = base_grid%delta*real(j, dp)
-           do i = -1,1
-              xc = base_grid%delta*real(i, dp)
-              !          [ a00, a10, a20, a01, a11, a02]
-              A(row,:) = [1.0_dp, xc, xc**2, yc, xc*yc, yc**2]
-              row = row + 1
-           end do
+        do j = -ks,ks
+            yc = base_grid%delta*real(j, dp)
+            do i = -ks,ks
+                xc = base_grid%delta*real(i, dp)
+                
+                if (order == 1) then
+                    !          [ a00,  a10, a01]
+                    A(row,:) = [1.0_dp, xc, yc]
+                elseif (order == 2) then
+                    !          [ a00,  a10, a20,  a01,  a11,  a02]
+                    A(row,:) = [1.0_dp, xc, xc**2, yc, xc*yc, yc**2]
+                elseif (order == 4) then
+                    !          [ a00,  a10, a20,  a30,  a40,  a01, a11, a21, a32, a02, a12, a22, a03, a13, a04]
+                    A(row,:) = [1.0_dp, xc, xc**2, xc**3, xc**4, yc, xc*yc, xc**2*yc, xc**3*yc, yc**2, &
+                                xc*yc**2, xc**2*yc**2, yc**3, xc*yc**3, yc**4]
+                endif
+                row = row + 1
+            end do
         end do
   
         ! Compute tranpose of A
@@ -109,7 +139,7 @@ contains
     function get_coefficients(f) result(c)
  
         ! In/Out variables
-        real(dp), intent(in ) :: f(-1:1,-1:1)
+        real(dp), intent(in ) :: f(-ks:ks,-ks:ks)
         real(dp)              :: c(n)
   
         c = matmul(inv_ATAxAT, reshape(f, (/m/)))
@@ -118,7 +148,18 @@ contains
     !=====================================================================================
   
     !=====================================================================================
-     function P2nd(x, a) result(f)
+    function P1st(x, a) result(f)
+  
+        real(dp), intent(in) :: x(:), a(:)
+        real(dp)             :: f
+  
+        f = a(1) + a(2)*x(1) + a(3)*x(2)
+  
+    end function P1st
+    !=====================================================================================
+
+    !=====================================================================================
+    function P2nd(x, a) result(f)
   
         real(dp), intent(in) :: x(:), a(:)
         real(dp)             :: f
@@ -126,6 +167,20 @@ contains
         f = a(1) + a(2)*x(1) + a(3)*x(1)**2 + a(4)*x(2) + a(5)*x(1)*x(2) + a(6)*x(2)**2
   
     end function P2nd
+    !=====================================================================================
+
+    !=====================================================================================
+    function P4th(x, a) result(f)
+  
+        real(dp), intent(in) :: x(:), a(:)
+        real(dp)             :: f
+  
+        f = a(1) + a(2)*x(1) + a(3)*x(1)**2 + a(4)*x(1)**3 + a(5)*x(1)**4 + &
+            a(6)*x(2) + a(7)*x(1)*x(2) + a(8)*x(1)**2*x(2) + a(9)*x(1)**3*x(2) + &
+            a(10)*x(2)**2 + a(11)*x(1)*x(2)**2 + a(12)*x(1)**2*x(2)**2 + &
+            a(13)*x(2)**3 + a(14)*x(1)*x(2)**3 + a(15)*x(2)**4
+  
+    end function P4th
     !=====================================================================================
 
     !=====================================================================================

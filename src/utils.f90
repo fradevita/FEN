@@ -130,4 +130,25 @@ contains
     end function integrate_1D
     !========================================================================================
 
+    !========================================================================================
+    function urandom_seed(n, stat) result(seed)
+        
+        ! Routine taken from https://cyber.dabamos.de/programming/modernfortran/random-numbers.html
+
+        ! Returns a seed array filled with random values from `/dev/urandom`.
+        
+        integer, intent(in)            :: n
+        integer, intent(out), optional :: stat
+        integer                        :: seed(n)
+        integer                        :: fu, rc
+
+        open (access='stream', action='read', file='/dev/urandom', &
+              form='unformatted', iostat=rc, newunit=fu)
+        if (present(stat)) stat = rc
+        if (rc == 0) read (fu) seed
+        close (fu)
+
+    end function urandom_seed
+    !========================================================================================
+
 end module utils

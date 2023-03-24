@@ -52,7 +52,7 @@ class_Tensor.o: $(FEN_DIR)/src/class_Tensor.f90 class_Grid.o precision.o class_S
 class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o utils.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-polynomial_reconstruction.o: $(FEN_DIR)/src/polynomial_reconstruction.f90 precision.o class_Grid.o
+polynomial_reconstruction.o: $(FEN_DIR)/src/polynomial_reconstruction.f90 precision.o class_Grid.o functions.o
 	$(FC) $(FLAGS) -c $< -llapack
 
 eulerian_ibm.o: $(FEN_DIR)/src/eulerian_ibm.f90 precision.o class_Vector.o class_Grid.o class_Tensor.o class_eulerian_solid.o utils.o
