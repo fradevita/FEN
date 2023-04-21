@@ -47,7 +47,7 @@ program main
     ! Create the grid
     call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1, bc)
 
-    C = circle(X = [xc, yc, 0.0_dp], R = rc)
+    C = circle(X = [xc, yc, 0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp], R = rc)
     solid_list(1)%pS => C
 
     ! Setup eulerian fields for IBM

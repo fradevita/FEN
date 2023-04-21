@@ -56,7 +56,7 @@ program Pan
    g(1) = Deltap
 
    ! Create the solid body
-   C = circle(X = [0.5_dp, 0.4_dp, 0.0_dp], R = radius, name = 'Circle')
+   C = circle(X = [0.5_dp, 0.4_dp, 0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp], R = radius, name = 'Circle')
    allocate(Eulerian_Solid_list(1))
    Eulerian_Solid_list(1)%pS => C
    call C%load_surface_points('mesh.txt')
@@ -71,6 +71,7 @@ program Pan
    call set_timestep(dt, 1.0_dp)
 
    call print_setup_json(dt)
+   call save_fields(step)
 
    !==== Start Time loop ===================================================================
    time_loop: do while(time < 1.0e+3_dp)
@@ -88,6 +89,8 @@ program Pan
       if (base_grid%rank == 0) then
          call C%print_csv(time)
       endif
+
+      if (mod(step,100) == 0 ) call save_fields(step)
 
    end do time_loop
 

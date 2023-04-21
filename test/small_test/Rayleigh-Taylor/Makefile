@@ -1,6 +1,7 @@
 include $(FEN_DIR)/src/Makefile.defs
 
 override CNNFLAGS += -DMF
+override OPT += -O3
 
 code.e: $(SOURCE).o $(OBJ)
 	$(FC) $(FFLAGS) -o $@ $(SOURCE).o $(OBJ) $(LIBS)
