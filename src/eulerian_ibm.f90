@@ -185,8 +185,8 @@ contains
 
         end do dir_cycle
 
-   end subroutine tag_cells
-   !========================================================================================
+    end subroutine tag_cells
+    !========================================================================================
 
     !========================================================================================
     subroutine compute_ibm_forcing(v, RHS, solid_list, dt, F)
@@ -280,77 +280,77 @@ contains
     end subroutine compute_ibm_forcing
     !======================================================================================
 
-    ! !======================================================================================
-    ! subroutine forcing_velocity(v, solid_list, dt)
+    !======================================================================================
+    subroutine forcing_velocity(v, solid_list, dt)
 
-    !     ! Force the velocity field v based on the location of the solid body.
-    !     ! Use this function instead of compute_ibm_forcing
+        ! Force the velocity field v based on the location of the solid body.
+        ! Use this function instead of compute_ibm_forcing
     
-    !     use mpi
-    !     use class_Grid          , only : base_grid
-    !     use class_Vector
-    !     use class_Eulerian_Solid, only : Eulerian_Solid_pointer
+        use mpi
+        use class_Grid          , only : base_grid
+        use class_Vector
+        use class_Eulerian_Solid, only : Eulerian_Solid_pointer
     
-    !     ! In/Out variables
-    !     real(dp)    , intent(in   ) :: dt
-    !     type(vector), intent(inout) :: v
-    !     type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
+        ! In/Out variables
+        real(dp)    , intent(in   ) :: dt
+        type(vector), intent(inout) :: v
+        type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
     
-    !     ! Local variables
-    !     integer  :: i, j, k, b
-    !     real(dp) :: delta, x, y, z, vs
+        ! Local variables
+        integer  :: i, j, k, b
+        real(dp) :: delta, x, y, z, vs
     
-    !     delta = base_grid%delta
+        delta = base_grid%delta
         
-    !     do k = base_grid%lo(3),base_grid%hi(3)
-    !        do j = base_grid%lo(2),base_grid%hi(2)
-    !           do i = base_grid%lo(1),base_grid%hi(1)
+        do k = base_grid%lo(3),base_grid%hi(3)
+           do j = base_grid%lo(2),base_grid%hi(2)
+              do i = base_grid%lo(1),base_grid%hi(1)
     
-    !              ! Force x component of velocity
-    !              if (ibm_index(i,j,k,1) == 2) then
-    !                 ! Fluid point do nothing
-    !              elseif (ibm_index(i,j,k,1) == 1) then
-    !                 ! Interface point
-    !                 b = closest(i,j,k,1)
-    !                 vs = interpolate_velocity(i, j, k, v%x%f, solid_list(b)%pS, 1)
-    !                 v%x%f(i,j,k) = vs
-    !              else
-    !                 ! Solid point
-    !                 x = (i - 0.0_dp)*delta
-    !                 y = (j - 0.5_dp)*delta
-    !                 z = (k - 0.5_dp)*delta
-    !                 b = closest(i,j,k,1)
-    !                 vs = solid_list(b)%pS%velocity([x, y, z], 1)
-    !                 v%x%f(i,j,k) = vs
-    !              endif
+                 ! Force x component of velocity
+                 if (ibm_index(i,j,k,1) == 2) then
+                    ! Fluid point do nothing
+                 elseif (ibm_index(i,j,k,1) == 1) then
+                    ! Interface point
+                    b = closest(i,j,k,1)
+                    vs = interpolate_velocity(i, j, k, v%x%f, solid_list(b)%pS, 1)
+                    v%x%f(i,j,k) = vs
+                 else
+                    ! Solid point
+                    x = (i - 0.0_dp)*delta
+                    y = (j - 0.5_dp)*delta
+                    z = (k - 0.5_dp)*delta
+                    b = closest(i,j,k,1)
+                    vs = solid_list(b)%pS%velocity([x, y, z], 1)
+                    v%x%f(i,j,k) = vs
+                 endif
     
-    !              ! Force y component of velocity
-    !              if (ibm_index(i,j,k,2) == 2) then
-    !                 ! Fluid point, do nothing
-    !              elseif (ibm_index(i,j,k,2) == 1) then
-    !                 ! Interface point
-    !                 b = closest(i,j,k,2)
-    !                 vs = interpolate_velocity(i, j, k, v%y%f, solid_list(b)%pS, 2)
-    !                 v%y%f(i,j,k) = vs
-    !              else
-    !                 ! Solid point
-    !                 x = (i - 0.5_dp)*delta
-    !                 y = (j - 0.0_dp)*delta
-    !                 z = (k - 0.5_dp)*delta
-    !                 b = closest(i,j,k,2)
-    !                 vs = solid_list(b)%pS%velocity([x, y, z], 2)
-    !                 v%y%f(i,j,k) = vs
-    !              endif
+                 ! Force y component of velocity
+                 if (ibm_index(i,j,k,2) == 2) then
+                    ! Fluid point, do nothing
+                 elseif (ibm_index(i,j,k,2) == 1) then
+                    ! Interface point
+                    b = closest(i,j,k,2)
+                    vs = interpolate_velocity(i, j, k, v%y%f, solid_list(b)%pS, 2)
+                    v%y%f(i,j,k) = vs
+                 else
+                    ! Solid point
+                    x = (i - 0.5_dp)*delta
+                    y = (j - 0.0_dp)*delta
+                    z = (k - 0.5_dp)*delta
+                    b = closest(i,j,k,2)
+                    vs = solid_list(b)%pS%velocity([x, y, z], 2)
+                    v%y%f(i,j,k) = vs
+                 endif
     
-    !           end do
-    !        end do
-    !     end do
+              end do
+           end do
+        end do
     
-    !     ! Apply boundary conditions after forcing
-    !     call v%apply_bc
+        ! Apply boundary conditions after forcing
+        call v%apply_bc
         
-    ! end subroutine forcing_velocity
-    ! !======================================================================================
+    end subroutine forcing_velocity
+    !======================================================================================
     
     !======================================================================================
     function velocity_interpolation_2D(i, j, k, f, solid, dir) result(fl)
@@ -458,12 +458,12 @@ contains
 
         endif
 
-   end function velocity_interpolation_2D
-   !========================================================================================
+    end function velocity_interpolation_2D
+    !========================================================================================
 
 #if DIM==3
-   !========================================================================================
-   function velocity_interpolation_3D(i, j, k, f, solid, dir) result(fl)
+    !========================================================================================
+    function velocity_interpolation_3D(i, j, k, f, solid, dir) result(fl)
 
         ! This function compute the interpolated velocity component (f) on the forcing point
         ! with coordinates (i,j,k)

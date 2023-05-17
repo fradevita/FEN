@@ -103,7 +103,9 @@ contains
 
       ! Compute the predicted velocity field
       call predicted_velocity_field(dt)
-
+#ifdef IBM
+      call forcing_velocity(v, Eulerian_Solid_list, dt)
+#endif
       ! Solve Poisson equation
       call divergence(v, phi)
 #ifdef MF
@@ -142,9 +144,9 @@ contains
       use multiphase, only : p_hat, grad_p_hat, irhomin
       use class_Grid, only : base_grid
 #endif
-#ifdef IBM
-      use ibm       , only : compute_ibm_forcing, Fe
-#endif 
+!#ifdef IBM
+!      use ibm       , only : compute_ibm_forcing, Fe
+!#endif 
 
       ! In/Out variables
       real(dp), intent(in) :: dt
@@ -184,17 +186,19 @@ contains
 #endif
 #endif
 
-#ifdef IBM
+!NOTE: this method of applying the direct forcing gives problems with the probes.
+!      for now, use the forcing on the predicted velocity field (performed above) 
+!#ifdef IBM
       ! If using the Immersed Boundary Method evaluate the forcing vector field
-      call compute_ibm_forcing(v, RHS, dt, Fe)
+      !call compute_ibm_forcing(v, RHS, dt, Fe)
 
       ! and add it to the RHS of momentum
-      RHS%x%f = RHS%x%f + Fe%x%f
-      RHS%y%f = RHS%y%f + Fe%y%f
-#if DIM==3
-      RHS%z%f = RHS%z%f + Fe%z%f
-#endif
-#endif
+      !RHS%x%f = RHS%x%f + Fe%x%f
+      !RHS%y%f = RHS%y%f + Fe%y%f
+!#if DIM==3
+      !RHS%z%f = RHS%z%f + Fe%z%f
+!#endif
+!#endif
 
       ! Compute intermediate velocity field
       do k = base_grid%lo(3),base_grid%hi(3)
