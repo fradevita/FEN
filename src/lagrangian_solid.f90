@@ -1,26 +1,17 @@
 !> ! Define the lagrangian solid objects for the Immersed Boundary Method
 module lagrangian_solid
 
-    use precision, only : dp
+    use precision
+    use constants
+    use class_Marker
 
     implicit none
 
-    type marker
-        !< Base type to define a point
-        real(dp), dimension(:), allocatable :: X  !< Position vector
-        real(dp), dimension(:), allocatable :: V  !< Velocity vector
-        real(dp), dimension(:), allocatable :: A  !< Acceleration vector
-        real(dp), dimension(:), allocatable :: F  !< Generic  force vector
-        real(dp), dimension(:), allocatable :: Fe !< External force vector
-        real(dp), dimension(:), allocatable :: Fv !< Viscous  force vector
-        real(dp), dimension(:), allocatable :: Fp !< Pressure force vector
-        real(dp), dimension(:), allocatable :: Fi !< Internal force vector
-    end type marker
-
     ! Define the mass point type
     type, extends(marker) ::  mass_point
-        !< A mass point is a marker with a mass connected to one or more edges.                      
-        real(dp)                           :: m               !< Discrete inertial mass
+        !< A mass point is a marker with a mass connected to one or more edges.
+        real(dp)                           :: Fi(tdof) = 0.0_dp  !< Internal forces vector
+        real(dp)                           :: Fe(tdof) = 0.0_dp  !< External forces vector
         integer                            :: number_of_edges !< self exp.
         integer, dimension(:), allocatable :: edges_index     !< self exp.
     end type mass_point
@@ -50,21 +41,24 @@ module lagrangian_solid
         type(edge), allocatable       :: edges(:)                !< array of edges
         real(dp)                      :: Vol                     !< volume of the solid
         real(dp)                      :: rho                     !< density of the solid
-        real(dp)                      :: M(3) = 1.0_dp           !< inertial mass (applied to the center of mass)
+        real(dp)                      :: M(tdof+rdof) = 1.0_dp   !< inertial mass (applied to the center of mass)
         type(marker)                  :: center_of_mass          !< self exp.
-        real(dp)                      :: tra(2)                  !< rigid body traslation
-        real(dp)                      :: rot(1)                  !< rigid body rotation
+        real(dp)                      :: tra(tdof)               !< rigid body traslation
+        real(dp)                      :: rot(rdof)               !< rigid body rotation
         integer                       :: nsubsteps = 200         !< number of substep for the structural solver
         real(dp)                      :: ke                      !< elastic constant in-plane deformation
         real(dp)                      :: kb                      !< elastic constant for bending 
         real(dp)                      :: c = 0.0_dp              !< damping for the structural solver
-        integer                       :: outpit_file_id          !< id number for the output file
+        integer                       :: output_file_id          !< id number for the output file
         logical                       :: is_deformable = .false. !< flag for solving deformation
         logical                       :: is_open = .false.       !< flag for open structure
-        logical                       :: is_out = .false.        !< flag for checking if the solid is outside the domain  
+        logical                       :: is_out = .false.        !< flag for checking if the solid is outside the domain
+        character(len=99)             :: name = 'unset'          !< solid name
     contains
-        procedure :: create                       
-        procedure :: get_center_of_mass
+        procedure :: create
+        procedure :: get_center_of_mass                    
+        procedure :: update_center_of_mass
+        procedure :: rigid_body_motion
         procedure :: compute_internal_forces
         procedure :: integrate_hydrodynamic_forces
         procedure :: update_lagrangian_markers
@@ -85,21 +79,25 @@ module lagrangian_solid
     end interface
     procedure(constraints), pointer :: apply_constraints => Null()
 
+    type solid_pointer
+        class(solid), pointer :: pS => Null()
+    end type solid_pointer
+
 contains
 
     !========================================================================================
-    subroutine create(self, filename)
+    subroutine create(self, filename, name)
 
         ! This subroutine initialize the variables of the solid.
         ! The file filename must contains the location of the mass points.
 
         ! In/Out variables
-        class(solid)    , intent(inout), target :: self
-        character(len=*), intent(in   )         :: filename
+        class(solid)    , intent(inout), target   :: self
+        character(len=*), intent(in   )           :: filename
+        character(len=*), intent(in   ), optional :: name
 
         ! Local variables
         integer  :: fid, nl, io, n, l
-        real(dp) :: Xcm(2)
 
         ! Open the mesh file
         open(newunit = fid, file = filename)
@@ -122,18 +120,12 @@ contains
 
         ! Read the position of mass points
         do n = 1,self%number_of_mass_points
-            allocate(self%mass_points(n)%X(2))
-            read(fid,*) self%mass_points(n)%X(1), self%mass_points(n)%X(2)
+            
+            ! Allocate the mass point variables
+            call self%mass_points(n)%create(tdof) ! only traslational motion
 
-            ! Set other variables to zero
-            allocate(self%mass_points(n)%V(2))
-            self%mass_points(n)%V = 0.0_dp
-            allocate(self%mass_points(n)%A(2))
-            self%mass_points(n)%A = 0.0_dp
-            allocate(self%mass_points(n)%Fe(2))
-            self%mass_points(n)%Fe = 0.0_dp
-            allocate(self%mass_points(n)%Fi(2))
-            self%mass_points(n)%Fi = 0.0_dp
+            ! Read the position from file
+            read(fid,*) self%mass_points(n)%X
 
             ! Set the discrete mass of the point
             self%mass_points(n)%m = self%M(1)/self%number_of_mass_points
@@ -142,14 +134,8 @@ contains
 
         ! **** Setup Center of Mass ****
         ! Compute center of mass of the solid body
-        allocate(self%center_of_mass%X(3))
-        allocate(self%center_of_mass%V(3))
-        allocate(self%center_of_mass%A(3))
-        allocate(self%center_of_mass%F(3))
-        allocate(self%center_of_mass%Fv(3))
-        allocate(self%center_of_mass%Fp(3))
-        Xcm = self%get_center_of_mass()
-        self%center_of_mass%X(1:2) = [Xcm(1), Xcm(2)]
+        call self%center_of_mass%create(dofs)
+        call self%update_center_of_mass()
         
         ! **** Setup edges ****
         ! Set the number of edges
@@ -165,18 +151,20 @@ contains
         allocate(self%edges(self%number_of_edges))
 
         ! Initialize all edges
-        do l = 1,self%number_of_edges
+        do l = 1,self%number_of_edges - 1
             ! Each edge connect two masses, select the indexes
             self%edges(l)%mass_point_index = [l, l + 1]
             ! Each edge connect two masses, select the indexes
             self%edges(l)%x1 => self%mass_points(l)
             self%edges(l)%x2 => self%mass_points(l+1)
         end do
+        self%edges(l)%x1 => self%mass_points(l)
 
         ! Fix the last edge if the structure is closed
         if (self%is_open .eqv. .false.) then
             l = self%number_of_edges
             self%edges(l)%mass_point_index(2) = 1
+            self%edges(l)%x2 => self%mass_points(1)
         end if
 
         ! Setup edge variables
@@ -190,46 +178,62 @@ contains
             ! Compute the normal vector
             call self%edges(l)%update_norm()
 
-            allocate(self%edges(l)%C%X(3))
-            allocate(self%edges(l)%C%V(3))
-            allocate(self%edges(l)%C%A(3))
-            allocate(self%edges(l)%C%Fv(3))
-            allocate(self%edges(l)%C%Fp(3))
-            allocate(self%edges(l)%C%F(3))
+            ! Allocate centroid variables
+            call self%edges(l)%C%create(dofs)
 
             ! Compute the centroid
             call self%edges(l)%update_centroid()
-
-            ! Set velocity, acceleration and forces to zero
-            self%edges(l)%C%V = 0.0_dp
-            self%edges(l)%C%A = 0.0_dp
-            self%edges(l)%C%F = 0.0_dp
-            self%edges(l)%C%Fv = 0.0_dp
-            self%edges(l)%C%Fp = 0.0_dp
         end do
 
         ! Set the index of the mass points. By default consider the structure closed
         do n = 1,self%number_of_mass_points
             self%mass_points(n)%number_of_edges = 2
-            !allocate(self%mass_points(n)%edges_index(2))
-            !self%mass_points(n)%edges_index = [n - 1, n]
+            allocate(self%mass_points(n)%edges_index(2))
+            self%mass_points(n)%edges_index = [n - 1, n]
         end do
-        !self%mass_points(1)%edges_index(1) = self%number_of_edges
-        !self%mass_points(self%number_of_mass_points)%edges_index(2) = 1
+        self%mass_points(1)%edges_index(1) = self%number_of_edges
+        self%mass_points(self%number_of_mass_points)%edges_index(2) = 1
 
         ! If the solid is open, the first and last mass point have only one edge, fix it.
         if (self%is_open) then
-            !deallocate(self%mass_points(1)%edges_index)
+            deallocate(self%mass_points(1)%edges_index)
             self%mass_points(1)%number_of_edges = 1
-            !allocate(self%mass_points(1)%edges_index(1))
-            !self%mass_points(1)%edges_index(1) = 1
-            !deallocate(self%mass_points(self%number_of_mass_points)%edges_index)
+            allocate(self%mass_points(1)%edges_index(1))
+            self%mass_points(1)%edges_index(1) = 1
+            deallocate(self%mass_points(self%number_of_mass_points)%edges_index)
             self%mass_points(self%number_of_mass_points)%number_of_edges = 1
-            !allocate(self%mass_points(self%number_of_mass_points)%edges_index(1))
-            !self%mass_points(self%number_of_mass_points)%edges_index(1) = self%number_of_edges
+            allocate(self%mass_points(self%number_of_mass_points)%edges_index(1))
+            self%mass_points(self%number_of_mass_points)%edges_index(1) = self%number_of_edges
         end if
 
+        if (present(name)) self%name = name
+
+        ! Open output file
+        open(newunit = self%output_file_id, file = trim('data/'//self%name))
+
     end subroutine create
+    !========================================================================================
+
+    !========================================================================================
+    subroutine update_center_of_mass(self)
+
+        ! Find the center of mass location of the solid.
+
+        ! In/Out variables
+        class(solid), intent(inout) :: self
+
+        ! Local variables
+        integer  :: n
+        real(dp) :: Xcm(tdof)
+
+        Xcm = 0.0_dp
+        do n = 1,self%number_of_mass_points
+            Xcm = Xcm + self%mass_points(n)%X
+        end do
+
+        self%center_of_mass%X(1:tdof) = Xcm/real(self%number_of_mass_points, dp)
+
+    end subroutine
     !========================================================================================
 
     !========================================================================================
@@ -242,7 +246,7 @@ contains
 
         ! Local variables
         integer  :: n
-        real(dp) :: Xcm(2)
+        real(dp) :: Xcm(tdof)
 
         Xcm = 0.0_dp
         do n = 1,self%number_of_mass_points
@@ -419,18 +423,107 @@ contains
         integer :: l
 
         ! Hydrodynamic forces
-        self%center_of_mass%F  = 0.0_dp
+        self%center_of_mass%Fh = 0.0_dp
         self%center_of_mass%Fv = 0.0_dp
         self%center_of_mass%Fp = 0.0_dp
 
         ! Cycle over lagrangian markers
         do l = 1,self%number_of_edges
-            self%center_of_mass%F  = self%center_of_mass%F  + self%edges(l)%C%F
+            self%center_of_mass%Fh = self%center_of_mass%Fh + self%edges(l)%C%Fh
             self%center_of_mass%Fv = self%center_of_mass%Fv + self%edges(l)%C%Fv
             self%center_of_mass%Fp = self%center_of_mass%Fp + self%edges(l)%C%Fp
         end do
 
     end subroutine
+    !========================================================================================
+
+    !========================================================================================
+    subroutine rigid_body_motion(self, central_axis)
+
+        ! This subroutine moves the solid according to the value of the traslation and 
+        ! rotation array.
+
+        use io       , only : print_error_message
+        use constants, only : Ndim, tdof, rdof
+
+        ! In/Out variables
+        class(solid), intent(inout)           :: self
+        real(dp)   , intent(in   ), optional :: central_axis(tdof)
+
+        ! Local variables
+        integer  :: n, l
+        real(dp) :: R(Ndim,Ndim), rot_cen(tdof), d(tdof)
+
+#if DIM==3
+#else
+        ! Build rotation matrix
+        R(1,1) =  cos(self%rot(1))
+        R(1,2) = -sin(self%rot(1))
+        R(2,1) =  sin(self%rot(1))
+        R(2,2) =  cos(self%rot(1))
+
+        ! Set center of rotation
+        if (present(central_axis)) then
+            rot_cen = central_axis
+        else
+            rot_cen = self%center_of_mass%X
+        endif
+
+        ! First apply traslation and rotation to each mass point
+        do n = 1,self%number_of_mass_points
+
+            ! Apply traslation
+            self%mass_points(n)%X = self%mass_points(n)%X + self%tra
+
+            ! Distance from center of rotation
+            d = self%mass_points(n)%X - rot_cen
+
+            ! Apply rotation
+            self%mass_points(n)%X = rot_cen + matmul(R,d)
+
+        end do
+
+        ! When center of rotation is equal to center of mass, check that the center of mass 
+        ! location is preserved
+        if (present(central_axis))then
+            ! do nothing
+        else 
+            if (maxval(abs(self%center_of_mass%X - self%get_center_of_mass())) > 1.0e-13_dp) then
+                call print_error_message('ERROR: rigid mody motion do not preserve center of mass location')
+            endif
+        endif
+
+        ! Update lagrangian markers with new mass node position
+        call self%update_lagrangian_markers
+
+        ! Now compute velocity and acceleration on each lagrangian marker
+        do l = 1,self%number_of_edges
+
+            ! Distance between edge center and rotation center
+            d = self%edges(l)%C%X - rot_cen
+
+            ! Velocity of the lagrangian point n is given by
+            ! v = v_cm + omega x r
+            self%edges(l)%C%V(1) = self%center_of_mass%V(1) - self%center_of_mass%V(3)*d(2)
+            self%edges(l)%C%V(2) = self%center_of_mass%V(2) + self%center_of_mass%V(3)*d(1)
+
+            ! The angular velocity is the same
+            self%edges(l)%C%V(3) = self%center_of_mass%V(3)
+
+            ! Acceleration of the lagrangian marker l
+            ! a = a_cm + omega x (omega x r) + alpha x r
+            self%edges(l)%C%A(1) = self%center_of_mass%A(1) - d(1)*self%center_of_mass%V(3)**2 - &
+                                    self%center_of_mass%A(3)*d(2)
+            self%edges(l)%C%A(2) = self%center_of_mass%A(2) - d(2)*self%center_of_mass%V(3)**2 + &
+                                    self%center_of_mass%A(3)*d(1)
+
+            ! The angular acceleration is the same
+            self%edges(l)%C%A(3) = self%center_of_mass%A(3)
+
+        end do
+#endif
+
+    end subroutine rigid_body_motion
     !========================================================================================
 
     !========================================================================================
@@ -569,26 +662,25 @@ contains
     !========================================================================================
 
     !========================================================================================
-    subroutine write_csv(self, fid, time)
+    subroutine write_csv(self, time)
 
         ! In/Out variables
         class(solid), intent(in) :: self
-        integer     , intent(in) :: fid
         real(dp)    , intent(in) :: time
 
         ! If writing the first line write first the header
         if (time == 0.0_dp) then
-            write(fid,11) 't,x,y,theta,u,v,omega,ax,ay,alpha,Fsx,Fsy,Fpx,Fpy,Fx,Fy,Mz'
+            write(self%output_file_id,11) 't,x,y,theta,u,v,omega,ax,ay,alpha,Fsx,Fsy,Fpx,Fpy,Fx,Fy,Mz'
         endif
 11      format(A58)
 
-        write(fid,12) time, ",", &
+        write(self%output_file_id,12) time, ",", &
             self%center_of_mass%X(1) , ",", self%center_of_mass%X(2) , ",", self%center_of_mass%X(3), ",", &
             self%center_of_mass%V(1) , ",", self%center_of_mass%V(2) , ",", self%center_of_mass%V(3), ",", &
             self%center_of_mass%A(1) , ",", self%center_of_mass%A(2) , ",", self%center_of_mass%A(3), ",", &
             self%center_of_mass%Fv(1), ",", self%center_of_mass%Fv(2), ",", &
             self%center_of_mass%Fp(1), ",", self%center_of_mass%Fp(2), ",", &
-            self%center_of_mass%F(1) , ",", self%center_of_mass%F(2) , ",", self%center_of_mass%F(3)
+            self%center_of_mass%Fh(1), ",", self%center_of_mass%Fh(2), ",", self%center_of_mass%Fh(3)
 12      format(E16.8,16(A1,E16.8))
 
     end subroutine write_csv
@@ -628,12 +720,7 @@ contains
 
         deallocate(self%edges)
         deallocate(self%mass_points)
-        deallocate(self%center_of_mass%X)
-        deallocate(self%center_of_mass%V)
-        deallocate(self%center_of_mass%A)
-        deallocate(self%center_of_mass%F)
-        deallocate(self%center_of_mass%Fv)
-        deallocate(self%center_of_mass%Fp)
+        call self%center_of_mass%destroy
 
     end subroutine destroy
     !========================================================================================

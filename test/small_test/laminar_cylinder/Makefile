@@ -1,8 +1,8 @@
 include $(FEN_DIR)/src/Makefile.defs
 
-#override DBG += -Wall -g -fcheck=all --fpe-trap=invalid,zero,overflow
+override DBG += -Wall -g -fcheck=all --fpe-trap=invalid,zero,overflow
 override CNNFLAGS += -DIBM
-override OPT += -O3
+#override OPT += -O3
 
 code.e: $(SOURCE).o $(OBJ)
 	$(FC) $(FLAGS) -o $@ $(SOURCE).o $(OBJ) $(LIBS)

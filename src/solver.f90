@@ -91,13 +91,11 @@ contains
 #ifdef IBM
       block
             integer :: i
-            do i = 1,size(Eulerian_Solid_list)
-                  call Eulerian_Solid_list(i)%pS%setup()
-#ifdef FSI
-                  ! If solving for FSI add gravity to external forces
-                  Eulerian_Solid_list(i)%pS%eF(1:3) = g*Eulerian_Solid_list(i)%pS%mass
-#endif
-            end do
+            if (allocated(Eulerian_Solid_list)) then
+                  do i = 1,size(Eulerian_Solid_list)
+                        call Eulerian_Solid_list(i)%pS%setup()
+                  end do
+            end if
       end block
       call init_ibm
 #endif
