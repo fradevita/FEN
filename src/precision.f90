@@ -1,6 +1,6 @@
 !> This module contains the numerical storage size parameters for real and integer values
 !> (taken from: https://fortran-lang.org/en/learn/best_practices/floating_point/)
-module precision
+module precision_mod
 
   implicit none
   public
@@ -21,4 +21,4 @@ module precision
   !> Long length for integers, range -2⁶³ to 2⁶³-1; 64 bits
   integer, parameter :: i8 = selected_int_kind(18)
 
-end module precision
+end module

@@ -1,7 +1,7 @@
 !> This module contains some predefined physical constants.
-module constants
+module global_mod
 
-    use precision, only : dp
+    use precision_mod, only : dp
 
 #if DIM==3
     integer , parameter :: Ndim = 3                    !< For 3D simulations
@@ -13,7 +13,7 @@ module constants
     integer , parameter :: dofs = tdof + rdof          !< total degree of freedom
     real(dp), parameter :: pi = acos(-1.0_dp)          !< Pi grek
     real(dp), parameter :: gravity = 9.80665_dp        !< Acceleration of gravity
-    real(dp), parameter :: small = 1.0e-16_dp          !< Small positive number used to avoid divison by zero
+    real(dp), parameter :: small = 1.0e-14_dp          !< Small positive number
 
     !< Staggering of variables: indexes are: (index, location)
     ! index = i,j,k, the value of the staggering in each direction
@@ -23,4 +23,7 @@ module constants
                                                                 0.5_dp, 0.0_dp, 0.5_dp, &
                                                                 0.5_dp, 0.5_dp, 0.0_dp], shape(stagger))
 
-end module constants
+    integer :: myrank = 0
+    integer :: ierror
+
+end module

@@ -1,15 +1,14 @@
 #!/bin/bash
 
-echo "Running test field ..."
+echo "Running field test cases ..."
 
-make SOURCE=test_fields > compilation_log 2> compilation_warning
+mkdir -p ./.fmod ./.fobj
 
-mpirun -n 8 ./code.e > log 2> error.err
+echo "    runinng memory test ..."
+make SOURCE=memory.f90 > memor_compilation_log 2> memory_compilation_warnings
+valgrind --leak-check=full --show-leak-kinds=all -s ./run.e 2> memory_log
+grep 'HEAP' memory_log
+grep 'in use at exit' memory_log
+grep 'ERROR' memory_log
 
-NL=$(wc error.err | awk '{print $1}')
-if [[ $NL -gt 0 ]]
-then
-    echo "An error occured in the test field."
-else
-    echo "Test completed."
-fi
+

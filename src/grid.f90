@@ -1,17 +1,17 @@
 !> This module contains definitions and procedures for the class Grid.
-module class_Grid
+module grid_mod
 
     ! The class grid represent a computational grid over which solving governing equations.
     ! The grid class must contains information about: nodes location (logical and physical),
     ! boundary conditions (logical and physical) and parallel distribution.
 
-    use precision, only : dp
-    use constants, only : Ndim
+    use precision_mod, only : dp
+    use global_mod   , only : Ndim
 
     implicit none
 
     private
-    public :: bc_type, Grid, base_grid
+    public :: bc_type, grid, base_grid
 
     ! This type is necessary to have an array of strings of variable size.
     ! It is used to specify physical boundary conditions on the domain.
@@ -19,7 +19,7 @@ module class_Grid
         character(:), allocatable :: s
     end type bc_type
 
-    type Grid
+    type grid
         ! Total number of points
         integer :: Nx, Ny, Nz
 
@@ -56,44 +56,66 @@ module class_Grid
         procedure, pass(self) :: setup
         procedure, pass(self) :: closest_grid_node
         procedure, pass(self) :: destroy
-    end type Grid
+    end type grid
 
     ! Define a default base grid for the simulation.
     type(Grid) :: base_grid
 
 contains
 
-    !========================================================================================
+    !==============================================================================================
     subroutine setup(self, Nx, Ny, Nz, Lx, Ly, Lz, x0, prow, pcol, bc)
 
-        ! This subroutine setup all grid variables for the simulation
-
-        use decomp_2d, only : decomp_2d_init, nrank, nproc, xstart, xend, ystart, yend, zstart, zend
-        use io       , only : print_error_message
+        ! This subroutine setup all grid variables.
+        use global_mod, only : myrank
+#ifdef MPI
+        use decomp_2d , only : decomp_2d_init, nrank, nproc, xstart, xend, ystart, yend, zstart, zend
+#endif
+        use IO_mod    , only : print_error_message
 
         ! In/Out variables
-        class(grid)  , intent(inout) :: self
-        integer      , intent(in   ) :: Nx, Ny, Nz, prow, pcol
-        real(dp)     , intent(in   ) :: Lx, Ly, Lz, x0(3)
-        type(bc_type), intent(in   ) :: bc(:)
+        class(grid)  , intent(inout)           :: self
+        integer      , intent(in   )           :: Nx
+        integer      , intent(in   )           :: Ny
+        integer      , intent(in   )           :: Nz
+        integer      , intent(in   )           :: prow
+        integer      , intent(in   )           :: pcol
+        real(dp)     , intent(in   )           :: Lx
+        real(dp)     , intent(in   )           :: Ly
+        real(dp)     , intent(in   )           :: Lz
+        real(dp)     , intent(in   )           :: x0(3)
+        type(bc_type), intent(in   ), optional :: bc(:)
 
         ! Local variables
         integer :: i
         logical :: pbc(3)
 
         ! Set physical boundary condition on the grid
-        self%boundary_conditions = bc
+        ! By default use periodic BC on all boundarys
+        self%boundary_conditions(1)%s = 'Periodic'
+        self%boundary_conditions(2)%s = 'Periodic'
+        self%boundary_conditions(3)%s = 'Periodic'
+        self%boundary_conditions(4)%s = 'Periodic'
+#if DIM==3
+        self%boundary_conditions(5)%s = 'Periodic'
+        self%boundary_conditions(6)%s = 'Periodic'
+#endif
+        if (present(bc)) self%boundary_conditions = bc
         pbc = [.false., .false., .false.]
-        if (bc(1)%s == 'Periodic' .and. bc(2)%s == 'Periodic') then
+        if (self%boundary_conditions(1)%s == 'Periodic' .and. &
+            self%boundary_conditions(2)%s == 'Periodic') then
             pbc(1) = .true.
         endif
-        if (bc(3)%s == 'Periodic' .and. bc(4)%s == 'Periodic') then
+        if (self%boundary_conditions(3)%s == 'Periodic' .and. &
+            self%boundary_conditions(4)%s == 'Periodic') then
             pbc(2) = .true.
         endif
-        pbc(3) = .true.
+        pbc(3) = .true. ! For now only periodic BC in z is available.
 
+#ifdef MPI
         ! Create the domain decomposition with 2decomp
         call decomp_2d_init(Nx, Ny, Nz, prow, pcol, pbc)
+#endif
 
         ! Set the grid size
         self%Nx = Nx
@@ -111,13 +133,12 @@ contains
 
         ! Check that the spacing is equal in all directions
         if (Lx/float(Nx) .ne. Ly/float(Ny)) then
-            if (nrank == 0) then
+            if (myrank == 0) then
                 call print_error_message('The grid spacing must be equal in all directions')
                 call print_error_message('Aborting simulation ...')
             endif
 
             ! TODO **** call abort subroutine ****
-
         endif
 
         ! Set the cell-center grid value
@@ -135,26 +156,41 @@ contains
         end do
 
         ! Set the local grid size
+#ifdef MPI
         self%lo = xstart
         self%hi = xend
         self%lo_y = ystart
         self%hi_y = yend
         self%lo_z = zstart
         self%hi_z = zend
-
+#else
+        self%lo = [1,1,1]
+        self%hi = [Nx,Ny,Nz]
+        self%lo_y = self%lo
+        self%hi_y = self%hi
+        self%lo_z = self%lo
+        self%hi_z = self%hi
+#endif
         ! Set the periodicity
         self%periodic_bc = pbc
 
         ! Set the parallel variables
+#ifdef MPI
         self%rank = nrank
         self%nranks = nproc
         self%prow = prow
         self%pcol = pcol
+#else
+    self%rank = 0
+    self%nranks = 1
+    self%prow = 1
+    self%pcol = 1
+#endif
 
     end subroutine setup
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     function closest_grid_node(self, xl, ind) result(ie)
 
         ! This function returns indexes ie of the closest Eulerian point to the point xl.
@@ -164,10 +200,10 @@ contains
         ! 2 = y face
         ! 3 = z face
 
-        !use constants, only : stagger
+        !use global_mod, only : stagger
 
         ! In/Out variables
-        class(Grid), intent(in) :: self  !< Grid object
+        class(grid), intent(in) :: self  !< Grid object
         integer    , intent(in) :: ind   !< location on the cell
         real(dp)   , intent(in) :: xl(3) !< given points in the grid.
         integer                 :: ie(3) !< Output indexes
@@ -236,25 +272,33 @@ contains
 #endif
  
     end function closest_grid_node
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine destroy(self)
 
         ! Free the memory allocated by the grid obj.
-
+#ifdef MPI
         use decomp_2d, only : decomp_2d_finalize
-
+#endif
         ! In/Out variables
-        class(Grid), intent(inout) :: self
+        class(grid), intent(inout) :: self
 
         ! Free the memory allocate by the grid
         deallocate(self%x, self%y, self%z)
-
+        deallocate(self%boundary_conditions(1)%s)
+        deallocate(self%boundary_conditions(2)%s)
+        deallocate(self%boundary_conditions(3)%s)
+        deallocate(self%boundary_conditions(4)%s)
+#if DIM==3
+        deallocate(self%boundary_conditions(5)%s)
+        deallocate(self%boundary_conditions(6)%s)
+#endif
+#ifdef MPI
         ! Free the memory of the lib 2decomp
         call decomp_2d_finalize
-
+#endif
     end subroutine destroy
-    !========================================================================================
+    !==============================================================================================
 
-end module class_Grid
+end module
