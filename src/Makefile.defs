@@ -16,7 +16,7 @@ override OPT=#-O3
 override CPPDEFS+=-cpp
 override FLAGS = $(BIG) $(DBG) $(PROF) $(OPT) $(CPPDEFS) -J$(MDIR) -I$(MDIR)
 
-# Select all request object by the SOURCE
+# Select all objects request by the SOURCE
 ifeq "$(SOURCE)" ""
 	SOBJ =
 	COBJ =
@@ -40,6 +40,22 @@ target: run.e
 # Rule for the executable run.e
 run.e: $(SOURCE) $(SOBJ)
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -o $@ $(SOURCE) $(ODIR)/* $(LIBS)
+
+# Rule for poisson module
+poisson.o: $(SRC)/poisson.f90 precision.o global.o grid.o scalar.o IO.o
+	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for fields module
+fields.o: $(SRC)/fields.f90 precision.o grid.o scalar.o vector.o tensor.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for tensor module
+tensor.o: $(SRC)/tensor.f90 precision.o grid.o vector.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for vector module
+vector.o: $(SRC)/vector.f90 precision.o grid.o scalar.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for scalar module
 scalar.o: $(SRC)/scalar.f90 precision.o grid.o halo.o IO.o function.o
@@ -73,23 +89,12 @@ global.o: $(SRC)/global.f90 precision.o
 precision.o: $(SRC)/precision.f90
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
-# class_Scalar.o: $(FEN_DIR)/src/class_Scalar.f90 class_Grid.o precision.o halo.o io.o functions.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# class_Vector.o: $(FEN_DIR)/src/class_Vector.f90 class_Grid.o precision.o class_Scalar.o halo.o io.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# class_Tensor.o: $(FEN_DIR)/src/class_Tensor.f90 class_Grid.o precision.o class_Scalar.o class_Vector.o halo.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
 # class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o utils.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 # class_Marker.o: $(FEN_DIR)/src/class_Marker.f90 precision.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-# lagrangian_solid.o: $(FEN_DIR)/src/lagrangian_solid.f90 precision.o utils.o class_Marker.o constants.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 # mls.o: $(FEN_DIR)/src/mls.f90 precision.o class_Grid.o constants.o class_Scalar.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
@@ -106,11 +111,6 @@ precision.o: $(SRC)/precision.f90
 # ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o eulerian_ibm.o lagrangian_solid.o lagrangian_ibm.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-# fields.o: $(FEN_DIR)/src/fields.f90 precision.o class_Grid.o class_Scalar.o class_Vector.o class_Tensor.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# Poisson.o: $(FEN_DIR)/src/Poisson.f90 precision.o class_Grid.o class_Scalar.o io.o constants.o 
-# 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
 
 # volume_of_fluid.o: $(FEN_DIR)/src/volume_of_fluid.f90 precision.o class_Scalar.o class_Vector.o io.o constants.o io.o utils.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<

@@ -17,6 +17,7 @@ then
 else
     echo "        memory test completed."
 fi
+make clean > /dev/null
 
 echo "    runinng methods test ..."
 make SOURCE=methods.f90 > methods_compilation_log 2> methods_compilation_warnings

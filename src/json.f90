@@ -7,8 +7,8 @@ contains
   !========================================================================================
   subroutine print_setup_json(dt)
 
-    use precision , only : dp
-    use class_Grid, only : base_grid
+    use precision_mod , only : dp
+    use grid_mod, only : base_grid
 
     ! In/Out variables
     real(dp), intent(in) :: dt

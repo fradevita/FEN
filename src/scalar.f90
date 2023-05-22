@@ -14,26 +14,37 @@ module scalar_mod
     public :: scalar
 
     ! Boundary Condition structure
-    ! BC type can be: Periodic, Dirichlet, Neumann
+    ! BC type can be: Periodic, Dirichlet, Neumann, Halo
     ! Legend:
-    ! 0: Periodic
-    ! 1: Dirichlet
-    ! 2: Neumann
+    ! -1: Halo
+    !  0: Periodic
+    !  1: Dirichlet
+    !  2: Neumann
     type field_bc
-        integer                               :: type_l, type_r, type_t, type_b
-        real(dp), dimension(:,:), allocatable :: l, r, t, b
+        integer               :: type_left   !< Left boundary bc type (x = 0)
+        integer               :: type_right  !< Right boundary bc type (x = Lx)
+        integer               :: type_bottom !< Bottom boundary bc type (y = 0)
+        integer               :: type_top    !< Top boundary bc type (y = Ly)
+        real(dp), allocatable :: left(:,:)   !< Left boundary bc value
+        real(dp), allocatable :: right(:,:)  !< Rright boundary bc value
+        real(dp), allocatable :: bottom(:,:) !< Bottom boundary bc value
+        real(dp), allocatable :: top(:,:)    !< Top boundary bc value
 #if DIM==3
-        integer                               :: type_f, type_e
-        real(dp), dimension(:,:), allocatable :: f, e
+        integer               :: type_front  !< Front boundary bc type (z = 0)
+        integer               :: type_back   !< Back boundary bc type (z = Lz)
+        real(dp), allocatable :: front(:,:)  !< Front boundary bc value
+        real(dp), allocatable :: back(:,:)   !< Back boundary bc value
 #endif
     end type field_bc
 
     type scalar
         !< scalar class
-        real(dp), allocatable :: f(:,:,:)    !< Array for the field values
-        integer               :: gl = 0      !< Number of ghost nodes per side
-        type(grid), pointer   :: G => Null() !< Pointer to the grid where the scalar is defined
-        type(field_bc)        :: bc          !< Boundary condition data structure
+        real(dp), allocatable :: f(:,:,:)       !< Array for the field values
+        integer               :: gl = 0         !< Number of ghost nodes per side
+        type(grid), pointer   :: G => Null()    !< Pointer to the grid where the scalar is defined
+        type(field_bc)        :: bc             !< Boundary condition data structure
+        character(1)          :: c = 'c'        !< scalar location in the grid cell (by default cell center)
+        character(len=99)     :: name = 'unset' !< scalar name
     contains
         procedure, pass(self) :: allocate           !< allocate memory
         procedure, pass(self) :: set_from_function  !< set scalar from given function
@@ -41,7 +52,7 @@ module scalar_mod
         procedure, pass(self) :: max_value          !< compute maximum scalar value
         procedure, pass(self) :: integral           !< compute scalar integral
         procedure, pass(self) :: write              !< write scalar to file
-        procedure, pass(self) :: destroy
+        procedure, pass(self) :: destroy            !< free the memory allocated by the scalar
     end type scalar
 
 contains
@@ -67,39 +78,53 @@ contains
                         G%lo(2) - self%gl:G%hi(2) + self%gl, &
                         G%lo(3) - self%gl:G%hi(3) + self%gl))
 
-        ! Set the field to zero
+        ! Set the field value to zero
         self%f = 0.0_dp
 
         ! If using ghost node
         if (self%gl > 0) then
             ! Allocate the boundary conditions array
-            allocate(self%bc%l(G%lo(2)-self%gl:G%hi(2)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
-            allocate(self%bc%r(G%lo(2)-self%gl:G%hi(2)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
-            allocate(self%bc%t(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
-            allocate(self%bc%b(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
+            allocate(self%bc%left(G%lo(2)-self%gl:G%hi(2)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
+            allocate(self%bc%right(G%lo(2)-self%gl:G%hi(2)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
+            allocate(self%bc%top(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
+            allocate(self%bc%bottom(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(3)-self%gl:G%hi(3)+self%gl))
 #if DIM==3
-            allocate(self%bc%f(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(2)-self%gl:G%hi(2)+self%gl))
-            allocate(self%bc%e(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(2)-self%gl:G%hi(2)+self%gl))
+            allocate(self%bc%front(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(2)-self%gl:G%hi(2)+self%gl))
+            allocate(self%bc%back(G%lo(1)-self%gl:G%hi(1)+self%gl,G%lo(2)-self%gl:G%hi(2)+self%gl))
 #endif
 
             ! Set bc to zero by default
-            self%bc%l = 0.0_dp
-            self%bc%r = 0.0_dp
-            self%bc%t = 0.0_dp
-            self%bc%b = 0.0_dp
+            self%bc%left = 0.0_dp
+            self%bc%right = 0.0_dp
+            self%bc%top = 0.0_dp
+            self%bc%bottom = 0.0_dp
 #if DIM==3
-            self%bc%f = 0.0_dp
-            self%bc%e = 0.0_dp
+            self%bc%front = 0.0_dp
+            self%bc%back = 0.0_dp
 #endif
 
             ! Set bc type periodic by default
-            self%bc%type_l = 0
-            self%bc%type_r = 0
-            self%bc%type_t = 0
-            self%bc%type_b = 0
+            self%bc%type_left = 0
+            self%bc%type_right = 0
+            self%bc%type_top = 0
+            self%bc%type_bottom = 0
 #if DIM==3
-            self%bc%type_f = 0
-            self%bc%type_e = 0
+            self%bc%type_front = 0
+            self%bc%type_back = 0
+#endif
+
+#ifdef MPI
+            ! Search for internal boundaries
+            if (self%G%prow > 1) then
+                if (self%G%lo(2) /= 1) self%bc%type_bottom = -1
+                if (self%G%hi(2) /= self%G%Ny) self%bc%type_top = -1 
+            endif
+#if DIM==3
+            if (self%G%pcol > 1) then
+                if (self%G%lo(3) > 1) self%bc%type_front = -1
+                if (self%G%hi(3) < self%G%Nz) self%bc%type_back = -1 
+            endif
+#endif
 #endif
         endif
 
@@ -185,13 +210,18 @@ contains
     subroutine update_ghost_nodes(self)
 
         ! This subroutine update ghost nodes for the scalar s.
+
+        ! TODO: For now it is assumed that parallel blocks are aligned with x direction and can be 
+        !       splitted in y and z (pencil decomposition with 2decomp). This should be extended
+        !       to apply other kinds of domain decomposition.
+
 #ifdef MPI
         use mpi
         use global_mod, only : ierror
         use halo_mod  , only : update_halos
 
 #endif
-        use IO_mod  , only : print_error_message
+        use IO_mod    , only : print_error_message
 
         ! In/Out variables
         class(scalar), intent(inout) :: self !< input scalar
@@ -209,83 +239,93 @@ contains
 #endif
 
         ! Left Boundary
-        if (self%bc%type_l == 0) then ! Periodic
+        if (self%bc%type_left == 0) then ! Periodic
             do l = 1,self%gl
                 self%f(lo(1)-l,:,:) = self%f(hi(1)-l+1,:,:)
             end do
-        elseif (self%bc%type_l == 1) then ! Dirichlet
-            self%f(lo(1)-1,:,:) = 2.0_dp*self%bc%l(:,:) - self%f(lo(1),:,:)
-        elseif (self%bc%type_l == 2) then ! Neumann
+        elseif (self%bc%type_left == 1) then ! Dirichlet
+            if (self%c == 'c' .or. self%c == 'y' .or. self%c == 'z') then
+                self%f(lo(1)-1,:,:) = 2.0_dp*self%bc%left(:,:) - self%f(lo(1),:,:)
+            elseif (self%c == 'x') then 
+                self%f(lo(1)-1,:,:) = self%bc%left
+            else
+                call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name))
+            endif
+        elseif (self%bc%type_left == 2) then ! Neumann
             self%f(lo(1)-1,:,:) = self%f(lo(1),:,:)
         else
-            call print_error_message('ERROR: wrong left boundary condition type for scalar s')
+            call print_error_message('ERROR: wrong left boundary condition type for scalar '//trim(self%name))
         endif
 
         ! Right Boundary
-        if (self%bc%type_r == 0) then ! Periodic
+        if (self%bc%type_right == 0) then ! Periodic
             do l = 1,self%gl
                 self%f(hi(1)+l,:,:) = self%f(lo(1)+l-1,:,:)
             end do
-        elseif (self%bc%type_r == 1) then ! Dirichlet
-            self%f(hi(1)+1,:,:) = 2.0_dp*self%bc%r(:,:) - self%f(hi(1),:,:)
-        elseif (self%bc%type_r == 2) then ! Neumann
+        elseif (self%bc%type_right == 1) then ! Dirichlet
+            if (self%c == 'c' .or. self%c == 'y' .or. self%c == 'z') then
+                self%f(hi(1)+1,:,:) = 2.0_dp*self%bc%right(:,:) - self%f(hi(1),:,:)
+            elseif (self%c == 'x') then
+                self%f(hi(1)  ,:,:) = self%bc%right(:,:)
+                self%f(hi(1)+1,:,:) = self%bc%right(:,:)
+            else
+                call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name))
+            endif
+        elseif (self%bc%type_right == 2) then ! Neumann
             self%f(hi(1)+1,:,:) = self%f(hi(1),:,:)
         else
             call print_error_message('ERROR: wrong rigth boundary condition type for scalar s')
         endif
 
         ! Bottom Boundary
-        if (lo(2) == 1) then
-            if (self%bc%type_b == 0) then ! Periodic
-                ! When using 2decomp decomposition this ghost nodes is updated automatically
-                ! Must be overwritten only when using 1 proc
-#ifdef MPI
-                if (self%G%prow == 1) then
-                    do l = 1,self%gl
-                        self%f(:,lo(2)-1,:) = self%f(:,hi(2),:)
-                    end do
-                endif
-#else
+        if (self%bc%type_bottom == 0) then ! Periodic
+            ! When using 2decomp decomposition this ghost nodes are updated automatically
+            ! Must be overwritten only when using 1 proc
+            if (self%G%prow == 1) then
                 do l = 1,self%gl
                     self%f(:,lo(2)-1,:) = self%f(:,hi(2),:)
                 end do
-#endif
-            elseif (self%bc%type_b == 1) then ! Dirichlet
-                self%f(:,lo(2)-1,:) = 2.0_dp*self%bc%b(:,:) - self%f(:,lo(2),:)
-            elseif (self%bc%type_b == 2) then ! Neumann
-                self%f(:,lo(2)-1,:) = self%f(:,lo(2),:)
-            else
-                call print_error_message('ERROR: wrong bottom boundary condition type for scalar s')
             endif
+        elseif (self%bc%type_bottom == 1) then ! Dirichlet
+            if (self%c == 'c' .or. self%c == 'x' .or. self%c == 'z') then
+                self%f(:,lo(2)-1,:) = 2.0_dp*self%bc%bottom(:,:) - self%f(:,lo(2),:)
+            elseif (self%c == 'y') then
+                self%f(:,lo(2)-1,:) = self%bc%bottom
+            else
+                call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name))
+            endif
+        elseif (self%bc%type_bottom == 2) then ! Neumann
+                self%f(:,lo(2)-1,:) = self%f(:,lo(2),:)
+        else
+            call print_error_message('ERROR: wrong bottom boundary condition type for scalar s')
         endif
-
+        
         ! Top Boundary
-        if (hi(2) == self%G%Ny) then
-            if (self%bc%type_t == 0) then ! Periodic
-                ! When using 2decomp decomposition this ghost nodes is updated automatically
-                ! Must be overwritten only when using 1 proc
-#ifdef MPI
-                if (self%G%prow == 1) then
-                    do l = 1,self%gl
-                        self%f(:,hi(2)+1,:) = self%f(:,lo(2),:)
-                    end do
-                endif
-#else
+        if (self%bc%type_top == 0) then ! Periodic
+            ! When using 2decomp decomposition this ghost nodes is updated automatically
+            ! Must be overwritten only when using 1 proc
+            if (self%G%prow == 1) then
                 do l = 1,self%gl
                     self%f(:,hi(2)+1,:) = self%f(:,lo(2),:)
                 end do
-#endif
-            elseif (self%bc%type_t == 1) then ! Dirichlet
-                self%f(:,hi(2)+1,:) = 2.0_dp*self%bc%t(:,:) - self%f(:,hi(2),:)
-            elseif (self%bc%type_t == 2) then ! Neumann
-                self%f(:,hi(2)+1,:) = self%f(:,hi(2),:)
-            else
-                call print_error_message('ERROR: wrong top boundary condition type for scalar s')
             endif
+        elseif (self%bc%type_top == 1) then ! Dirichlet
+            if (self%c == 'c' .or. self%c == 'x' .or. self%c == 'z') then
+                self%f(:,hi(2)+1,:) = 2.0_dp*self%bc%top(:,:) - self%f(:,hi(2),:)
+            elseif (self%c == 'y') then
+               self%f(:,hi(2)  ,:) = self%bc%top
+               self%f(:,hi(2)+1,:) = self%bc%top
+            else
+                call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name)) 
+            endif
+        elseif (self%bc%type_top == 2) then ! Neumann
+                self%f(:,hi(2)+1,:) = self%f(:,hi(2),:)
+        else
+            call print_error_message('ERROR: wrong top boundary condition type for scalar s')
         endif
 
 #if DIM==3
-        if (base_grid%pcol == 1) then
+        if (self%G%pcol == 1) then
             self%f(:,:,lo(3)-1) = self%f(:,:,hi(3))
             self%f(:,:,hi(3)+1) = self%f(:,:,lo(3))
         end if
@@ -322,10 +362,12 @@ contains
         ! Free all memory allocated by the scalar s
         deallocate(self%f)
 
-        if (self%gl > 0) deallocate(self%bc%l, self%bc%r, self%bc%t, self%bc%b)
+        if (self%gl > 0) deallocate(self%bc%left, self%bc%right, self%bc%top, self%bc%bottom)
 #if DIM==3
-        if (self%gl > 0) deallocate(self%bc%f, self%bc%e)
+        if (self%gl > 0) deallocate(self%bc%front, self%bc%back)
 #endif
+
+        self%G => Null()
 
     end subroutine destroy
     !==============================================================================================

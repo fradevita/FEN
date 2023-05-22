@@ -14,7 +14,7 @@ else:
     display = 1
 
 # Plot for the first test
-data = np.genfromtxt('error_NN')
+data = np.genfromtxt('error_nn')
 N = data[:,0]
 emax = data[:,1]
 
@@ -50,7 +50,7 @@ if (display): plt.show()
 plt.close()
 
 # Plot for the second test
-data = np.genfromtxt('error_PP')
+data = np.genfromtxt('error_pp')
 N = data[:,0]
 emax = data[:,1]
 
@@ -86,7 +86,7 @@ if (display): plt.show()
 plt.close()
 
 # Plot for the third test
-data = np.genfromtxt('error_PN')
+data = np.genfromtxt('error_pn')
 N = data[:,0]
 emax = data[:,1]
 
@@ -122,7 +122,7 @@ if (display): plt.show()
 plt.close()
 
 # Plot for the 3D test
-data = np.genfromtxt('error_PPP')
+data = np.genfromtxt('error_ppp')
 N = data[:,0]
 emax = data[:,1]
 

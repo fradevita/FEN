@@ -208,7 +208,7 @@ contains
         real(dp)   , intent(in) :: xl(3) !< given points in the grid.
         integer                 :: ie(3) !< Output indexes
 
-        real(dp) :: stagger(2)
+        real(dp) :: stagger(Ndim)
 
 !         select case (ind)
 !         case(0)

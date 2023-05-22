@@ -27,7 +27,7 @@ program methods
     ! Create the scalar
     call s%allocate(G, 1)
 
-     ! Initialize the scalar field s
+    ! Initialize the scalar field s
     do k = G%lo(3),G%hi(3)
         z = (float(k) - 0.5_dp)*G%delta
         do j = G%lo(2),G%hi(2)
