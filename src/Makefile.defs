@@ -41,6 +41,14 @@ target: run.e
 run.e: $(SOURCE) $(SOBJ)
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -o $@ $(SOURCE) $(ODIR)/* $(LIBS)
 
+# Rule for lagrangian solid module
+lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for marker module
+marker.o: $(SRC)/marker.f90 precision.o
+	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
+
 # Rule for poisson module
 poisson.o: $(SRC)/poisson.f90 precision.o global.o grid.o scalar.o IO.o
 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $< -o $(ODIR)/$@
@@ -92,10 +100,6 @@ precision.o: $(SRC)/precision.f90
 # class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o utils.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-# class_Marker.o: $(FEN_DIR)/src/class_Marker.f90 precision.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-
 # mls.o: $(FEN_DIR)/src/mls.f90 precision.o class_Grid.o constants.o class_Scalar.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
@@ -110,7 +114,6 @@ precision.o: $(SRC)/precision.f90
 
 # ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o eulerian_ibm.o lagrangian_solid.o lagrangian_ibm.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
 
 # volume_of_fluid.o: $(FEN_DIR)/src/volume_of_fluid.f90 precision.o class_Scalar.o class_Vector.o io.o constants.o io.o utils.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<

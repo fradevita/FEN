@@ -1,11 +1,13 @@
 !> ! Define the lagrangian solid objects for the Immersed Boundary Method
-module lagrangian_solid
+module lagrangian_solid_mod
 
-    use precision
-    use constants
-    use class_Marker
+    use precision_mod
+    use global_mod
+    use marker_mod
 
     implicit none
+    private
+    public :: solid, mass_point
 
     ! Define the mass point type
     type, extends(marker) ::  mass_point
@@ -54,6 +56,7 @@ module lagrangian_solid
         logical                       :: is_open = .false.       !< flag for open structure
         logical                       :: is_out = .false.        !< flag for checking if the solid is outside the domain
         character(len=99)             :: name = 'unset'          !< solid name
+        procedure(constraints), pass(self), pointer :: apply_constraints => Null()
     contains
         procedure :: create
         procedure :: get_center_of_mass                    
@@ -69,15 +72,16 @@ module lagrangian_solid
         procedure :: velocity_verlet
         procedure :: write_csv
         procedure :: destroy
+        
     end type solid
 
-    interface
+    abstract interface
         subroutine constraints(self)
             import solid
-            type(solid), intent(inout) :: self
+            class(solid), intent(inout) :: self
         end subroutine constraints
     end interface
-    procedure(constraints), pointer :: apply_constraints => Null()
+    !procedure(constraints), pointer :: apply_constraints => Null()
 
     type solid_pointer
         class(solid), pointer :: pS => Null()
@@ -158,10 +162,14 @@ contains
             self%edges(l)%x1 => self%mass_points(l)
             self%edges(l)%x2 => self%mass_points(l+1)
         end do
-        self%edges(l)%x1 => self%mass_points(l)
 
-        ! Fix the last edge if the structure is closed
-        if (self%is_open .eqv. .false.) then
+        ! Fix the last edge
+        if (self%is_open) then
+            l = self%number_of_edges
+            self%edges(l)%x1 => self%mass_points(l)
+            self%edges(l)%x2 => self%mass_points(l+1)
+            self%edges(l)%mass_point_index = [l, l + 1]
+        else
             l = self%number_of_edges
             self%edges(l)%mass_point_index(2) = 1
             self%edges(l)%x2 => self%mass_points(1)
@@ -350,7 +358,7 @@ contains
         class(solid), intent(inout) :: self
 
         ! Local variables
-        integer    :: n, l, i_mp1, i_mp2, np1, nm1
+        integer    :: n, l, np1, nm1
         real(dp)   :: r12(2), r21(2), d1(2), d2(2), fac, prefac, fac1, fac2, C(2,2)
         type(edge) :: l_edge
 
@@ -443,8 +451,8 @@ contains
         ! This subroutine moves the solid according to the value of the traslation and 
         ! rotation array.
 
-        use io       , only : print_error_message
-        use constants, only : Ndim, tdof, rdof
+        use IO_mod     , only : print_error_message
+        use global_mod , only : Ndim, tdof, rdof
 
         ! In/Out variables
         class(solid), intent(inout)           :: self
@@ -538,8 +546,8 @@ contains
         ! Local variables
         integer :: l
 
-        if (associated(apply_constraints)) then
-            call apply_constraints(self)
+        if (associated(self%apply_constraints)) then
+            call self%apply_constraints()
         endif
 
         do l = 1,self%number_of_edges
@@ -562,7 +570,7 @@ contains
     !========================================================================================
     function get_potential_energy(self) result(Ep)
 
-        use utils, only : clamp
+        use utils_mod, only : clamp
 
         ! In/Out variables
         class(solid), intent(in) :: self
@@ -725,4 +733,4 @@ contains
     end subroutine destroy
     !========================================================================================
 
-end module lagrangian_solid
+end module

@@ -1,7 +1,7 @@
 !< Module to define the marker derived type.
-module class_Marker
+module marker_mod
 
-    use precision, only : dp
+    use precision_mod, only : dp
 
     implicit none
 

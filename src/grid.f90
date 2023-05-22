@@ -52,9 +52,12 @@ module grid_mod
         ! (prow x pcol)
         integer :: rank, nranks, prow, pcol
 
+        character(len=99) :: name = 'unste'
+
     contains
         procedure, pass(self) :: setup
         procedure, pass(self) :: closest_grid_node
+        procedure, pass(self) :: print_json
         procedure, pass(self) :: destroy
     end type grid
 
@@ -181,10 +184,10 @@ contains
         self%prow = prow
         self%pcol = pcol
 #else
-    self%rank = 0
-    self%nranks = 1
-    self%prow = 1
-    self%pcol = 1
+        self%rank = 0
+        self%nranks = 1
+        self%prow = 1
+        self%pcol = 1
 #endif
 
     end subroutine setup
@@ -272,6 +275,37 @@ contains
 #endif
  
     end function closest_grid_node
+    !==============================================================================================
+
+    !==============================================================================================
+    subroutine print_json(self)
+
+        class(grid), intent(in) :: self
+
+        integer           :: out_id
+        character(len=99) :: filename
+
+        filename = trim(self%name)//'.json'
+#ifdef MPI
+        if (myrank == 0) then
+#endif
+        open(newunit = out_id, file = filename)
+        write(out_id,'(A1)') '{'
+        write(out_id,'(4x,A9)') '"Grid": {'
+        write(out_id,'(8x,A6,1x,I7,A1)') '"Nx": ', self%Nx, ','
+        write(out_id,'(8x,A6,1x,I7,A1)') '"Ny": ', self%Ny, ','
+        write(out_id,'(8x,A6,1x,I7,A1)') '"Nz": ', self%Nz, ','
+        write(out_id,'(8x,A11,1x,E16.8,A1,E16.8,A1,E16.8,A2)') '"origin": [', &
+           self%origin(1), ',', self%origin(2), ',', self%origin(3), '],'
+        write(out_id,'(8x,A6,1x,E16.8,A1)') '"Lx": ', self%Lx, ','
+        write(out_id,'(8x,A6,1x,E16.8,A1)') '"Ly": ', self%Ly, ','
+        write(out_id,'(8x,A6,1x,E16.8)'   ) '"Lz": ', self%Lz
+        write(out_id,'(4x,A3)') '},'
+#ifdef MPI
+        end if
+#endif
+
+    end subroutine
     !==============================================================================================
 
     !==============================================================================================

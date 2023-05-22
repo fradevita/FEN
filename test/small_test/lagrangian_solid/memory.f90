@@ -1,6 +1,6 @@
-program mem_test
+program memory
 
-    use lagrangian_solid
+    use lagrangian_solid_mod
 
     type(solid), target :: test_solid
     
@@ -9,4 +9,4 @@ program mem_test
     
     call test_solid%destroy()
 
-end program mem_test
+end program
