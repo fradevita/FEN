@@ -96,7 +96,7 @@ contains
         self%y%x%f = self%x%y%f
 #if DIM==3
         self%x%z%f = 0.5_dp*(temp%x%z%f + temp%z%x%f)
-        self%z%x%f = T%x%z%f
+        self%z%x%f = temp%x%z%f
         self%y%z%f = 0.5_dp*(temp%y%z%f + temp%z%y%f)
         self%z%y%f = self%y%z%f
 #endif

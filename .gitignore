@@ -1,3 +1,6 @@
 .vscode
 .fmod
 commit.txt
+**/.fmod
+**/.fobj
+**/.objects

@@ -19,10 +19,8 @@ override FLAGS = $(BIG) $(DBG) $(PROF) $(OPT) $(CPPDEFS) -J$(MDIR) -I$(MDIR)
 # Select all objects request by the SOURCE
 ifeq "$(SOURCE)" ""
 	SOBJ =
-#	COBJ =
 else
 	SOBJ := $(shell python3 $(SRC)/get_objects.py $(SOURCE))
-#	COBJ := $(shell python3 $(SRC)/get_compiled_objects.py $(SOURCE))
 endif
 
 # Libraries dir
@@ -140,4 +138,4 @@ precision.o: $(SRC)/precision.f90
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 clean:
-	rm -rf $(ODIR)/*.o $(MDIR)/*.mod .objects run.e *_compilation_log *_compilation_warnings
+	rm -rf $(ODIR)/*.o $(MDIR)/*.mod .objects run.e *compilation_log *compilation_warnings

@@ -982,30 +982,44 @@ contains
 #endif
 
 #ifdef MPI
-            ! Search for internal boundaries
-            if (comp_grid%prow > 1) then
-                if (comp_grid%lo(2) /= 1) then
-                    p%bc%type_bottom = -1
-                    phi%bc%type_bottom = -1
-                    rho%bc%type_bottom = -1
-                    mu%bc%type_bottom = -1
-                    v%x%bc%type_bottom = -1
-                    v%y%bc%type_bottom = -1
-                endif
-                if (comp_grid%hi(2) /= comp_grid%Ny) then
-                    p%bc%type_top = -1
-                    phi%bc%type_top = -1
-                    rho%bc%type_top = -1
-                    mu%bc%type_top = -1
-                    v%x%bc%type_top = -1
-                    v%y%bc%type_top = -1
-                endif 
+        ! Search for internal boundaries
+        if (comp_grid%prow > 1) then
+            if (comp_grid%lo(2) /= 1) then
+                p%bc%type_bottom = -1
+                phi%bc%type_bottom = -1
+                rho%bc%type_bottom = -1
+                mu%bc%type_bottom = -1
+                v%x%bc%type_bottom = -1
+                v%y%bc%type_bottom = -1
             endif
+            if (comp_grid%hi(2) /= comp_grid%Ny) then
+                p%bc%type_top = -1
+                phi%bc%type_top = -1
+                rho%bc%type_top = -1
+                mu%bc%type_top = -1
+                v%x%bc%type_top = -1
+                v%y%bc%type_top = -1
+            endif 
+        endif
 #if DIM==3
-            if (comp_grid%pcol > 1) then
-                if (self%G%lo(3) > 1) self%bc%type_front = -1
-                if (self%G%hi(3) < self%G%Nz) self%bc%type_back = -1 
+        if (comp_grid%pcol > 1) then
+            if (comp_grid%lo(3) /= 1) then
+                p%bc%type_front = -1
+                phi%bc%type_front = -1
+                rho%bc%type_front = -1
+                mu%bc%type_front = -1
+                v%x%bc%type_front = -1
+                v%y%bc%type_front = -1
             endif
+            if (comp_grid%hi(2) /= comp_grid%Ny) then
+                p%bc%type_back = -1
+                phi%bc%type_back = -1
+                rho%bc%type_back = -1
+                mu%bc%type_back = -1
+                v%x%bc%type_back = -1
+                v%y%bc%type_back = -1
+            endif 
+        endif
 #endif
 #endif
 
