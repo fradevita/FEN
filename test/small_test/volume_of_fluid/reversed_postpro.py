@@ -19,18 +19,17 @@ else:
 ###############################################################################
 # READ SETUP FILE
 ###############################################################################
-setup_file = open('setup.json')
-setup = json.load(setup_file)
+grid = json.load(open('unset.json'))
 
 # Setup Grid
-Nx = setup["Grid"]["Nx"]
-Ny = setup["Grid"]["Ny"]
-Nz = setup["Grid"]["Nz"]
-Lx = setup["Grid"]["Lx"]
-Ly = setup["Grid"]["Ly"]
-Lz = setup["Grid"]["Lz"]
-x0 = setup["Grid"]["origin"][0]
-y0 = setup["Grid"]["origin"][1]
+Nx = grid["Grid"]["Nx"]
+Ny = grid["Grid"]["Ny"]
+Nz = grid["Grid"]["Nz"]
+Lx = grid["Grid"]["Lx"]
+Ly = grid["Grid"]["Ly"]
+Lz = grid["Grid"]["Lz"]
+x0 = grid["Grid"]["origin"][0]
+y0 = grid["Grid"]["origin"][1]
 dx = Lx/Nx
 dy = Ly/Ny
 assert(dx == dy)

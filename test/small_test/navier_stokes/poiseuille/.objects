@@ -1,7 +1,0 @@
-IO.o
-global.o
-precision.o
-grid.o
-scalar.o
-solver.o
-navier_stokes.o

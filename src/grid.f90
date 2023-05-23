@@ -187,6 +187,8 @@ contains
         self%pcol = 1
 #endif
 
+        call self%print_json
+
     end subroutine setup
     !==============================================================================================
 
