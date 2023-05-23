@@ -40,7 +40,7 @@ run.e: $(SOURCE) $(SOBJ)
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -o $@ $(SOURCE) $(ODIR)/* $(LIBS)
 
 # Rule for solver module
-solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o volume_of_fluid.o multiphase.o# fsi.o
+solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o volume_of_fluid.o multiphase.o ibm.o fsi.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for multiphase module
@@ -53,8 +53,24 @@ volume_of_fluid.o: $(SRC)/volume_of_fluid.f90 precision.o global.o scalar.o vect
 
 # Rule for navier_stokes module
 navier_stokes.o: $(SRC)/navier_stokes.f90 precision.o global.o grid.o scalar.o vector.o tensor.o fields.o poisson.o \
-                volume_of_fluid.o multiphase.o# non_newtonian.o ibm.o
+                volume_of_fluid.o multiphase.o ibm.o # non_newtonian.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for fsi module
+fsi.o: $(SRC)/fsi.f90 precision.o grid.o ibm.o navier_stokes.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for ibm module
+ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for lagrangian_ibm module
+lagrangian_ibm.o: $(SRC)/lagrangian_ibm.f90 precision.o grid.o global.o mls.o scalar.o vector.o lagrangian_solid.o
+	$(FC) $(FLAGS) -c $< -o$(ODIR)/$
+
+# RUle for the mls module
+mls.o: $(SRC)/mls.f90 precision.o grid.o global.o scalar.o
+	$(FC) $(FLAGS) -c $< -o$(ODIR)/$@
 
 # Rule for lagrangian solid module
 lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o
@@ -115,25 +131,13 @@ precision.o: $(SRC)/precision.f90
 # class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o utils.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-# mls.o: $(FEN_DIR)/src/mls.f90 precision.o class_Grid.o constants.o class_Scalar.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# lagrangian_ibm.o: $(FEN_DIR)/src/lagrangian_ibm.f90 precision.o class_Grid.o constants.o mls.o class_Scalar.o class_Vector.o lagrangian_solid.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
 # polynomial_reconstruction.o: $(FEN_DIR)/src/polynomial_reconstruction.f90 precision.o class_Grid.o functions.o
 # 	$(FC) $(FLAGS) -c $< -llapack
 
 # eulerian_ibm.o: $(FEN_DIR)/src/eulerian_ibm.f90 precision.o class_Vector.o class_Grid.o class_Tensor.o class_eulerian_solid.o utils.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-# ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o eulerian_ibm.o lagrangian_solid.o lagrangian_ibm.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
 # non_newtonian.o: $(FEN_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o class_Tensor.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# fsi.o: $(FEN_DIR)/src/fsi.f90 precision.o class_eulerian_solid.o eulerian_ibm.o navier_stokes.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 clean:

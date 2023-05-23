@@ -50,7 +50,7 @@ module grid_mod
 
         ! Local rank (rank), total number of ranks (nranks), parallel grid 
         ! (prow x pcol)
-        integer :: rank, nranks, prow, pcol
+        integer :: rank = 0, nranks = 1, prow = 1, pcol = 1
 
         character(len=99) :: name = 'unset'
 
@@ -195,14 +195,14 @@ contains
     !==============================================================================================
     function closest_grid_node(self, xl, ind) result(ie)
 
-        ! This function returns indexes ie of the closest Eulerian point to the point xl.
-        ! Ind is an integer index used to select the node location:
+        ! This function returns indexes ie of the closest grid point to the point xl.
+        ! Ind is an integer index used to select the node location in the cell grid:
         ! 0 = cell center
         ! 1 = x face
         ! 2 = y face
         ! 3 = z face
 
-        !use global_mod, only : stagger
+        use global_mod, only : stagger
 
         ! In/Out variables
         class(grid), intent(in) :: self  !< Grid object
@@ -210,69 +210,13 @@ contains
         real(dp)   , intent(in) :: xl(3) !< given points in the grid.
         integer                 :: ie(3) !< Output indexes
 
-        real(dp) :: stagger(Ndim)
-
-!         select case (ind)
-!         case(0)
-!              stagger = 0.0_dp
-!         case(1)
-!             stagger = [base_grid%delta*0.5_dp, 0.0_dp]
-!         case(2)
-!             stagger = [0.0_dp, base_grid%delta*0.5_dp]
-!         end select
-
-
-
-!         if (ind == 0) then
-!             ! self%x is already the proper location
-!             ie(1) = minloc(abs(self%x(1:base_grid%Nx) - xl(1)),1)
-!             ie(2) = minloc(abs(self%y(1:base_grid%Ny) - xl(2)),1)
-!             ie(3) = 1
-! #if DIM==3
-!             ie(3) = minloc(abs(self%z(1:base_grid%Nz) - xl(3)),1)
-! #endif
-
-!         else
-!             !ie(1) = minloc(abs(self%x(1:base_grid%Nx) - stagger(1, ind)*self%delta - xl(1)),1)
-!             !ie(2) = minloc(abs(self%y(1:base_grid%Ny) - stagger(2, ind)*self%delta - xl(2)),1)
-!             ie(1) = minloc(abs(self%x(1:base_grid%Nx) - [stagger(1)*self%delta,0.0_dp,0.0_dp] - xl(1)),1)
-!             ie(2) = minloc(abs(self%y(1:base_grid%Ny) - [0.0_dp,stagger(2)*self%delta,0.0_dp] - xl(2)),1)
-!             ie(3) = 1
-! #if DIM==3
-!             !ie(3) = minloc(abs(self%z(1:base_grid%Nz) - stagger(3, ind)*self%delta - xl(3)),1)
-! #endif
-!         endif
-
-        select case (ind)
-        case(0)
-          stagger = 0.0_dp
-        case(1)
+        ie(1) = minloc(abs(self%x(1:self%Nx) + stagger(1, ind)*self%delta - xl(1)),1)
+        ie(2) = minloc(abs(self%y(1:self%Ny) + stagger(2, ind)*self%delta - xl(2)),1)
+        ie(3) = 1
 #if DIM==3
-          stagger = [self%delta*0.5_dp, 0.0_dp, 0.0_dp]
-#else
-          stagger = [self%delta*0.5_dp, 0.0_dp]
+        ie(3) = minloc(abs(self%z(1:self%Nz) + stagger(3, ind)*self%delta - xl(3)),1)
 #endif
-        case(2)
-#if DIM==3
-          stagger = [0.0_dp, self%delta*0.5_dp, 0.0_dp]
-#else
-          stagger = [0.0_dp, self%delta*0.5_dp]
-#endif
- 
-#if DIM==3
-        case(3)
-          stagger = [0.0_dp, 0.0_dp, self%delta*0.5_dp]
-#endif
-        case default
-!        call print_error_message('ERROR IN CLOSEST GRID NODE')
-       end select
- 
-       ie(1) = minloc(abs(self%x(1:self%Nx) + stagger(1) - xl(1)),1)
-       ie(2) = minloc(abs(self%y(1:self%Ny) + stagger(2) - xl(2)),1)
-#if DIM==3
-       ie(3) = minloc(abs(self%z(1:self%Nz) + stagger(3) - xl(3)),1)
-#endif
- 
+
     end function closest_grid_node
     !==============================================================================================
 

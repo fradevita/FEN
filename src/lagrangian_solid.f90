@@ -7,7 +7,7 @@ module lagrangian_solid_mod
 
     implicit none
     private
-    public :: solid, mass_point
+    public :: solid, mass_point, solid_pointer, edge
 
     ! Define the mass point type
     type, extends(marker) ::  mass_point
@@ -171,6 +171,7 @@ contains
             self%edges(l)%mass_point_index = [l, l + 1]
         else
             l = self%number_of_edges
+            self%edges(l)%x1 => self%mass_points(l)
             self%edges(l)%mass_point_index(2) = 1
             self%edges(l)%x2 => self%mass_points(1)
         end if
@@ -474,7 +475,7 @@ contains
         if (present(central_axis)) then
             rot_cen = central_axis
         else
-            rot_cen = self%center_of_mass%X
+            rot_cen = self%center_of_mass%X(1:tdof)
         endif
 
         ! First apply traslation and rotation to each mass point
@@ -712,8 +713,8 @@ contains
 
         open(newunit = out_id, file = filename)
         do l = 1,self%number_of_edges
-            write(out_id,*) self%mass_points(self%edges(l)%mass_point_index(1))%X
-            write(out_id,*) self%mass_points(self%edges(l)%mass_point_index(2))%X
+            write(out_id,*) self%edges(l)%x1%X
+            write(out_id,*) self%edges(l)%x2%X
             write(out_id,*) ''
         end do
         close(out_id)

@@ -62,7 +62,7 @@ contains
         use multiphase_mod     , only : p_hat, p_o, rhomin
 #endif
 #ifdef IBM
-        use ibm
+        use ibm_mod
 #endif
 
         ! In/Out variables

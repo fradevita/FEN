@@ -32,41 +32,41 @@ popt, _ = curve_fit(objective, np.log(N), np.log(emax))
 a, b = popt
 
 if (-a > 1.8):
-  print('Convergence rate for f(1) is second order.')
+  print('        Convergence rate for f(1) is second order.')
 else:
-  print('The convergence rate of the mls interpolation is less than second order')
+  print('        The convergence rate of the mls interpolation is less than second order')
 
 popt, _ = curve_fit(objective, np.log(N), np.log(exmax))
 c, d = popt
 
 if (-c > 1.8):
-  print('Convergence rate for derivative in x with f(2) is second order.')
+  print('        Convergence rate for derivative in x with f(2) is second order.')
 else:
-  print('Convergence rate for derivative in x with f(2) is less than second order.')
+  print('        Convergence rate for derivative in x with f(2) is less than second order.')
 
 popt, _ = curve_fit(objective, np.log(N), np.log(eymax))
 e, f = popt
 
 if (-e > 1.8):
-  print('Convergence rate for derivative in y with f(3) is second order.')
+  print('        Convergence rate for derivative in y with f(3) is second order.')
 else:
-  print('Convergence rate for derivative in y with f(3) is less than second order.')
+  print('        Convergence rate for derivative in y with f(3) is less than second order.')
 
 popt, _ = curve_fit(objective, np.log(N), np.log(efxmax))
 g, h = popt
 
 if (-g > 1.8):
-  print('Convergence rate for derivative in x with finite difference is second order.')
+  print('        Convergence rate for derivative in x with finite difference is second order.')
 else:
-  print('Convergence rate for derivative in x with finite difference is less than second order.')
+  print('        Convergence rate for derivative in x with finite difference is less than second order.')
 
 popt, _ = curve_fit(objective, np.log(N), np.log(efymax))
 i, l = popt
 
 if (-i > 1.8):
-  print('Convergence rate for derivative in y with finite difference is second order.')
+  print('        Convergence rate for derivative in y with finite difference is second order.')
 else:
-  print('Convergence rate for derivative in x with finite difference is less than second order.')
+  print('        Convergence rate for derivative in x with finite difference is less than second order.')
   
 # Plot
 scaling = np.zeros(np.size(N))

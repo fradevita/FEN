@@ -48,11 +48,11 @@ contains
         use volume_of_fluid_mod, only : allocate_vof_fields, get_vof_from_distance, vof, advect_vof
 #endif
 #ifdef IBM
-        use ibm
+        use ibm_mod
 #endif
 #ifdef FSI
         use navier_stokes_mod, only : g
-        use fsi
+        use fsi_mod
 #endif
         ! In/out variables
         type(grid), intent(in   ) :: comp_grid
@@ -94,15 +94,15 @@ contains
         advect_interface => advect_vof
 #endif
 #ifdef IBM
-        block
-            integer :: i
-            if (allocated(Eulerian_Solid_list)) then
-                do i = 1,size(Eulerian_Solid_list)
-                    call Eulerian_Solid_list(i)%pS%setup()
-                end do
-            end if
-        end block
-        call init_ibm
+        ! block
+        !     integer :: i
+        !     if (allocated(Eulerian_Solid_list)) then
+        !         do i = 1,size(Eulerian_Solid_list)
+        !             call Eulerian_Solid_list(i)%pS%setup()
+        !         end do
+        !     end if
+        ! end block
+        call init_ibm(comp_grid)
 #endif
 
     end subroutine init_solver
@@ -150,7 +150,10 @@ contains
         use navier_stokes_mod, only : phi, destroy_navier_stokes_solver
 #ifdef MF
         use volume_of_fluid_mod, only : destroy_vof
-        use multiphase_mod     , only : p_o, p_hat, grad_p_hat 
+        use multiphase_mod     , only : p_o, p_hat, grad_p_hat
+#endif
+#ifdef ibm
+        use ibm_mod
 #endif
 
         call destroy_poisson_solver(phi)
@@ -160,6 +163,9 @@ contains
         call p_hat%destroy()
         call grad_p_hat%destroy()
         call p_o%destroy()
+#endif
+#ifdef ibm
+        call destroy_ibm()
 #endif
 
     end subroutine destroy_solver

@@ -1,12 +1,13 @@
-module lagrangian_ibm
+module lagrangian_ibm_mod
 
     ! This module contains all procedures for the Lagrangian Immersed Boundary Method
     ! using the Mooving-Least-Square method. The main procedures for the IBM are
     ! the forcing of the velocity field and the computation of the hydrodynamic loads.
 
-    use precision       , only : dp
-    use class_Vector
-    use lagrangian_solid, only : solid
+    use precision_mod       , only : dp
+    use grid_mod
+    use vector_mod
+    use lagrangian_solid_mod, only : solid
 
     implicit none
 
@@ -22,15 +23,16 @@ module lagrangian_ibm
 contains
 
     !========================================================================================
-    subroutine init_ibm
+    subroutine init_ibm(comp_grid)
 
         ! This subroutine initialize the variables of the module
-        use class_Grid, only : base_grid
 
-        call F%allocate(1)
+        type(grid), intent(in) :: comp_grid
+
+        call F%allocate(comp_grid, 1)
 
         ! By default set the distance of the probe to 1.2 dx
-        h_probe = 1.2_dp*base_grid%delta
+        h_probe = 1.2_dp*comp_grid%delta
 
     end subroutine init_ibm
     !========================================================================================
@@ -39,10 +41,9 @@ contains
     subroutine forcing_velocity(v, solid_array, dt)
 
         use mpi
-        use constants       , only : Ndim
-        use class_Grid      , only : base_grid
-        use mls             , only : Ne, interpolate, phi
-        use lagrangian_solid, only : edge, solid_pointer
+        use global_mod          , only : Ndim
+        use mls_mod             , only : Ne, interpolate, phi
+        use lagrangian_solid_mod, only : edge, solid_pointer
 
         ! In/Out variables
         real(dp)    , intent(in   ) :: dt
@@ -77,11 +78,11 @@ contains
                     lm = l_edge%C%X
 
                     ! If the point is outside the domain translate it
-                    lm = translate(lm)
+                    lm = traslate(lm, v%G)
 
                     ! **** X ****
                     ! Find the closest Eulerain u node to lm
-                    ie = base_grid%closest_grid_node([lm(1), lm(2), 0.0_dp], 1)
+                    ie = v%G%closest_grid_node([lm(1), lm(2), 0.0_dp], 1)
 
                     ! Interpolate u on the lagrangian marker lm
                     Vl = interpolate(v%x, lm, ie, 1)
@@ -91,12 +92,12 @@ contains
                     Fl = (l_edge%C%V(1) - Vl(1))/dt
 
                     ! Compute the scaling factor, eq. 20 of de Tullio & Pascazio JCP 2016.
-                    c = l_edge%l/base_grid%delta
+                    c = l_edge%l/v%G%delta
 
                     ! Transfer the Lagrangian force to Eulerian force,
                     ! eq (18) of de Tullio & Pascazio JCP 2016.
                     ! Select the rank containing the Eulerian point
-                    if (ie(2) >= base_grid%lo(2) .and. ie(2) <= base_grid%hi(2)) then
+                    if (ie(2) >= v%G%lo(2) .and. ie(2) <= v%G%hi(2)) then
                         q = 1
                         do sj = -1,1
                             jj = ie(2) + sj
@@ -110,7 +111,7 @@ contains
 
                     ! **** Y ****
                     ! Find the closest Eulerain v node to lm
-                    ie = base_grid%closest_grid_node([lm(1), lm(2), 0.0_dp], 2)
+                    ie = v%G%closest_grid_node([lm(1), lm(2), 0.0_dp], 2)
 
                     ! Interpolate v on the lagrangian marker lm
                     Vl = interpolate(v%y, lm, ie, 2)
@@ -121,7 +122,7 @@ contains
 
                     ! Transfer Lagrangian force to Eulerian force,
                     ! eq (18) of de Tullio & Pascazio JCP 2016.
-                    if (ie(2) >= base_grid%lo(2) .and. ie(2) <= base_grid%hi(2)) then
+                    if (ie(2) >= v%G%lo(2) .and. ie(2) <= v%G%hi(2)) then
                         q = 1
                         do sj = -1,1
                             jj = ie(2) + sj
@@ -138,7 +139,7 @@ contains
                 ! Apply eulerian force to the velocity field due to solid body b
                 v%x%f = v%x%f + F%x%f*dt
                 v%y%f = v%y%f + F%y%f*dt
-                call v%apply_bc()
+                call v%update_ghost_nodes()
 
             end do forcing_cycle
 
@@ -153,10 +154,9 @@ contains
         ! Compute hydrodynamic loads on solid obj given by the velocity field v, pressure
         ! field p, of the flow with viscosity mu, density rho and body force g.
 
-        use constants       , only : Ndim, tdof
-        use class_Grid      , only : base_grid
-        use class_Scalar
-        use lagrangian_solid, only : solid, edge
+        use global_mod          , only : Ndim, tdof
+        use scalar_mod
+        use lagrangian_solid_mod, only : solid, edge
 
         ! In/Out variables
         real(dp)    , intent(in   )         :: g(2)
@@ -216,7 +216,7 @@ contains
             l_edge%C%Fh(1) = l_edge%C%Fv(1) + l_edge%C%Fp(1)
             l_edge%C%Fh(2) = l_edge%C%Fv(2) + l_edge%C%Fp(2)
             
-            ! Moment around Xcm
+            ! Torque around Xcm
             l_edge%C%Fh(3) = -l_edge%C%Fh(1)*(l_edge%C%X(2) - Xcm(2)) + &
                               l_edge%C%Fh(2)*(l_edge%C%X(1) - Xcm(1))
         end do
@@ -225,7 +225,7 @@ contains
         ! on the mass point is given by the weigthed average between the froces on the
         ! lagragian markers using as weight the size of the edges.
         do n = 1,obj%number_of_mass_points
-            obj%mass_points(n)%Fe = 0.0_dp
+            obj%mass_points(n)%Fh = 0.0_dp
             sum_l = 0.0_dp
             do l = 1,obj%mass_points(n)%number_of_edges
                 obj%mass_points(n)%Fh = obj%mass_points(n)%Fh + &
@@ -250,11 +250,10 @@ contains
         ! duplication between positive and negative norm direction 
 
         use mpi
-        use constants
-        use class_Grid      , only : base_grid
-        use class_Scalar
-        use lagrangian_solid, only : edge
-        use mls             , only : interpolate
+        use global_mod          , only : Ndim, ierror
+        use scalar_mod
+        use lagrangian_solid_mod, only : edge
+        use mls_mod             , only : interpolate
 
         ! In/Out variables
         type(solid) , intent(in   ) :: obj        
@@ -268,7 +267,7 @@ contains
         integer     , intent(in   ) :: probe_sign
 
         ! Local variables
-        integer    :: l, ie(3), ierror
+        integer    :: l, ie(3)
         real(dp)   :: X_probe(Ndim), Ul(Ndim+1), Vl(Ndim+1), ppl(Ndim+1)
         type(edge) :: l_edge
         
@@ -288,32 +287,32 @@ contains
             X_probe = l_edge%C%X + l_edge%n*h_probe*probe_sign
 
             ! Check periodicity and in case translate it
-            X_probe = translate(X_probe)
+            X_probe = traslate(X_probe, v%G)
 
             ! **** U ****
             ! Find the closest Eulerian u node to the probe
-            ie = base_grid%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 1)
+            ie = v%G%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 1)
 
             ! Interpolate u and its derivatives on the probe
             Ul = interpolate(v%x, X_probe, ie, 1)
 
             ! **** V ****
             ! Find the closest Eulerian v node to the probe
-            ie = base_grid%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 2)
+            ie = v%G%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 2)
 
             ! Interpolate v and its derivatives on the probe
             Vl = interpolate(v%y, X_probe, ie, 2)
 
             ! **** P ****
             ! Find the closest Eulerian p node
-            ie = base_grid%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 0)
+            ie = v%G%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 0)
 
             ! Interpolate u and its derivatives on the probe
             ppl = interpolate(p, X_probe, ie, 0)
 
             ! Compute pressure on the Lagrangian marker
             ! eq. 46 of de Tullio and Pascazio JCP 2016.
-            if (ie(2) >= base_grid%lo(2) .and. ie(2) <= base_grid%hi(2)) then
+            if (ie(2) >= v%G%lo(2) .and. ie(2) <= v%G%hi(2)) then
                 pl(l) = ppl(1) + h_probe*((l_edge%C%A(1) - g(1))*l_edge%n(1)  + &
                                           (l_edge%C%A(2) - g(2))*l_edge%n(2)) * &
                                            rho%f(ie(1),ie(2),1)*probe_sign
@@ -344,15 +343,16 @@ contains
     !==============================================================================================
 
     !========================================================================================
-    subroutine advance_structure(obj, step, dt, g, density)
+    subroutine advance_structure(obj, step, dt, g, density, comp_grid)
 
         ! This subroutine perform one timestep of the structural solver
-        use constants
+        use global_mod
 
         ! In/Out varialbes
         integer    , intent(in   ) :: step
         real(dp)   , intent(in   ) :: dt, g(:), density
-        type(solid), intent(inout) :: obj
+        type(solid), intent(inout) :: obj        
+        type(grid) , intent(in   ) :: comp_grid
 
         ! Local variables
         integer  :: n, substep
@@ -406,7 +406,7 @@ contains
 
             ! Save traslation and rotation
             obj%tra = Xnp1(1:tdof) - obj%center_of_mass%X(1:tdof)
-            obj%rot = Xnp1(tdof+1:tdof+1:rdof)   - obj%center_of_mass%X(tdof+1:tdof+1:rdof)
+            obj%rot = Xnp1(tdof+1:tdof+1:rdof) - obj%center_of_mass%X(tdof+1:tdof+1:rdof)
 
             ! Update solution
             obj%center_of_mass%V = Vnp1
@@ -418,41 +418,40 @@ contains
         endif
 
         ! Check if the body is outside of the domain and in case traslate it
-        call check_periodicity(obj)
+        call check_periodicity(obj, comp_grid)
 
     end subroutine advance_structure
     !========================================================================================
 
     !========================================================================================
-    function translate(X) result(X1)
+    function traslate(X, comp_grid) result(X1)
 
-        use constants , only : Ndim
-        use class_Grid, only : base_grid
+        use global_mod , only : Ndim
 
         ! In/out variables
-        real(dp), intent(in) :: X(Ndim)
-        real(dp)             :: X1(Ndim)
+        type(grid), intent(in) :: comp_grid
+        real(dp)  , intent(in) :: X(Ndim)
+        real(dp)               :: X1(Ndim)
 
         X1 = X
 
-        if (base_grid%periodic_bc(1) .eqv. .true.) then
-            if (X(1) > base_grid%Lx) then
-                X1(1) = X(1) - base_grid%Lx
-            elseif (X(1) < base_grid%origin(1)) then
-                X1(1) = X(1) + base_grid%Lx
+        if (comp_grid%periodic_bc(1) .eqv. .true.) then
+            if (X(1) >= comp_grid%Lx) then
+                X1(1) = X(1) - comp_grid%Lx
+            elseif (X(1) <= comp_grid%origin(1)) then
+                X1(1) = X(1) + comp_grid%Lx
             endif
         endif
 
-    end function translate
+    end function traslate
     !========================================================================================
 
     !========================================================================================
-    subroutine check_periodicity(obj)
-
-        use class_Grid, only : base_grid
+    subroutine check_periodicity(obj, comp_grid)
 
         ! In/Out variables
         type(solid), intent(inout) :: obj
+        type(grid) , intent(in   ) :: comp_grid
 
         ! Local variables
         integer  :: n
@@ -461,24 +460,24 @@ contains
         ! Set the flag to true
         obj%is_out = .true.
 
-        ! Then check if the body is entirely outside
-        if (base_grid%periodic_bc(1) .eqv. .true.) then
+        ! Check if the body is entirely outside
+        if (comp_grid%periodic_bc(1) .eqv. .true.) then
             do n = 1,obj%number_of_mass_points
-                if (obj%mass_points(n)%X(1) > (base_grid%Lx - base_grid%origin(1)) .or. &
-                    obj%mass_points(n)%X(1) < base_grid%origin(1)) then
+                if (obj%mass_points(n)%X(1) > (comp_grid%Lx - comp_grid%origin(1)) .or. &
+                    obj%mass_points(n)%X(1) < comp_grid%origin(1)) then
                 else
-                ! If one point is inside the domain set to false the flag for the body
-                obj%is_out = .false.
+                    ! If one point is inside the domain set to false the flag for the body
+                    obj%is_out = .false.
                 end if
             end do
         endif
 
         ! If all the mass points are outside of the domain translate it
-        if (obj%is_out .and. base_grid%periodic_bc(1) .eqv. .true.) then
+        if (obj%is_out .and. comp_grid%periodic_bc(1) .eqv. .true.) then
 
             ! Check if need to translate to the left or to the right
-            DL = merge(-base_grid%Lx, base_grid%Lx, obj%mass_points(1)%X(1) > &
-                (base_grid%Lx - base_grid%origin(1)))
+            DL = merge(-comp_grid%Lx, comp_grid%Lx, obj%mass_points(1)%X(1) > &
+                (comp_grid%Lx - comp_grid%origin(1)))
             do n = 1,obj%number_of_mass_points
                 obj%mass_points(n)%X(1) = obj%mass_points(n)%X(1) + DL
             end do
@@ -500,4 +499,4 @@ contains
     end subroutine destroy_ibm
     !========================================================================================
 
-end module lagrangian_ibm
+end module
