@@ -21,13 +21,12 @@ prosperetti = np.genfromtxt('prosperetti.csv', delimiter=',')
 #########################################################################################
 # READ SETUP FILE
 #########################################################################################
-setup_file = open('setup.json')
-setup = json.load(setup_file)
-Lx = setup["Grid"]["Lx"]
-Ly = setup["Grid"]["Ly"]
-Lz = setup["Grid"]["Lz"]
-x0 = setup["Grid"]["origin"][0]
-y0 = setup["Grid"]["origin"][1]
+grid = json.load(open('grid.json'))
+Lx = grid["Grid"]["Lx"]
+Ly = grid["Grid"]["Ly"]
+Lz = grid["Grid"]["Lz"]
+x0 = grid["Grid"]["origin"][0]
+y0 = grid["Grid"]["origin"][1]
 
 #########################################################################################
 # READ CASE FILE

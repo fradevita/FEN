@@ -39,19 +39,19 @@ contains
         use navier_stokes_mod, only : allocate_navier_stokes_fields, phi, navier_stokes_solver
         use navier_stokes_mod, only : print_navier_stokes_solver_status
 #if defined(MF) || defined(NN)
-        use navier_stokes  , only : constant_viscosity
+        use navier_stokes_mod, only : constant_viscosity
 #endif
 #ifdef MF
-        use navier_stokes  , only : rho, mu
-        use multiphase     , only : allocate_multiphase_fields, update_material_properties
-        use multiphase     , only : rho_0, rho_1, rhomin, irhomin, advect_interface
-        use volume_of_fluid, only : allocate_vof_fields, get_vof_from_distance, vof, advect_vof
+        use navier_stokes_mod  , only : rho, mu
+        use multiphase_mod     , only : allocate_multiphase_fields, update_material_properties
+        use multiphase_mod     , only : rho_0, rho_1, rhomin, irhomin, advect_interface
+        use volume_of_fluid_mod, only : allocate_vof_fields, get_vof_from_distance, vof, advect_vof
 #endif
 #ifdef IBM
         use ibm
 #endif
 #ifdef FSI
-        use navier_stokes  , only : g
+        use navier_stokes_mod, only : g
         use fsi
 #endif
         ! In/out variables
@@ -84,8 +84,8 @@ contains
 #endif
 
 #ifdef MF
-        call allocate_vof_fields
-        call allocate_multiphase_fields
+        call allocate_vof_fields(comp_grid)
+        call allocate_multiphase_fields(comp_grid)
         call get_vof_from_distance
         call update_material_properties(rho, mu, vof)
         ! set the minimum density for the Dodd & Ferrante method
@@ -114,7 +114,7 @@ contains
         ! This subroutine save the fields of the simulation at timestep step
         use navier_stokes_mod, only : v, p
 #ifdef MF
-        use volume_of_fluid, only : vof
+        use volume_of_fluid_mod, only : vof
 #endif
 
         ! In/Out variables
@@ -149,8 +149,8 @@ contains
         use poisson_mod      , only : destroy_poisson_solver
         use navier_stokes_mod, only : phi, destroy_navier_stokes_solver
 #ifdef MF
-        use volume_of_fluid, only : destroy_vof
-        use multiphase     , only : p_o, p_hat, grad_p_hat 
+        use volume_of_fluid_mod, only : destroy_vof
+        use multiphase_mod     , only : p_o, p_hat, grad_p_hat 
 #endif
 
         call destroy_poisson_solver(phi)

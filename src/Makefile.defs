@@ -39,16 +39,21 @@ target: run.e
 run.e: $(SOURCE) $(SOBJ)
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -o $@ $(SOURCE) $(ODIR)/* $(LIBS)
 
-volume_of_fluid.o: $(SRC)/volume_of_fluid.f90 precision.o global.o scalar.o vector.o IO.o utils.o
+# Rule for solver module
+solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o volume_of_fluid.o multiphase.o# fsi.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
-# Rule for solver module
-solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o #volume_of_fluid.o multiphase.o fsi.o
+# Rule for multiphase module
+multiphase.o: $(SRC)/multiphase.f90 precision.o scalar.o vector.o IO.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for volume of fluid module
+volume_of_fluid.o: $(SRC)/volume_of_fluid.f90 precision.o global.o scalar.o vector.o IO.o utils.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for navier_stokes module
 navier_stokes.o: $(SRC)/navier_stokes.f90 precision.o global.o grid.o scalar.o vector.o tensor.o fields.o poisson.o \
-                 #volume_of_fluid.o multiphase.o non_newtonian.o ibm.o
+                volume_of_fluid.o multiphase.o# non_newtonian.o ibm.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for lagrangian solid module
@@ -125,18 +130,10 @@ precision.o: $(SRC)/precision.f90
 # ibm.o: $(FEN_DIR)/src/ibm.f90 precision.o class_Vector.o class_eulerian_solid.o eulerian_ibm.o lagrangian_solid.o lagrangian_ibm.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-
-
-# multiphase.o: $(FEN_DIR)/src/multiphase.f90 precision.o class_Scalar.o class_Vector.o io.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(INCLUDE_FFTW3) $(FLAGS) -c $<
-
 # non_newtonian.o: $(FEN_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o class_Tensor.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 # fsi.o: $(FEN_DIR)/src/fsi.f90 precision.o class_eulerian_solid.o eulerian_ibm.o navier_stokes.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# json.o: $(FEN_DIR)/src/json.f90 class_Grid.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 clean:

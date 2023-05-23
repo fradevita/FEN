@@ -54,12 +54,12 @@ contains
         ! 2): solve Poisson equation for the pressure increment
         ! 3): update velocity and pressure.
 
-        use poisson_mod    , only : solve_Poisson
-        use fields_mod     , only : divergence
+        use poisson_mod, only : solve_poisson
+        use fields_mod , only : divergence
 #ifdef MF
-        use volume_of_fluid, only : vof
-        use multiphase     , only : advect_interface, update_material_properties
-        use multiphase     , only : p_hat, p_o, rhomin
+        use volume_of_fluid_mod, only : vof
+        use multiphase_mod     , only : advect_interface, update_material_properties
+        use multiphase_mod     , only : p_hat, p_o, rhomin
 #endif
 #ifdef IBM
         use ibm
@@ -92,7 +92,7 @@ contains
         endif
         
         ! Update boundary condtiions for the approximate pressure
-        call p_hat%apply_bc()
+        call p_hat%update_ghost_nodes()
 #endif
 
 ! #ifdef FSI
@@ -141,7 +141,7 @@ contains
 
         use fields_mod , only : gradient, center_to_face
 #ifdef MF
-        use multiphase, only : p_hat, grad_p_hat, irhomin
+        use multiphase_mod, only : p_hat, grad_p_hat, irhomin
 #endif
 
         ! In/Out variables
@@ -460,8 +460,8 @@ contains
 
         ! Add the surface tension force to the RHS of momentum using the CSF method.
 
-        use volume_of_fluid , only : vof, curv
-        use multiphase      , only : sigma
+        use volume_of_fluid_mod, only : vof, curv
+        use multiphase_mod     , only : sigma
 
         ! In/Out variables
         type(grid  ), intent(in   ) :: comp_grid
@@ -507,7 +507,7 @@ contains
 
         use fields_mod, only : gradient
 #ifdef MF
-        use multiphase, only : irhomin
+        use multiphase_mod, only : irhomin
 #endif
 
         ! In/Out variables
@@ -551,7 +551,7 @@ contains
    subroutine update_pressure()
 
 #ifdef MF
-        use multiphase, only : p_o
+        use multiphase_mod, only : p_o
 
         ! If using the Dodd & Ferrante approximation for pressure, update pressure at 
         ! old timestep.
@@ -626,8 +626,8 @@ contains
         ! Compute the timestep
 
 #ifdef MF
-        use constants , only : pi
-        use multiphase, only : rho_0, rho_1, mu_0, mu_1, sigma
+        use global_mod    , only : pi
+        use multiphase_mod, only : rho_0, rho_1, mu_0, mu_1, sigma
 #endif
 #ifdef NN
         use non_newtonian, only : mu_max
@@ -673,11 +673,11 @@ contains
         ! Compute the timestep
 #ifdef MPI
         use mpi
-        use global_mod   , only : ierror
+        use global_mod, only : ierror
 #endif
 #ifdef MF
-        use global_mod   , only : pi
-        use multiphase   , only : rho_0, rho_1, mu_0, mu_1, sigma
+        use global_mod    , only : pi
+        use multiphase_mod, only : rho_0, rho_1, mu_0, mu_1, sigma
 #endif
 #ifdef NN
         use non_newtonian, only : mu_max
@@ -981,7 +981,7 @@ contains
         endif
 #endif
 
-#ifdef MPI
+
         ! Search for internal boundaries
         if (comp_grid%prow > 1) then
             if (comp_grid%lo(2) /= 1) then
@@ -1020,7 +1020,6 @@ contains
                 v%y%bc%type_back = -1
             endif 
         endif
-#endif
 #endif
 
     end subroutine allocate_navier_stokes_fields

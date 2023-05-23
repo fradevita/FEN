@@ -191,6 +191,31 @@ contains
             call print_error_message('ERROR: wrong bc on top boundary')
         endif
 
+
+        ! Search for internal boundaries
+        if (comp_grid%prow > 1) then
+            if (comp_grid%lo(2) /= 1) then
+                vof%bc%type_bottom = -1
+                h%bc%type_bottom = -1
+                d%bc%type_bottom = -1
+                curv%bc%type_bottom = -1
+                norm%x%bc%type_bottom = -1
+                norm%y%bc%type_bottom = -1
+                l%x%bc%type_bottom = -1
+                l%y%bc%type_bottom = -1 
+            endif
+            if (comp_grid%hi(2) /= comp_grid%Ny) then
+                vof%bc%type_top = -1
+                h%bc%type_top = -1
+                d%bc%type_top = -1
+                curv%bc%type_top = -1
+                norm%x%bc%type_top = -1
+                norm%y%bc%type_top = -1
+                l%x%bc%type_top = -1
+                l%y%bc%type_top = -1
+            endif 
+        endif
+
     end subroutine allocate_vof_fields
     !==============================================================================================
 
