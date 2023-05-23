@@ -1,0 +1,16 @@
+make[1]: ingresso nella directory «/home/devita/repos/FEN/test/small_test/navier_stokes/poiseuille_io»
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/IO.f90 -o ./.fobj/IO.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/precision.f90 -o ./.fobj/precision.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/global.f90 -o ./.fobj/global.o
+mpif90 -I/home/devita/repos/2decomp_FFT/include     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/grid.f90 -o ./.fobj/grid.o
+mpif90 -I/home/devita/repos/2decomp_FFT/include     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/halo.f90 -o ./.fobj/halo.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/function.f90 -o ./.fobj/function.o
+mpif90 -I/home/devita/repos/2decomp_FFT/include     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/scalar.f90 -o ./.fobj/scalar.o
+mpif90 -I/home/devita/repos/2decomp_FFT/include -I/home/devita/local/include     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/poisson.f90 -o ./.fobj/poisson.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/vector.f90 -o ./.fobj/vector.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/tensor.f90 -o ./.fobj/tensor.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/fields.f90 -o ./.fobj/fields.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/navier_stokes.f90 -o ./.fobj/navier_stokes.o
+mpif90     -cpp -DMPI -J./.fmod -I./.fmod -c /home/devita/repos/FEN/src/solver.f90 -o ./.fobj/solver.o
+mpif90 -I/home/devita/repos/2decomp_FFT/include     -cpp -DMPI -J./.fmod -I./.fmod -o run.e poiseuille_io.f90 ./.fobj/* -L/home/devita/repos/2decomp_FFT/lib -l2decomp_fft -L/home/devita/local/lib -lfftw3 -llapack
+make[1]: uscita dalla directory «/home/devita/repos/FEN/test/small_test/navier_stokes/poiseuille_io»

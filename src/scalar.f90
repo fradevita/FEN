@@ -296,7 +296,9 @@ contains
             endif
         elseif (self%bc%type_bottom == 2) then ! Neumann
                 self%f(:,lo(2)-1,:) = self%f(:,lo(2),:)
-        else
+        elseif (self%bc%type_bottom == -1) then ! internal
+            ! do nothing
+        else    
             call print_error_message('ERROR: wrong bottom boundary condition type for scalar s')
         endif
         
@@ -319,7 +321,9 @@ contains
                 call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name)) 
             endif
         elseif (self%bc%type_top == 2) then ! Neumann
-                self%f(:,hi(2)+1,:) = self%f(:,hi(2),:)
+            self%f(:,hi(2)+1,:) = self%f(:,hi(2),:)
+        elseif (self%bc%type_top == -1) then ! internal
+            ! do nothing
         else
             call print_error_message('ERROR: wrong top boundary condition type for scalar s')
         endif

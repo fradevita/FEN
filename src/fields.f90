@@ -1,4 +1,4 @@
-module fields
+module fields_mod
 
     ! This module contains the fields (scalar, vector and tensor) procedures.
 
@@ -343,4 +343,4 @@ contains
   end subroutine curl
   !========================================================================================
 
-end module fields
+end module

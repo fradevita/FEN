@@ -55,6 +55,12 @@ contains
         call self%z%allocate(G, self%z%gl)
 #endif
 
+        ! Set vector compontent location on the grid
+        self%x%c = 'x'
+        self%y%c = 'y'
+#if DIM==3
+        self%z%c = 'z'
+#endif
     end subroutine allocate
     !==============================================================================================
 

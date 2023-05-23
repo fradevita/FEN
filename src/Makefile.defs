@@ -19,10 +19,10 @@ override FLAGS = $(BIG) $(DBG) $(PROF) $(OPT) $(CPPDEFS) -J$(MDIR) -I$(MDIR)
 # Select all objects request by the SOURCE
 ifeq "$(SOURCE)" ""
 	SOBJ =
-	COBJ =
+#	COBJ =
 else
 	SOBJ := $(shell python3 $(SRC)/get_objects.py $(SOURCE))
-	COBJ := $(shell python3 $(SRC)/get_compiled_objects.py $(SOURCE))
+#	COBJ := $(shell python3 $(SRC)/get_compiled_objects.py $(SOURCE))
 endif
 
 # Libraries dir
@@ -40,6 +40,15 @@ target: run.e
 # Rule for the executable run.e
 run.e: $(SOURCE) $(SOBJ)
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -o $@ $(SOURCE) $(ODIR)/* $(LIBS)
+
+# Rule for solver module
+solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o #volume_of_fluid.o multiphase.o fsi.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for navier_stokes module
+navier_stokes.o: $(SRC)/navier_stokes.f90 precision.o global.o grid.o scalar.o vector.o tensor.o fields.o poisson.o \
+                 #volume_of_fluid.o multiphase.o non_newtonian.o ibm.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for lagrangian solid module
 lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o
@@ -124,18 +133,11 @@ precision.o: $(SRC)/precision.f90
 # non_newtonian.o: $(FEN_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o class_Tensor.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
-# navier_stokes.o: $(FEN_DIR)/src/navier_stokes.f90 precision.o constants.o class_Grid.o class_Scalar.o class_Vector.o class_Tensor.o fields.o Poisson.o \
-#                  volume_of_fluid.o multiphase.o non_newtonian.o ibm.o
-# 	$(FC) $(FLAGS) -c $<
-
 # fsi.o: $(FEN_DIR)/src/fsi.f90 precision.o class_eulerian_solid.o eulerian_ibm.o navier_stokes.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 # json.o: $(FEN_DIR)/src/json.f90 class_Grid.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
-# solver.o: $(FEN_DIR)/src/solver.f90 precision.o class_Grid.o Poisson.o navier_stokes.o volume_of_fluid.o multiphase.o fsi.o
-# 	$(FC) $(FLAGS) -c $<
 
 clean:
 	rm -rf $(ODIR)/*.o $(MDIR)/*.mod .objects run.e *_compilation_log *_compilation_warnings

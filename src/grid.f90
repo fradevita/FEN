@@ -11,7 +11,7 @@ module grid_mod
     implicit none
 
     private
-    public :: bc_type, grid, base_grid
+    public :: bc_type, grid
 
     ! This type is necessary to have an array of strings of variable size.
     ! It is used to specify physical boundary conditions on the domain.
@@ -52,7 +52,7 @@ module grid_mod
         ! (prow x pcol)
         integer :: rank, nranks, prow, pcol
 
-        character(len=99) :: name = 'unste'
+        character(len=99) :: name = 'unset'
 
     contains
         procedure, pass(self) :: setup
@@ -60,9 +60,6 @@ module grid_mod
         procedure, pass(self) :: print_json
         procedure, pass(self) :: destroy
     end type grid
-
-    ! Define a default base grid for the simulation.
-    type(Grid) :: base_grid
 
 contains
 
@@ -279,7 +276,9 @@ contains
 
     !==============================================================================================
     subroutine print_json(self)
-
+#ifdef MPI
+        use global_mod, only : myrank
+#endif
         class(grid), intent(in) :: self
 
         integer           :: out_id
@@ -300,7 +299,8 @@ contains
         write(out_id,'(8x,A6,1x,E16.8,A1)') '"Lx": ', self%Lx, ','
         write(out_id,'(8x,A6,1x,E16.8,A1)') '"Ly": ', self%Ly, ','
         write(out_id,'(8x,A6,1x,E16.8)'   ) '"Lz": ', self%Lz
-        write(out_id,'(4x,A3)') '},'
+        write(out_id,'(4x,A3)') '}'
+        write(out_id,'(A1)') '}'
 #ifdef MPI
         end if
 #endif

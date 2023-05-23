@@ -1,0 +1,15 @@
+/home/devita/repos/FEN/src/navier_stokes.f90:571:41:
+
+  571 |     subroutine checks(comp_grid, dt, step)
+      |                                         1
+Warning: Unused dummy argument ‘step’ at (1) [-Wunused-dummy-argument]
+lid_driven.f90:10:8:
+
+   10 |     use navier_stokes_mod , only : viscosity, v, set_timestep, constant_CFL, CFL
+      |        1
+Warning: Unused module variable ‘cfl’ which has been explicitly imported at (1) [-Wunused-variable]
+lid_driven.f90:10:8:
+
+   10 |     use navier_stokes_mod , only : viscosity, v, set_timestep, constant_CFL, CFL
+      |        1
+Warning: Unused module variable ‘constant_cfl’ which has been explicitly imported at (1) [-Wunused-variable]
