@@ -137,6 +137,7 @@ contains
                 end do edges_cycle
 
                 ! Apply eulerian force to the velocity field due to solid body b
+                call F%update_ghost_nodes()
                 v%x%f = v%x%f + F%x%f*dt
                 v%y%f = v%y%f + F%y%f*dt
                 call v%update_ghost_nodes()
@@ -307,7 +308,7 @@ contains
             ! Find the closest Eulerian p node
             ie = v%G%closest_grid_node([X_probe(1), X_probe(2), 0.0_dp], 0)
 
-            ! Interpolate u and its derivatives on the probe
+            ! Interpolate p and its derivatives on the probe
             ppl = interpolate(p, X_probe, ie, 0)
 
             ! Compute pressure on the Lagrangian marker
@@ -342,7 +343,7 @@ contains
     end subroutine
     !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine advance_structure(obj, step, dt, g, density, comp_grid)
 
         ! This subroutine perform one timestep of the structural solver
