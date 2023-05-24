@@ -2,16 +2,17 @@ program spring_mass
 
     ! Test for the filament in a uniform current
 
-    use precision        , only : dp
-    use constants        , only : pi
-    use class_Grid       , only : base_grid, bc_type
-    use lagrangian_ibm   , only : number_of_solid_bodies, solid_array
-    use navier_stokes    , only : viscosity, g, v, set_timestep, dt_o
-    use io               , only : stdout
-    use solver
-    use class_Vector
-    use fields           , only : curl
-    use lagrangian_solid , only : apply_constraints
+    use mpi
+    use precision_mod        , only : dp
+    use global_mod           , only : ierror, myrank, pi
+    use grid_mod
+    use vector_mod
+    use ibm_mod              , only : lagrangian_solid_list
+    use navier_stokes_mod    , only : viscosity, g, v, set_timestep, dt_o
+    use IO_mod               , only : stdout
+    use solver_mod
+    use fields_mod           , only : curl
+    use lagrangian_solid_mod
     
     implicit none
 
@@ -35,15 +36,18 @@ program spring_mass
     real(dp), parameter :: B = beta*rhof*U**2*L**3 ! Bending modulus
 
     ! Variables
-    integer  :: ierror, Nx, Ny, Nz, step, out_id, fid, lid
-    real(dp) :: Lx, Ly, Lz, Ep0, L0, dt, time, Lt
-    character(len=7) :: sn
-    character(len=16) :: filename
-    type(bc_type) :: bc(4)
-    type(vector) :: omega
+    integer             :: Nx, Ny, Nz, step, out_id, fid, lid
+    real(dp)            :: Lx, Ly, Lz, Ep0, L0, dt, time, Lt
+    character(len=7)    :: sn
+    character(len=16)   :: filename
+    type(grid)          :: comp_grid
+    type(solid), target :: S
+    type(bc_type)       :: bc(4)
+    type(vector)        :: omega
 
     ! Initialize MPI
     call mpi_init(ierror)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! The domain is a square box of size 8
     Lx = 8.0_dp
@@ -63,32 +67,28 @@ program spring_mass
     bc(4)%s = 'Outflow'
 
     ! Create the grid
-    call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, [0.0_dp, 0.0_dp, 0.0_dp], 8, 1, bc)
+    comp_grid%name = 'grid'
+    call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, [0.0_dp, 0.0_dp, 0.0_dp], 8, 1, bc)
 
-    ! Set one solid body
-    number_of_solid_bodies = 1
-
-    ! Allocate the array of solid
-    allocate(solid_array(number_of_solid_bodies))
-
+    ! Create the filament
     ! Set the mass of the filament
     ! rhos = gamma*rhof
     ! volume = h*L*w
-    solid_array(1)%Vol = L*h*w
-    solid_array(1)%rho = rhos
-    solid_array(1)%M = rhos*L*h*w
+    S%Vol = L*h*w
+    S%rho = rhos
+    S%M = rhos*L*h*w
 
     ! Turn on the deformable flag
-    solid_array(1)%is_deformable = .true.
+    S%is_deformable = .true.
 
     ! The filament is an open geometry
-    solid_array(1)%is_open = .true.
+    S%is_open = .true.
 
     ! Create the lagrangian solid from the mesh file
-    call solid_array(1)%create('mesh.txt')
+    call S%create('mesh.txt')
 
-    solid_array(1)%mass_points(solid_array(1)%number_of_mass_points)%M = &
-        solid_array(1)%mass_points(solid_array(1)%number_of_mass_points)%M*0.5_dp
+    ! Half the last mass since it is connected to one single edge
+    S%mass_points(S%number_of_mass_points)%M = S%mass_points(S%number_of_mass_points)%M*0.5_dp
 
     ! Set the elastic in-plane constant of the springs
     ! eq. 25 of de Tullio and Pascazio JCP 2016.
@@ -96,26 +96,26 @@ program spring_mass
     ! Ke = Eh*SumAi/l**2
     ! A = l*1
     ! l = L/number_of_mass_points
-    !solid_array(1)%edges%ke = eps*rhof*U**2*L*2.0_dp*real(solid_array(1)%number_of_mass_points, dp)
-    solid_array(1)%edges%ke = E*h*real(solid_array(1)%number_of_edges, dp)/L
-    solid_array(1)%ke = E*h*real(solid_array(1)%number_of_edges, dp)/L
-
+    S%ke = E*h*real(S%number_of_edges, dp)/L
 
     ! Set the bending constant
     ! eq. 30 of de Tullio and Pascazio JCP 2016.
     ! kb = B*2/sqrt(3)
     ! B = beta*rhof*U**2*L**3
-    !solid_array(1)%kb = beta*rhof*U**2*L**3*2.0_dp/sqrt(3.0_dp)
-    solid_array(1)%kb = B*real(solid_array(1)%number_of_mass_points, dp)
+    S%kb = B*real(S%number_of_mass_points, dp)
 
     ! Compute the initial length of the filament
-    L0 = solid_array(1)%get_total_length()
+    L0 = S%get_total_length()
 
     ! Compute initial potential energy
-    Ep0 = solid_array(1)%get_potential_energy()
+    Ep0 = S%get_potential_energy()
 
     ! Set the constraints procedure
-    apply_constraints => test_constraints
+    S%apply_constraints => test_constraints
+
+    ! Allocate the array of solid
+    allocate(lagrangian_solid_list(1))
+    lagrangian_solid_list(1)%pS => S
 
     ! Set the viscosity
     viscosity = rhof*nu
@@ -124,7 +124,7 @@ program spring_mass
     g(2) = gravity
 
     ! Initialize the solver
-    call init_solver
+    call init_solver(comp_grid)
     step = 0
     time = 0.0_dp
 
@@ -133,12 +133,12 @@ program spring_mass
     dt_o = dt
     
     ! Set boundary conditions
-    v%y%bc%b = U
-    v%y%bc%l = U
-    v%y%bc%r = U
+    v%y%bc%bottom = U
+    v%y%bc%left = U
+    v%y%bc%right = U
     
     ! Print the poitns
-    call solid_array(1)%print_configuration(step)
+    call S%print_configuration(step)
 
     ! Open output file
     open(newunit = out_id, file = 'out.txt')
@@ -146,29 +146,28 @@ program spring_mass
     open(newunit = lid   , file = 'length.txt')
 
     ! Allocate the vorticity vector
-    call omega%allocate()
+    call omega%allocate(comp_grid, 1)
     
-    !==== Start Time loop ===================================================================
+    !==== Start Time loop =========================================================================
     time_loop: do while(time < 30)
 
         step = step + 1
         time = time + dt
 
         ! Advance in time the solution
-        call advance_solution(step, dt)
+        call advance_solution(comp_grid, step, dt)
 
         ! Advance solver status to log file
         call print_solver_status(stdout, step, time, dt)
 
         ! Output
-        if (base_grid%rank == 0) write(out_id,*) time, &
-            solid_array(1)%mass_points(solid_array(1)%number_of_mass_points)%X(1:2)
+        if (myrank == 0) write(out_id,*) time, S%mass_points(S%number_of_mass_points)%X(1:2)
         if (mod(step,100) == 0) then
-            call solid_array(1)%integrate_hydrodynamic_forces
-            if (base_grid%rank == 0) write(fid,*) time, solid_array(1)%center_of_mass%Fh(:)
-            if (base_grid%rank == 0) call solid_array(1)%print_configuration(step)
-            Lt = solid_array(1)%get_total_length()
-            if (base_grid%rank == 0) write(lid,*) time, Lt, L0
+            call S%integrate_hydrodynamic_forces
+            if (myrank == 0) write(fid,*) time, S%center_of_mass%Fh(:)
+            if (myrank == 0) call S%print_configuration(step)
+            Lt = S%get_total_length()
+            if (myrank == 0) write(lid,*) time, Lt, L0
             write(sn,'(I0.7)') step
             call curl(v, omega)
             filename = 'data/vrt_'//sn
@@ -186,16 +185,14 @@ program spring_mass
 contains
     
     !========================================================================================
-    subroutine test_constraints(obj)
-
-        use lagrangian_solid, only : solid
+    subroutine test_constraints(self)
         
-        type(solid), intent(inout) :: obj
+        class(solid), intent(inout) :: self
 
-        obj%mass_points(1)%X(1) = Lx/2.0_dp
-        obj%mass_points(1)%X(2) = 2.0_dp
-        obj%mass_points(1)%V = 0.0_dp
-        obj%mass_points(1)%A = 0.0_dp
+        self%mass_points(1)%X(1) = Lx/2.0_dp
+        self%mass_points(1)%X(2) = 2.0_dp
+        self%mass_points(1)%V = 0.0_dp
+        self%mass_points(1)%A = 0.0_dp
         
     end subroutine test_constraints
     !========================================================================================

@@ -247,6 +247,8 @@ contains
         write(out_id,'(8x,A6,1x,E16.8)'   ) '"Lz": ', self%Lz
         write(out_id,'(4x,A3)') '}'
         write(out_id,'(A1)') '}'
+
+        call flush(out_id)
 #ifdef MPI
         end if
 #endif

@@ -4,7 +4,7 @@ program main
 
     use mpi
     use precision_mod        , only : dp
-    use global_mod           , only : ierror, pi
+    use global_mod           , only : ierror, myrank, pi
     use grid_mod
     use ibm_mod              , only : Lagrangian_Solid_list
     use lagrangian_solid_mod , only : solid
@@ -29,6 +29,7 @@ program main
 
     ! Initialize MPI
     call mpi_init(ierror)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! The program takes as input argument the number of point in the x direction
     call get_command_argument(1, arg)
@@ -51,6 +52,7 @@ program main
     bc(3)%s = 'Inflow'
     bc(4)%s = 'Outflow'
     ! Create the grid
+    comp_grid%name = 'grid'
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
 
     ! Create the cylinder
@@ -76,6 +78,7 @@ program main
 
     ! Output
     if (comp_grid%rank == 0) call C%write_csv(time)
+    call save_fields(step)
 
     !==== Start Time loop ===================================================================
     time_loop: do while (time < 3.0_dp)
@@ -95,6 +98,7 @@ program main
 
         ! Output forces
         if (comp_grid%rank == 0) call C%write_csv(time)
+        if (mod(step,10)==0) call save_fields(step)
     end do time_loop
 
     ! free memory

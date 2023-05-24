@@ -4,12 +4,12 @@ program main
 
     use mpi
     use precision_mod        , only : dp
-    use global_mod           , only : ierror, pi
+    use global_mod           , only : ierror, myrank, pi
     use grid_mod
     use ibm_mod              , only : Lagrangian_Solid_list
     use lagrangian_solid_mod , only : solid
     use solver_mod        
-    use navier_stokes_mod    , only : v, p, set_timestep, g, viscosity, mu, rho
+    use navier_stokes_mod    , only : v, p, set_timestep, g, viscosity, mu, rho, dt_o
     use lagrangian_ibm_mod   , only : compute_hydrodynamic_loads
     use IO_mod               , only : stdout
     
@@ -22,7 +22,7 @@ program main
     real(dp), parameter :: Re = 1.0e+3_dp    !< Reynolds number
 
     ! Variables
-    integer             :: Nx, Ny, Nz, step, i
+    integer             :: Nx, Ny, Nz, step
     real(dp)            :: Lx, Ly, Lz, time, dt, origin(3)
     type(grid)          :: comp_grid
     type(bc_type)       :: bc(4)
@@ -30,6 +30,7 @@ program main
 
     ! Initialize MPI
     call mpi_init(ierror)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! The domain has size [18D, 12D]
     Lx = 12.0_dp*D
@@ -43,17 +44,14 @@ program main
     Nz = 1
     Lz = Lx*float(Nz)/float(Nx)
 
-    ! Since 2D
-    Nz = 1
-    Lz = Lx*float(Nz)/float(Nx)
-
     origin = [0.0_dp, 0.0_dp, 0.0_dp]
     bc(1)%s = 'Wall'
     bc(2)%s = 'Wall'
     bc(3)%s = 'Inflow'
     bc(4)%s = 'Outflow'
     ! Create the grid
-    call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 32, 1, bc)
+    comp_grid%name = 'grid'
+    call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 8, 1, bc)
 
     ! Create the cylinder
     call C%create('mesh.txt', name = 'C')
@@ -69,16 +67,20 @@ program main
     call init_solver(comp_grid)
     step = 0
     time = 0.0_dp
-    call set_timestep(comp_grid, dt, U)
+    call set_timestep(comp_grid, dt, 2*U)
+    dt = dt/2.0_dp
+    dt_o = dt
  
     ! Set the inflow boundary condition
+    v%y%f = U
     v%y%bc%left = U
     v%y%bc%right = U
     v%y%bc%bottom = U
 
     ! Output
     if (comp_grid%rank == 0) call C%write_csv(time)
-
+    call save_fields(step)
+    
     !==== Start Time loop ===================================================================
     time_loop: do while (time < 3.0_dp)
 
@@ -96,7 +98,11 @@ program main
         call lagrangian_solid_list(1)%pS%integrate_hydrodynamic_forces()
 
         ! Output forces
-        if (comp_grid%rank == 0) call C%write_csv(time)
+        if (comp_grid%rank == 0) then
+            call C%write_csv(time)
+            call C%print_configuration(step)
+        endif
+        if (mod(step,10) == 0)  call save_fields(step)
     end do time_loop
 
     ! free memory

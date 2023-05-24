@@ -2,7 +2,7 @@ import numpy as np
 import math
 
 L = 1
-Nx = 1024
+Nx = 512
 Lx = 8.0
 theta = 0.1*math.pi
 x0 = Lx/2

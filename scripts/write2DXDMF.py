@@ -3,18 +3,16 @@ import sys
 import glob
 
 # Load setup File
-setup_file = open('setup.json')
-setup = json.load(setup_file)
+grid_file = 'grid.json'
+grid = json.load(open(grid_file))
 
 # Setup Grid
-Nx = setup["Grid"]["Nx"]
-Ny = setup["Grid"]["Ny"]
-Nz = setup["Grid"]["Nz"]
-Lx = setup["Grid"]["Lx"]
-Ly = setup["Grid"]["Ly"]
-Lz = setup["Grid"]["Lz"]
-MF = setup["Solvers"]["MF"]
-IBM = setup["Solvers"]["IBM"]
+Nx = grid["Grid"]["Nx"]
+Ny = grid["Grid"]["Ny"]
+Nz = grid["Grid"]["Nz"]
+Lx = grid["Grid"]["Lx"]
+Ly = grid["Grid"]["Ly"]
+Lz = grid["Grid"]["Lz"]
 dx = Lx/Nx
 dy = Ly/Ny
 assert(dx == dy)
@@ -72,16 +70,6 @@ for n in range(nf):
       </DataItem>
     </Attribute>
     '''%(Ny, Nx, 'data/vy_'+str(step).zfill(7)+'.raw'))
-
-    if (MF):
-         # VOF
-        f.write('''\n
-        <Attribute Name="VoF" AttributeType="Scalar" Center="Node">
-        <DataItem Dimensions="%d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
-        %s
-        </DataItem>
-        </Attribute>
-        '''%(Ny, Nx, 'data/vof_'+str(step).zfill(7)+'.raw'))
    
     # Pressure
     f.write('''\n

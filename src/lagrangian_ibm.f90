@@ -22,7 +22,7 @@ module lagrangian_ibm_mod
 
 contains
 
-    !========================================================================================
+    !==============================================================================================
     subroutine init_ibm(comp_grid)
 
         ! This subroutine initialize the variables of the module
@@ -35,9 +35,9 @@ contains
         h_probe = 1.2_dp*comp_grid%delta
 
     end subroutine init_ibm
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine forcing_velocity(v, solid_array, dt)
 
         use mpi
@@ -46,9 +46,9 @@ contains
         use lagrangian_solid_mod, only : edge, solid_pointer
 
         ! In/Out variables
-        real(dp)    , intent(in   ) :: dt
-        type(vector), intent(inout) :: v
-        type(solid_pointer), intent(in) :: solid_array(:)
+        real(dp)           , intent(in   ) :: dt
+        type(vector)       , intent(inout) :: v
+        type(solid_pointer), intent(in   ) :: solid_array(:)
 
         ! Local variables
         integer    :: b, fstep, l, q, sj, si, ii, jj, ie(3)
@@ -137,7 +137,6 @@ contains
                 end do edges_cycle
 
                 ! Apply eulerian force to the velocity field due to solid body b
-                call F%update_ghost_nodes()
                 v%x%f = v%x%f + F%x%f*dt
                 v%y%f = v%y%f + F%y%f*dt
                 call v%update_ghost_nodes()
@@ -147,9 +146,9 @@ contains
         end do solid_body_cycle
 
     end subroutine forcing_velocity
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine compute_hydrodynamic_loads(obj, v, p, mu, rho, g)
 
         ! Compute hydrodynamic loads on solid obj given by the velocity field v, pressure
@@ -269,7 +268,7 @@ contains
 
         ! Local variables
         integer    :: l, ie(3)
-        real(dp)   :: X_probe(Ndim), Ul(Ndim+1), Vl(Ndim+1), ppl(Ndim+1)
+        real(dp)   :: X_probe(Ndim), Ul(Ndim+1), Vl(Ndim+1), ppl(Ndim+1), dpdn_m, dpdn_p
         type(edge) :: l_edge
         
         ! Cycle over all the edges (lagrangian markers) of the solid
@@ -314,10 +313,17 @@ contains
             ! Compute pressure on the Lagrangian marker
             ! eq. 46 of de Tullio and Pascazio JCP 2016.
             if (ie(2) >= v%G%lo(2) .and. ie(2) <= v%G%hi(2)) then
-                pl(l) = ppl(1) + h_probe*((l_edge%C%A(1) - g(1))*l_edge%n(1)  + &
-                                          (l_edge%C%A(2) - g(2))*l_edge%n(2)) * &
-                                           rho%f(ie(1),ie(2),1)*probe_sign
 
+                ! Normal pressure gradient on the lagrangian marker
+                dpdn_m = -rho%f(ie(1),ie(2),1)*((l_edge%C%A(1) - g(1))*l_edge%n(1)  + &
+                                                (l_edge%C%A(2) - g(2))*l_edge%n(2))*probe_sign
+                !pl(l) = ppl(1) - h_probe*(dpdn_m)
+
+                ! Wang et al 2019 JCP eq 20 correction 
+                ! Normal pressure gradient on the probe
+                dpdn_p = (ppl(2)*l_edge%n(1) + ppl(3)*l_edge%n(2))*probe_sign
+                pl(l) = ppl(1) - h_probe*(dpdn_m + dpdn_p)*0.5_dp
+                
                 ! Viscous stresses
                 tau11(l) = 2.0_dp*mu%f(ie(1),ie(2),1)*Ul(2)
                 tau12(l) = mu%f(ie(1),ie(2),1)*(Ul(3) + Vl(2))
@@ -422,9 +428,9 @@ contains
         call check_periodicity(obj, comp_grid)
 
     end subroutine advance_structure
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     function traslate(X, comp_grid) result(X1)
 
         use global_mod , only : Ndim
@@ -445,9 +451,9 @@ contains
         endif
 
     end function traslate
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine check_periodicity(obj, comp_grid)
 
         ! In/Out variables
@@ -489,15 +495,15 @@ contains
         end if
 
     end subroutine check_periodicity
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine destroy_ibm
 
         ! Free the allocated memory
         call F%destroy()
 
     end subroutine destroy_ibm
-    !========================================================================================
+    !==============================================================================================
 
 end module
