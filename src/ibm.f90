@@ -48,7 +48,7 @@ contains
         real(dp)    , intent(in   ) :: dt  !< timestep
 
         ! Evaluate the forcing due to eulerian solids
-        if (allocated(Eulerian_Solid_list)) call eulerian_forcing_velocity(v, eulerian_Solid_list, dt)
+        if (allocated(Eulerian_Solid_list)) call eulerian_forcing_velocity(v, eulerian_Solid_list, Fe, dt)
 
         if (allocated(Lagrangian_Solid_list)) call lagrangian_forcing_velocity(v, lagrangian_Solid_list, dt)
 

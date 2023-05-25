@@ -28,7 +28,7 @@ module global_mod
     real(dp), dimension(3,0:3), parameter :: istagger = reshape([0.5_dp, 0.5_dp, 0.5_dp, &
                                                                  0.0_dp, 0.5_dp, 0.5_dp, &
                                                                  0.5_dp, 0.0_dp, 0.5_dp, &
-                                                                 0.5_dp, 0.5_dp, 0.5_dp], shape(istagger))
+                                                                 0.5_dp, 0.5_dp, 0.0_dp], shape(istagger))
 
 
     integer :: myrank = 0

@@ -41,7 +41,7 @@ module eulerian_ibm_mod
 
 contains
 
-    !========================================================================================
+    !==============================================================================================
     subroutine init_eulerian_ibm(solid_list, G)
 
         ! This subroutine initialize all eulerian fields.
@@ -69,15 +69,15 @@ contains
 #endif
 
     end subroutine init_eulerian_ibm
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     subroutine tag_cells(solid_list)
 
         ! This subroutine compute the eulerian fields phi, ibm_index, norm and cbl
         ! for the identification of solid bodies inside the Eulerian grid
 
-        use global_mod, only : istagger
+        use global_mod, only : istagger, stagger
 
         ! In/Out variables
         type(eulerian_solid_pointer), intent(in) :: solid_list(:)
@@ -113,9 +113,13 @@ contains
                     do i = bg%lo(1)-1,bg%hi(1)+1
 
                         ! Local coordinates
-                        x = (i - istagger(1,dir))*delta
-                        y = (j - istagger(2,dir))*delta
-                        z = (k - istagger(3,dir))*delta
+                        ! x = (i - istagger(1,dir))*delta
+                        ! y = (j - istagger(2,dir))*delta
+                        ! z = (k - istagger(3,dir))*delta
+
+                        x = bg%x(i) + stagger(1, dir)*delta
+                        y = bg%y(j) + stagger(2, dir)*delta
+                        z = bg%z(k) + stagger(3, dir)*delta
 
                         ! Compute distance from every solid body
                         do b = 1,nb
@@ -144,14 +148,14 @@ contains
                         ! Tag cell
                         if (phi(i,j,k,dir) <= 0.0_dp) then
 
-                            if (phi(ip,j,k,dir) > 0.0_dp .or. phi(im,j,k,dir) > 0.0_dp .or. &
-                                phi(i,jp,k,dir) > 0.0_dp .or. phi(i,jm,k,dir) > 0.0_dp) then
+                            !if (phi(ip,j,k,dir) > 0.0_dp .or. phi(im,j,k,dir) > 0.0_dp .or. &
+                            !   phi(i,jp,k,dir) > 0.0_dp .or. phi(i,jm,k,dir) > 0.0_dp) then
                                 ! extrapolation point
-                                ibm_index(i,j,k,dir) = -1
-                            else
+                            !    ibm_index(i,j,k,dir) = -1
+                            !else
                                 ! Solid point
                                 ibm_index(i,j,k,dir) = 0
-                            endif
+                            !endif
                         else
 #if DIM==3
                         if (phi(ip,j,k,dir) < 0.0_dp .or. phi(im,j,k,dir) < 0.0_dp .or. &
@@ -184,157 +188,199 @@ contains
         end do dir_cycle
 
     end subroutine tag_cells
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
-    subroutine compute_ibm_forcing(v, RHS, solid_list, dt, F)
+!     !========================================================================================
+!     subroutine compute_ibm_forcing(v, RHS, solid_list, dt, F)
 
-        !> Compute the force field due to all eulerian solid.
+!         !> Compute the force field due to all eulerian solid.
 
-        use mpi
-        use vector_mod        , only : vector
+!         use mpi
+!         use vector_mod        , only : vector
 
-        ! In/Out variables
-        type(vector)                , intent(in   ) :: v
-        type(vector)                , intent(in   ) :: RHS
-        type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
-        real(dp)                    , intent(in   ) :: dt
-        type(vector)                , intent(inout) :: F
+!         ! In/Out variables
+!         type(vector)                , intent(in   ) :: v
+!         type(vector)                , intent(in   ) :: RHS
+!         type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
+!         real(dp)                    , intent(in   ) :: dt
+!         type(vector)                , intent(inout) :: F
 
-        ! Local variables
-        integer  :: i, j, k, b
-        real(dp) :: delta, x, y, z, vs
+!         ! Local variables
+!         integer  :: i, j, k, b
+!         real(dp) :: delta, x, y, z, vs
 
-        delta = v%G%delta
-        F%x%f = 0.0_dp
-        F%y%f = 0.0_dp
-        do k = v%G%lo(3),v%G%hi(3)
-            do j = v%G%lo(2),v%G%hi(2)
-                do i = v%G%lo(1),v%G%hi(1)
+!         delta = v%G%delta
+!         F%x%f = 0.0_dp
+!         F%y%f = 0.0_dp
+!         do k = v%G%lo(3),v%G%hi(3)
+!             do j = v%G%lo(2),v%G%hi(2)
+!                 do i = v%G%lo(1),v%G%hi(1)
 
-                ! X component of the forcing
-                if (ibm_index(i,j,k,1) == 2) then
-                    ! Fluid point do nothing
-                    F%x%f(i,j,k) = 0.0_dp
-                elseif (ibm_index(i,j,k,1) == 1) then
-                    ! Interface point
-                    b = closest(i,j,k,1)
-                    vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
-                    F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
-                else
-                    ! Solid point
-                    x = (i - 0.0_dp)*delta
-                    y = (j - 0.5_dp)*delta
-                    z = (k - 0.5_dp)*delta
-                    b = closest(i,j,k,1)
-                    vs = solid_list(b)%pS%velocity([x, y, z], 1)
-                    F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
-                endif
+!                 ! X component of the forcing
+!                 if (ibm_index(i,j,k,1) == 2) then
+!                     ! Fluid point do nothing
+!                     F%x%f(i,j,k) = 0.0_dp
+!                 elseif (ibm_index(i,j,k,1) == 1) then
+!                     ! Interface point
+!                     b = closest(i,j,k,1)
+!                     vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
+!                     F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
+!                 else
+!                     ! Solid point
+!                     x = (i - 0.0_dp)*delta
+!                     y = (j - 0.5_dp)*delta
+!                     z = (k - 0.5_dp)*delta
+!                     b = closest(i,j,k,1)
+!                     vs = solid_list(b)%pS%velocity([x, y, z], 1)
+!                     F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
+!                 endif
 
-                ! Y component of the forcing
-                if (ibm_index(i,j,k,2) == 2) then
-                    ! Fluid point, do nothing
-                    F%y%f(i,j,k) = 0.0_dp
-                elseif (ibm_index(i,j,k,2) == 1) then
-                    ! Interface point
-                    b = closest(i,j,k,2)
-                    vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
-                    F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
-                else
-                    ! Solid point
-                    x = (i - 0.5_dp)*delta
-                    y = (j - 0.0_dp)*delta
-                    z = (k - 0.5_dp)*delta
-                    b = closest(i,j,k,2)
-                    vs = solid_list(b)%pS%velocity([x, y, z], 2)
-                    F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
-                endif
+!                 ! Y component of the forcing
+!                 if (ibm_index(i,j,k,2) == 2) then
+!                     ! Fluid point, do nothing
+!                     F%y%f(i,j,k) = 0.0_dp
+!                 elseif (ibm_index(i,j,k,2) == 1) then
+!                     ! Interface point
+!                     b = closest(i,j,k,2)
+!                     vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
+!                     F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
+!                 else
+!                     ! Solid point
+!                     x = (i - 0.5_dp)*delta
+!                     y = (j - 0.0_dp)*delta
+!                     z = (k - 0.5_dp)*delta
+!                     b = closest(i,j,k,2)
+!                     vs = solid_list(b)%pS%velocity([x, y, z], 2)
+!                     F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
+!                 endif
 
-#if DIM==3
-                ! Force z component of velocity
-                if (ibm_index(i,j,k,3) == 2) then
-                    ! Fluid point, do nothing
-                elseif (ibm_index(i,j,k,3) == 1) then
-                    ! Interface point
-                    b = closest(i,j,k,3)
-                    vs = interpolate_velocity(i, j, k, v%z, solid_list(b)%pS, 3)
-                    F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
-                else
-                    ! Solid point
-                    x = (i - 0.5_dp)*delta
-                    y = (j - 0.5_dp)*delta
-                    z = (k - 0.0_dp)*delta
-                    b = closest(i,j,k,3)
-                    vs = solid_list(b)%pS%velocity([x, y, z], 3)
-                    F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
-                endif
-#endif
-                end do
-            end do
-        end do
+! #if DIM==3
+!                 ! Force z component of velocity
+!                 if (ibm_index(i,j,k,3) == 2) then
+!                     ! Fluid point, do nothing
+!                 elseif (ibm_index(i,j,k,3) == 1) then
+!                     ! Interface point
+!                     b = closest(i,j,k,3)
+!                     vs = interpolate_velocity(i, j, k, v%z, solid_list(b)%pS, 3)
+!                     F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
+!                 else
+!                     ! Solid point
+!                     x = (i - 0.5_dp)*delta
+!                     y = (j - 0.5_dp)*delta
+!                     z = (k - 0.0_dp)*delta
+!                     b = closest(i,j,k,3)
+!                     vs = solid_list(b)%pS%velocity([x, y, z], 3)
+!                     F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
+!                 endif
+! #endif
+!                 end do
+!             end do
+!         end do
 
-    end subroutine compute_ibm_forcing
-    !======================================================================================
+!     end subroutine compute_ibm_forcing
+!     !======================================================================================
 
-    !======================================================================================
-    subroutine forcing_velocity(v, solid_list, dt)
+    !==============================================================================================
+    subroutine forcing_velocity(v, solid_list, Fe, dt)
 
         ! Force the velocity field v based on the location of the solid body.
         ! Use this function instead of compute_ibm_forcing
     
         use mpi
         use vector_mod
+        use scalar_mod
+        use global_mod, only : Ndim, istagger
     
         ! In/Out variables
-        real(dp)    , intent(in   ) :: dt
-        type(vector), intent(inout) :: v
+        real(dp)                    , intent(in   ) :: dt
+        type(vector), target        , intent(inout) :: v
+        type(vector), target        , intent(inout) :: Fe
         type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
     
         ! Local variables
-        integer  :: i, j, k, b
-        real(dp) :: delta, x, y, z, vs
-    
-        delta = v%G%delta
+        integer                :: i, j, k, b, dir
+        real(dp)               :: delta, x, y, z, vs
+        type(scalar) , pointer :: vi, Fi
         
+        delta = v%G%delta
+
         do k = v%G%lo(3),v%G%hi(3)
-           do j = v%G%lo(2),v%G%hi(2)
-              do i = v%G%lo(1),v%G%hi(1)
+            do j = v%G%lo(2),v%G%hi(2)
+                do i = v%G%lo(1),v%G%hi(1)
+
+                    velocity_component_cycle: do dir = 1,Ndim
+
+                        ! Select scalar velocity component vi
+                        if (dir == 1) then
+                            vi => v%x
+                            Fi => Fe%x
+                        elseif (dir == 2) then
+                            vi => v%y
+                            Fi => Fe%y
+                        elseif (dir ==3) then
+                            vi => v%z
+                            Fi => Fe%z
+                        endif
+
+                        if (ibm_index(i,j,k,dir) == 2) then
+                            ! Fluid point, do nothing
+                            Fi%f(i,j,k) = 0.0_dp
+                        elseif (ibm_index(i,j,k,dir) == 1) then
+                            ! Interface point
+                            b = closest(i,j,k,dir)
+                            vs = interpolate_velocity(i, j, k, vi, solid_list(b)%pS, dir)
+                            ! Evaluate the integral of the forcing 
+                            Fi%f(i,j,k) = (vs - vi%f(i,j,k))/dt
+                            vi%f(i,j,k) = vs
+                        else 
+                            ! Solid point
+                            x = (i - istagger(1,dir))*delta + v%G%origin(1)
+                            y = (j - istagger(2,dir))*delta + v%G%origin(2)
+                            z = (k - istagger(3,dir))*delta + v%G%origin(3)
+                            b = closest(i,j,k,dir)
+                            vs = solid_list(b)%pS%velocity([x, y, z], dir)
+                            ! Evaluate the integral of the forcing 
+                            Fi%f(i,j,k) = (vs - vi%f(i,j,k))/dt
+                            vi%f(i,j,k) = vs
+                        endif
+
+                    end do velocity_component_cycle
+
+                !  ! Force x component of velocity
+                !  if (ibm_index(i,j,k,1) == 2) then
+                !     ! Fluid point do nothing
+                !  elseif (ibm_index(i,j,k,1) == 1) then
+                !     ! Interface point
+                !     b = closest(i,j,k,1)
+                !     vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
+                !     v%x%f(i,j,k) = vs
+                !  else
+                !     ! Solid point
+                !     x = (i - 0.0_dp)*delta
+                !     y = (j - 0.5_dp)*delta
+                !     z = (k - 0.5_dp)*delta
+                !     b = closest(i,j,k,1)
+                !     vs = solid_list(b)%pS%velocity([x, y, z], 1)
+                !     v%x%f(i,j,k) = vs
+                !  endif
     
-                 ! Force x component of velocity
-                 if (ibm_index(i,j,k,1) == 2) then
-                    ! Fluid point do nothing
-                 elseif (ibm_index(i,j,k,1) == 1) then
-                    ! Interface point
-                    b = closest(i,j,k,1)
-                    vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
-                    v%x%f(i,j,k) = vs
-                 else
-                    ! Solid point
-                    x = (i - 0.0_dp)*delta
-                    y = (j - 0.5_dp)*delta
-                    z = (k - 0.5_dp)*delta
-                    b = closest(i,j,k,1)
-                    vs = solid_list(b)%pS%velocity([x, y, z], 1)
-                    v%x%f(i,j,k) = vs
-                 endif
-    
-                 ! Force y component of velocity
-                 if (ibm_index(i,j,k,2) == 2) then
-                    ! Fluid point, do nothing
-                 elseif (ibm_index(i,j,k,2) == 1) then
-                    ! Interface point
-                    b = closest(i,j,k,2)
-                    vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
-                    v%y%f(i,j,k) = vs
-                 else
-                    ! Solid point
-                    x = (i - 0.5_dp)*delta
-                    y = (j - 0.0_dp)*delta
-                    z = (k - 0.5_dp)*delta
-                    b = closest(i,j,k,2)
-                    vs = solid_list(b)%pS%velocity([x, y, z], 2)
-                    v%y%f(i,j,k) = vs
-                 endif
+                !  ! Force y component of velocity
+                !  if (ibm_index(i,j,k,2) == 2) then
+                !     ! Fluid point, do nothing
+                !  elseif (ibm_index(i,j,k,2) == 1) then
+                !     ! Interface point
+                !     b = closest(i,j,k,2)
+                !     vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
+                !     v%y%f(i,j,k) = vs
+                !  else
+                !     ! Solid point
+                !     x = (i - 0.5_dp)*delta
+                !     y = (j - 0.0_dp)*delta
+                !     z = (k - 0.5_dp)*delta
+                !     b = closest(i,j,k,2)
+                !     vs = solid_list(b)%pS%velocity([x, y, z], 2)
+                !     v%y%f(i,j,k) = vs
+                !  endif
     
               end do
            end do
@@ -368,8 +414,8 @@ contains
         delta = v%G%delta
 
         ! Physical coordinates
-        x = (i - istagger(1,dir))*delta
-        y = (j - istagger(2,dir))*delta
+        x = (i - istagger(1,dir))*delta + v%G%origin(1)
+        y = (j - istagger(2,dir))*delta + v%G%origin(2)
 
         ! Local normal vector
         nn = solid%norm([x, y, 0.0_dp])
@@ -389,8 +435,8 @@ contains
         ! Select nodes for interpolation based on local norm
         i2 = i + int(sign(1.0_dp,nx))
         j2 = j + int(sign(1.0_dp,ny))
-        x2 = (i2 - istagger(1,dir))*delta
-        y2 = (j2 - istagger(2,dir))*delta
+        x2 = (i2 - istagger(1,dir))*delta + v%G%origin(1)
+        y2 = (j2 - istagger(2,dir))*delta + v%G%origin(2)
 
         ! If one norm component is zero interpolate along cartesian directions
         if (abs(nx) <= 1.0e-12_dp) then
@@ -440,8 +486,10 @@ contains
                 xl = (xl - min(x,x2))/delta
                 yl = (yl - min(y,y2))/delta
 
-                q = bilinear_interpolation(xl, yl, v%f(min(i,i2),min(j,j2),k), v%f(max(i,i2),min(j,j2),k), &
-                                                   v%f(min(i,i2),max(j,j2),k), v%f(max(i,i2),max(j,j2),k))
+                q = bilinear_interpolation(xl, yl, v%f(min(i,i2),min(j,j2),k), &
+                                                   v%f(max(i,i2),min(j,j2),k), &
+                                                   v%f(min(i,i2),max(j,j2),k), &
+                                                   v%f(max(i,i2),max(j,j2),k))
 
                 ! Interpolation in the forcing point
                 fl = linear_interpolation(s, 0.0_dp, 2.0_dp*s, velb, q)
@@ -450,7 +498,7 @@ contains
         endif
 
     end function velocity_interpolation_2D
-    !========================================================================================
+    !==============================================================================================
 
 #if DIM==3
     !==============================================================================================
@@ -480,9 +528,9 @@ contains
         delta = bg%delta
 
         ! Local coordinates
-        x = (i - istagger(1,dir))*delta
-        y = (j - istagger(2,dir))*delta
-        z = (k - istagger(3,dir))*delta
+        x = (i - istagger(1,dir))*delta + bg%origin(1)
+        y = (j - istagger(2,dir))*delta + bg%origin(2)
+        z = (k - istagger(3,dir))*delta + bg%origin(3)
 
         ! Local normal
         nn = solid%norm([x, y, z])
@@ -505,9 +553,9 @@ contains
         i2 = i + int(sign(1.0_dp,nx))
         j2 = j + int(sign(1.0_dp,ny))
         k2 = k + int(sign(1.0_dp,nz))
-        x2 = (i2 - istagger(1,dir))*delta
-        y2 = (j2 - istagger(2,dir))*delta
-        z2 = (k2 - istagger(3,dir))*delta
+        x2 = (i2 - istagger(1,dir))*delta + bg%origin(1)
+        y2 = (j2 - istagger(2,dir))*delta + bg%origin(2)
+        z2 = (k2 - istagger(3,dir))*delta + bg%origin(3)
 
         ! Check if some of the neighbours is a forcing point
         if (ibm_index(i2,j,k,dir) < 2 ) then
@@ -656,10 +704,10 @@ contains
         end if
 
     end function velocity_interpolation_3D
-    !========================================================================================
+    !==============================================================================================
 #endif
 
-    !========================================================================================
+    !==============================================================================================
     subroutine compute_hydrodynamic_loads(solid, v, p, mu, rho, g)
 
         ! This subroutine compute hydrodynamic forces for each solid body using the probes 
@@ -895,7 +943,7 @@ contains
         call D%destroy()
 
     end subroutine compute_hydrodynamic_loads
-    !========================================================================================
+    !==============================================================================================
 
     ! !========================================================================================
     ! subroutine pressure_extrapolation(p, rho, g, solid_list)
@@ -1003,13 +1051,13 @@ contains
     ! end subroutine pressure_extrapolation
     ! !========================================================================================
 
-    !========================================================================================
+    !==============================================================================================
     function traslate(X, G) result(X1)
    
         ! In/out variables
         real(dp)  , intent(in) :: X(3)
         type(grid), intent(in) :: G
-        real(dp) :: X1(3)
+        real(dp)               :: X1(3)
     
         X1 = X
     
@@ -1024,57 +1072,57 @@ contains
     end function traslate
     !==============================================================================================
 
-    !==============================================================================================
-    subroutine update_halo_bc_solid(f, base_grid)
+    ! !==============================================================================================
+    ! subroutine update_halo_bc_solid(f, base_grid)
 
-        use decomp_2d
+    !     use decomp_2d
 
-        ! In/Out variables
-        type(grid), intent(in) :: base_grid
-        real(mytype), intent(inout) :: &
-            f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
+    !     ! In/Out variables
+    !     type(grid), intent(in) :: base_grid
+    !     real(mytype), intent(inout) :: &
+    !         f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
 
-        ! Local variables
-        real(mytype), dimension(:,:,:), allocatable :: fh
+    !     ! Local variables
+    !     real(mytype), dimension(:,:,:), allocatable :: fh
 
-        ! Call decomp_2d function to update halos
-        call update_halo(f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2):base_grid%hi(2),base_grid%lo(3):base_grid%hi(3)), &
-            fh, level = 1, opt_global = .true.)
+    !     ! Call decomp_2d function to update halos
+    !     call update_halo(f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2):base_grid%hi(2),base_grid%lo(3):base_grid%hi(3)), &
+    !         fh, level = 1, opt_global = .true.)
 
-        ! Copy into f
-        f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1) = &
-            fh(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
+    !     ! Copy into f
+    !     f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1) = &
+    !         fh(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
 
-        ! Free memroy
-        deallocate(fh)
+    !     ! Free memroy
+    !     deallocate(fh)
 
-        ! X direction
-        if (base_grid%periodic_bc(1)) then
-            f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
-            f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
-        else
-            f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
-            f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
-        endif
+    !     ! X direction
+    !     if (base_grid%periodic_bc(1)) then
+    !         f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
+    !         f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
+    !     else
+    !         f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
+    !         f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
+    !     endif
 
-        ! If using periodic bc in y and 1 proc need to overwrite the physical bc
-        if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
-            f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
-            f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
-        endif
+    !     ! If using periodic bc in y and 1 proc need to overwrite the physical bc
+    !     if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
+    !         f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
+    !         f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
+    !     endif
 
-        ! If non periodic in y select physical bc
-        if (base_grid%periodic_bc(2) .eqv. .false.) then
-            if (base_grid%rank == 0) then
-                f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
-            endif
-            if (base_grid%rank == base_grid%nranks-1) then
-                f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
-            endif
-        endif
+    !     ! If non periodic in y select physical bc
+    !     if (base_grid%periodic_bc(2) .eqv. .false.) then
+    !         if (base_grid%rank == 0) then
+    !             f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
+    !         endif
+    !         if (base_grid%rank == base_grid%nranks-1) then
+    !             f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
+    !         endif
+    !     endif
 
-    end subroutine update_halo_bc_solid
-    !==============================================================================================
+    ! end subroutine update_halo_bc_solid
+    ! !==============================================================================================
 
     !==============================================================================================
     subroutine update_halo_bc_ibm_index(ff, base_grid)
@@ -1133,15 +1181,15 @@ contains
         ff = int(f)
 
     end subroutine update_halo_bc_ibm_index
-    !===============================================================================================
+    !==============================================================================================
 
-    !===============================================================================================
+    !==============================================================================================
     subroutine destroy_ibm
 
             ! Free the allocated memory
             deallocate(closest, ibm_index)
 
     end subroutine destroy_ibm
-    !===============================================================================================
+    !==============================================================================================
 
 end module

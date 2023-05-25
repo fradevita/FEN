@@ -94,14 +94,6 @@ contains
         advect_interface => advect_vof
 #endif
 #ifdef IBM
-        block
-            integer :: i
-            if (allocated(Eulerian_Solid_list)) then
-                do i = 1,size(Eulerian_Solid_list)
-                    call Eulerian_Solid_list(i)%pS%setup()
-                end do
-            end if
-        end block
         call init_ibm(comp_grid)
 #endif
 

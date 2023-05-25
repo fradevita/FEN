@@ -51,7 +51,7 @@ program Pan
     bc(4)%s = 'Wall'
 
     ! Create the grid
-    call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1, bc)
+    call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
 
     ! Set body force
     g(1) = Deltap
@@ -59,13 +59,13 @@ program Pan
     ! Create the solid body
     C = circle(X = [0.5_dp, 0.4_dp, 0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp], R = radius, name = 'Circle')
     C%G => comp_grid
+    call C%setup()
+    ! Set body force on the solid
+    C%eF(1) = g(1)*C%mass
     allocate(Eulerian_Solid_list(1))
     Eulerian_Solid_list(1)%pS => C
     call C%load_surface_points('mesh.txt')
     
-    ! Set body force on the solid
-    C%eF(1:3) = [g(1)*C%mass, g(2)*C%mass, 0.0_dp]
-
     ! Set the viscoisty
     viscosity = mu
 

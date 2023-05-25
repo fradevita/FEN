@@ -21,8 +21,8 @@ module eulerian_solid_mod
         real(dp) :: V(6) = 0.0_dp                     !< center of mass velocity
         real(dp) :: A(6) = 0.0_dp                     !< center of mass acceleration
         real(dp) :: hF(6) = 0.0_dp                    !< center of mass hydrodynamic forces
-        real(dp) :: hFv(6) = 0.0_dp                   !< center of mass hydrodynamic forces
-        real(dp) :: hFp(6) = 0.0_dp                   !< center of mass hydrodynamic forces
+        real(dp) :: hFv(6) = 0.0_dp                   !< center of mass hydrodynamic viscous forces
+        real(dp) :: hFp(6) = 0.0_dp                   !< center of mass hydrodynamic pressure forces
         real(dp) :: eF(6) = 0.0_dp                    !< center of mass external forces
         real(dp) :: M(6) = 1.0_dp                     !< inertial mass
         real(dp) :: rotation(3) = 0.0_dp              !< center of mass rotation

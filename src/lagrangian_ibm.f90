@@ -413,7 +413,7 @@ contains
 
             ! Save traslation and rotation
             obj%tra = Xnp1(1:tdof) - obj%center_of_mass%X(1:tdof)
-            obj%rot = Xnp1(tdof+1:tdof+1:rdof) - obj%center_of_mass%X(tdof+1:tdof+1:rdof)
+            obj%rot = Xnp1(tdof+1:tdof+rdof) - obj%center_of_mass%X(tdof+1:tdof+rdof)
 
             ! Update solution
             obj%center_of_mass%V = Vnp1

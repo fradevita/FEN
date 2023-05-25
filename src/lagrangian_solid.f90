@@ -360,7 +360,7 @@ contains
 
         ! Local variables
         integer    :: n, l, np1, nm1
-        real(dp)   :: r12(2), r21(2), d1(2), d2(2), fac, prefac, fac1, fac2, C(2,2)
+        real(dp)   :: r12(Ndim), r21(Ndim), d1(Ndim), d2(Ndim), fac, prefac, fac1, fac2, C(2,2)
         type(edge) :: l_edge
 
         ! First set internal forces to zero
@@ -392,8 +392,8 @@ contains
             ! Compute distance between mass points
             nm1 = merge(n - 1, self%number_of_mass_points, n > 1)
             np1 = merge(n + 1, 1, n < self%number_of_mass_points)
-            d1 = self%mass_points(n  )%X(1:2) - self%mass_points(nm1)%X(1:2)
-            d2 = self%mass_points(np1)%X(1:2) - self%mass_points(n  )%X(1:2)
+            d1 = self%mass_points(n  )%X(1:Ndim) - self%mass_points(nm1)%X(1:Ndim)
+            d2 = self%mass_points(np1)%X(1:Ndim) - self%mass_points(n  )%X(1:Ndim)
 
             ! Store the C coefficients in a matrix
             C(1,1) = dot_product(d1,d1)

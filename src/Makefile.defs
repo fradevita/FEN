@@ -68,6 +68,10 @@ ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o eulerian_i
 eulerian_ibm.o: $(SRC)/eulerian_ibm.f90 precision.o grid.o global.o eulerian_solid.o scalar.o vector.o tensor.o utils.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $< -o $(ODIR)/$@
 
+# Rule for eulerian_sphere module
+eulerian_sphere.o: $(SRC)/eulerian_sphere.f90 precision.o global.o eulerian_solid.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
 # Rule for eulerian_solid module
 eulerian_circle.o: $(SRC)/eulerian_circle.f90 precision.o global.o eulerian_solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
