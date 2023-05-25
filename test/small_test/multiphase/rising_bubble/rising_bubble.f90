@@ -42,7 +42,6 @@ program main
     bc(3)%s = 'Wall'
     bc(4)%s = 'Wall'
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
-    comp_grid%name = 'grid'
 
     ! Setup the initial VoF from a distance function
     distance => circle

@@ -35,7 +35,6 @@ program test_mls_interpolation
         Lz = Lx*float(Nz)/float(Nx)
         origin = [0.0_dp, 0.0_dp, 0.0_dp]
         call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1)
-        comp_grid%name = 'grid'
 
         ! Eulerian grid spacing
         delta = comp_grid%delta

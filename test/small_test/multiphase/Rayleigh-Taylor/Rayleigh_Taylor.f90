@@ -35,7 +35,6 @@ program main
     bc(3)%s = 'Wall'
     bc(4)%s = 'Wall'
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1, bc)
-    comp_grid%name = 'grid'
     
     ! Setup multiphase parameter
     rho_0 = 0.1694_dp

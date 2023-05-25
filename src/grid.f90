@@ -52,7 +52,7 @@ module grid_mod
         ! (prow x pcol)
         integer :: rank = 0, nranks = 1, prow = 1, pcol = 1
 
-        character(len=99) :: name = 'unset'
+        character(len=99) :: name = 'grid'
 
     contains
         procedure, pass(self) :: setup

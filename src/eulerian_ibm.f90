@@ -1,7 +1,9 @@
 !> This module contains all procedures for the Eulerian Immersed Boundary Method.
-module eulerian_ibm
+module eulerian_ibm_mod
 
-    use precision, only : dp
+    use precision_mod     , only : dp
+    use grid_mod          , only : grid
+    use eulerian_solid_mod, only : eulerian_solid_pointer, eulerian_solid
 
     implicit none
 
@@ -23,15 +25,13 @@ module eulerian_ibm
 
     ! Define the interpolation procedures
     abstract interface
-        function velocity_interpolation(i, j, k, f, solid, dir) result(vs)
-            use precision           , only : dp
-            use class_Grid          , only : bg => base_grid
-            use class_eulerian_solid, only : eulerian_solid
+        function velocity_interpolation(i, j, k, v, solid, dir) result(vs)
+            use precision_mod     , only : dp
+            use scalar_mod          
+            use eulerian_solid_mod, only : eulerian_solid
             integer              , intent(in) :: i, j, k, dir
-            real(dp)             , intent(in) :: f(bg%lo(1)-1:bg%hi(1)+1, &
-                                                   bg%lo(2)-1:bg%hi(2)+1, &
-                                                   bg%lo(3)-1:bg%hi(3)+1)
-            class(Eulerian_Solid), intent(in) :: solid
+            type(scalar)         , intent(in) :: v
+            class(eulerian_solid), intent(in) :: solid
             real(dp)                          :: vs
         end function velocity_interpolation
     end interface
@@ -42,23 +42,21 @@ module eulerian_ibm
 contains
 
     !========================================================================================
-    subroutine init_eulerian_ibm(solid_list)
+    subroutine init_eulerian_ibm(solid_list, G)
 
         ! This subroutine initialize all eulerian fields.
 
-        use class_Grid          , only : bg => base_grid
-        use class_Eulerian_Solid, only : Eulerian_Solid_pointer
-
         ! In/Out variables
         type(Eulerian_Solid_pointer), intent(in) :: solid_list(:)
+        type(grid)                  , intent(in) :: G
 
         ! Allocate memoroy for the fields
 #if DIM==3
-        allocate(  closest(bg%lo(1)-1:bg%hi(1)+1,bg%lo(2)-1:bg%hi(2)+1,bg%lo(3)-1:bg%hi(3)+1,0:3))
-        allocate(ibm_index(bg%lo(1)-1:bg%hi(1)+1,bg%lo(2)-1:bg%hi(2)+1,bg%lo(3)-1:bg%hi(3)+1,0:3))
+        allocate(  closest(G%lo(1)-1:G%hi(1)+1,G%lo(2)-1:G%hi(2)+1,G%lo(3)-1:G%hi(3)+1,0:3))
+        allocate(ibm_index(G%lo(1)-1:G%hi(1)+1,G%lo(2)-1:G%hi(2)+1,G%lo(3)-1:G%hi(3)+1,0:3))
 #else
-        allocate(  closest(bg%lo(1)-1:bg%hi(1)+1,bg%lo(2)-1:bg%hi(2)+1,bg%lo(3)-1:bg%hi(3)+1,0:2))
-        allocate(ibm_index(bg%lo(1)-1:bg%hi(1)+1,bg%lo(2)-1:bg%hi(2)+1,bg%lo(3)-1:bg%hi(3)+1,0:2))
+        allocate(  closest(G%lo(1)-1:G%hi(1)+1,G%lo(2)-1:G%hi(2)+1,G%lo(3)-1:G%hi(3)+1,0:2))
+        allocate(ibm_index(G%lo(1)-1:G%hi(1)+1,G%lo(2)-1:G%hi(2)+1,G%lo(3)-1:G%hi(3)+1,0:2))
 #endif
 
         ! Initialize the eulerian fields
@@ -79,22 +77,22 @@ contains
         ! This subroutine compute the eulerian fields phi, ibm_index, norm and cbl
         ! for the identification of solid bodies inside the Eulerian grid
 
-        use constants           , only : stagger
-        use class_Grid          , only : bg => base_grid
-        use class_Eulerian_Solid, only : Eulerian_Solid_pointer
+        use global_mod, only : istagger
 
         ! In/Out variables
-        type(Eulerian_Solid_pointer), intent(in) :: solid_list(:)
+        type(eulerian_solid_pointer), intent(in) :: solid_list(:)
 
         ! Local variables
         integer :: nb, i, j, k, dir, im, ip, jm, jp, b, clb_i, ndir
         real(dp) :: x, y, z, delta
         real(dp), dimension(:), allocatable :: distance
         real(dp), dimension(:,:,:,:), allocatable :: phi
+        type(grid) :: bg
 #if DIM==3
         integer  :: kp, km
 #endif
 
+        bg = solid_list(1)%pS%G
         delta = bg%delta
 
         nb = size(solid_list)
@@ -115,9 +113,9 @@ contains
                     do i = bg%lo(1)-1,bg%hi(1)+1
 
                         ! Local coordinates
-                        x = (i - stagger(1,dir))*delta
-                        y = (j - stagger(2,dir))*delta
-                        z = (k - stagger(3,dir))*delta
+                        x = (i - istagger(1,dir))*delta
+                        y = (j - istagger(2,dir))*delta
+                        z = (k - istagger(3,dir))*delta
 
                         ! Compute distance from every solid body
                         do b = 1,nb
@@ -181,7 +179,7 @@ contains
             end do
 
             ! BC and ghost
-            call update_halo_bc_ibm_index(ibm_index(:,:,:,dir))
+            call update_halo_bc_ibm_index(ibm_index(:,:,:,dir), bg)
 
         end do dir_cycle
 
@@ -194,9 +192,7 @@ contains
         !> Compute the force field due to all eulerian solid.
 
         use mpi
-        use class_Grid          , only : base_grid
-        use class_Vector        , only : vector
-        use class_Eulerian_Solid, only : Eulerian_Solid_pointer
+        use vector_mod        , only : vector
 
         ! In/Out variables
         type(vector)                , intent(in   ) :: v
@@ -209,12 +205,12 @@ contains
         integer  :: i, j, k, b
         real(dp) :: delta, x, y, z, vs
 
-        delta = base_grid%delta
+        delta = v%G%delta
         F%x%f = 0.0_dp
         F%y%f = 0.0_dp
-        do k = base_grid%lo(3),base_grid%hi(3)
-            do j = base_grid%lo(2),base_grid%hi(2)
-                do i = base_grid%lo(1),base_grid%hi(1)
+        do k = v%G%lo(3),v%G%hi(3)
+            do j = v%G%lo(2),v%G%hi(2)
+                do i = v%G%lo(1),v%G%hi(1)
 
                 ! X component of the forcing
                 if (ibm_index(i,j,k,1) == 2) then
@@ -223,7 +219,7 @@ contains
                 elseif (ibm_index(i,j,k,1) == 1) then
                     ! Interface point
                     b = closest(i,j,k,1)
-                    vs = interpolate_velocity(i, j, k, v%x%f, solid_list(b)%pS, 1)
+                    vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
                     F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
                 else
                     ! Solid point
@@ -242,7 +238,7 @@ contains
                 elseif (ibm_index(i,j,k,2) == 1) then
                     ! Interface point
                     b = closest(i,j,k,2)
-                    vs = interpolate_velocity(i, j, k, v%y%f, solid_list(b)%pS, 2)
+                    vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
                     F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
                 else
                     ! Solid point
@@ -261,7 +257,7 @@ contains
                 elseif (ibm_index(i,j,k,3) == 1) then
                     ! Interface point
                     b = closest(i,j,k,3)
-                    vs = interpolate_velocity(i, j, k, v%z%f, solid_list(b)%pS, 3)
+                    vs = interpolate_velocity(i, j, k, v%z, solid_list(b)%pS, 3)
                     F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
                 else
                     ! Solid point
@@ -287,9 +283,7 @@ contains
         ! Use this function instead of compute_ibm_forcing
     
         use mpi
-        use class_Grid          , only : base_grid
-        use class_Vector
-        use class_Eulerian_Solid, only : Eulerian_Solid_pointer
+        use vector_mod
     
         ! In/Out variables
         real(dp)    , intent(in   ) :: dt
@@ -300,11 +294,11 @@ contains
         integer  :: i, j, k, b
         real(dp) :: delta, x, y, z, vs
     
-        delta = base_grid%delta
+        delta = v%G%delta
         
-        do k = base_grid%lo(3),base_grid%hi(3)
-           do j = base_grid%lo(2),base_grid%hi(2)
-              do i = base_grid%lo(1),base_grid%hi(1)
+        do k = v%G%lo(3),v%G%hi(3)
+           do j = v%G%lo(2),v%G%hi(2)
+              do i = v%G%lo(1),v%G%hi(1)
     
                  ! Force x component of velocity
                  if (ibm_index(i,j,k,1) == 2) then
@@ -312,7 +306,7 @@ contains
                  elseif (ibm_index(i,j,k,1) == 1) then
                     ! Interface point
                     b = closest(i,j,k,1)
-                    vs = interpolate_velocity(i, j, k, v%x%f, solid_list(b)%pS, 1)
+                    vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
                     v%x%f(i,j,k) = vs
                  else
                     ! Solid point
@@ -330,7 +324,7 @@ contains
                  elseif (ibm_index(i,j,k,2) == 1) then
                     ! Interface point
                     b = closest(i,j,k,2)
-                    vs = interpolate_velocity(i, j, k, v%y%f, solid_list(b)%pS, 2)
+                    vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
                     v%y%f(i,j,k) = vs
                  else
                     ! Solid point
@@ -347,38 +341,35 @@ contains
         end do
     
         ! Apply boundary conditions after forcing
-        call v%apply_bc
+        call v%update_ghost_nodes
         
     end subroutine forcing_velocity
-    !======================================================================================
+    !==============================================================================================
     
-    !======================================================================================
-    function velocity_interpolation_2D(i, j, k, f, solid, dir) result(fl)
+    !==============================================================================================
+    function velocity_interpolation_2D(i, j, k, v, solid, dir) result(fl)
 
         ! This function compute the interpolated velocity component (f) on the forcing point
         ! with coordinates (i,j,k)
 
-        use constants           , only : stagger
-        use class_Grid          , only : base_grid
-        use class_Eulerian_Solid, only : eulerian_solid
-        use utils               , only : linear, bilinear
+        use global_mod, only : istagger
+        use scalar_mod
+        use utils_mod , only : linear_interpolation, bilinear_interpolation
 
         ! In/Out variables
-        integer , intent(in) :: i, j, k, dir
-        real(dp), intent(in) :: f(base_grid%lo(1)-1:base_grid%hi(1)+1, &
-                                  base_grid%lo(2)-1:base_grid%hi(2)+1, &
-                                  base_grid%lo(3)-1:base_grid%hi(3)+1)
+        integer              , intent(in) :: i, j, k, dir
+        type(scalar)         , intent(in) :: v
         class(eulerian_solid), intent(in) :: solid
 
         ! Local variables
         integer  :: i2, j2
         real(dp) :: delta, x, y, s, a, b, q, fl, xl, yl, xx, yy, velb, xb, yb, nx, ny, x2, y2, nn(3)
 
-        delta = base_grid%delta
+        delta = v%G%delta
 
         ! Physical coordinates
-        x = (i - stagger(1,dir))*delta
-        y = (j - stagger(2,dir))*delta
+        x = (i - istagger(1,dir))*delta
+        y = (j - istagger(2,dir))*delta
 
         ! Local normal vector
         nn = solid%norm([x, y, 0.0_dp])
@@ -398,20 +389,20 @@ contains
         ! Select nodes for interpolation based on local norm
         i2 = i + int(sign(1.0_dp,nx))
         j2 = j + int(sign(1.0_dp,ny))
-        x2 = (i2 - stagger(1,dir))*delta
-        y2 = (j2 - stagger(2,dir))*delta
+        x2 = (i2 - istagger(1,dir))*delta
+        y2 = (j2 - istagger(2,dir))*delta
 
         ! If one norm component is zero interpolate along cartesian directions
         if (abs(nx) <= 1.0e-12_dp) then
             ! Auxiliary point in (x,y2)
-            q = f(i,j2,k)
+            q = v%f(i,j2,k)
             ! Inerpolate in the forcing point
-            fl = linear(s, 0.0_dp, delta, velb, q)
+            fl = linear_interpolation(s, 0.0_dp, delta, velb, q)
         elseif (abs(ny) <= 1.0e-12_dp) then
             ! Auxiliary point in (x2,y)
-            q = f(i2,j,k)
+            q = v%f(i2,j,k)
             ! Interpolate in the forcing point
-            fl = linear(s, 0.0_dp, delta, velb, q)
+            fl = linear_interpolation(s, 0.0_dp, delta, velb, q)
         else
 
             ! Norm line equation
@@ -423,20 +414,20 @@ contains
                 xx = (y2 - b)/a
 
                 ! Valocity in the auxiliary point
-                q = linear(xx, min(x,x2), max(x,x2), f(min(i,i2),j2,k), f(max(i,i2),j2,k))
+                q = linear_interpolation(xx, min(x,x2), max(x,x2), v%f(min(i,i2),j2,k), v%f(max(i,i2),j2,k))
 
                 ! Interpolation in forcing point
-                fl = linear(s, 0.0_dp, solid%distance([xx, y2, 0.0_dp]), velb, q)
+                fl = linear_interpolation(s, 0.0_dp, solid%distance([xx, y2, 0.0_dp]), velb, q)
 
             elseif (ibm_index(i,j2,k,dir) < 2) then
                 ! Intersection between normal line and line at x = x2: (x2, yy)
                 yy = a*x2 + b
 
                 ! Velocity in the auxiliary point
-                q = linear(yy, min(y,y2), max(y,y2), f(i2,min(j,j2),k), f(i2,max(j,j2),k))
+                q = linear_interpolation(yy, min(y,y2), max(y,y2), v%f(i2,min(j,j2),k), v%f(i2,max(j,j2),k))
 
                 ! Interpolation in the forcing point
-                fl = linear(s, 0.0_dp, solid%distance([x2, yy, 0.0_dp]), velb, q)
+                fl = linear_interpolation(s, 0.0_dp, solid%distance([x2, yy, 0.0_dp]), velb, q)
 
             else
                 ! Bilinear interpolation
@@ -449,11 +440,11 @@ contains
                 xl = (xl - min(x,x2))/delta
                 yl = (yl - min(y,y2))/delta
 
-                q = bilinear(xl, yl, f(min(i,i2),min(j,j2),k), f(max(i,i2),min(j,j2),k), &
-                                     f(min(i,i2),max(j,j2),k), f(max(i,i2),max(j,j2),k))
+                q = bilinear_interpolation(xl, yl, v%f(min(i,i2),min(j,j2),k), v%f(max(i,i2),min(j,j2),k), &
+                                                   v%f(min(i,i2),max(j,j2),k), v%f(max(i,i2),max(j,j2),k))
 
                 ! Interpolation in the forcing point
-                fl = linear(s, 0.0_dp, 2.0_dp*s, velb, q)
+                fl = linear_interpolation(s, 0.0_dp, 2.0_dp*s, velb, q)
             end if
 
         endif
@@ -462,22 +453,19 @@ contains
     !========================================================================================
 
 #if DIM==3
-    !========================================================================================
-    function velocity_interpolation_3D(i, j, k, f, solid, dir) result(fl)
+    !==============================================================================================
+    function velocity_interpolation_3D(i, j, k, v, solid, dir) result(fl)
 
         ! This function compute the interpolated velocity component (f) on the forcing point
         ! with coordinates (i,j,k)
 
-        use constants           , only : stagger
-        use class_Grid          , only : bg => base_grid
-        use class_Eulerian_Solid, only : eulerian_solid
-        use utils               , only : bilinear, trilinear
+        use global_mod, only : istagger
+        use utils_mod , only : bilinear_interpolation, trilinear_interpolation
+        use scalar_mod 
 
         ! In/Out variables
         integer              , intent(in) :: i, j, k                      !< Cell index
-        real(dp)             , intent(in) :: f(bg%lo(1)-1:bg%hi(1)+1, &   !< Velocity component to be interpolated
-                                               bg%lo(2)-1:bg%hi(2)+1, &
-                                               bg%lo(3)-1:bg%hi(3)+1)
+        type(scalar)         , intent(in) :: v
         class(eulerian_solid), intent(in) :: solid                        !< Solid object 
         integer              , intent(in) :: dir                          !< velocity direction
 
@@ -485,13 +473,16 @@ contains
         integer :: i2, j2, k2
         real(dp) :: x, y, z, nn(3), nx, ny, nz, s, xb, yb, zb, velb, x2, y2, z2, q, fl
         real(dP) :: xv, yv, zv, xl, yl, zl, d, delta
+        type(grid) :: bg
+
+        bg = v%G
 
         delta = bg%delta
 
         ! Local coordinates
-        x = (i - stagger(1,dir))*delta
-        y = (j - stagger(2,dir))*delta
-        z = (k - stagger(3,dir))*delta
+        x = (i - istagger(1,dir))*delta
+        y = (j - istagger(2,dir))*delta
+        z = (k - istagger(3,dir))*delta
 
         ! Local normal
         nn = solid%norm([x, y, z])
@@ -514,9 +505,9 @@ contains
         i2 = i + int(sign(1.0_dp,nx))
         j2 = j + int(sign(1.0_dp,ny))
         k2 = k + int(sign(1.0_dp,nz))
-        x2 = (i2 - stagger(1,dir))*delta
-        y2 = (j2 - stagger(2,dir))*delta
-        z2 = (k2 - stagger(3,dir))*delta
+        x2 = (i2 - istagger(1,dir))*delta
+        y2 = (j2 - istagger(2,dir))*delta
+        z2 = (k2 - istagger(3,dir))*delta
 
         ! Check if some of the neighbours is a forcing point
         if (ibm_index(i2,j,k,dir) < 2 ) then
@@ -529,8 +520,10 @@ contains
                 zl = (zv - min(z,z2))/delta
 
                 ! Bilinear interpolation in the virtual point
-                q = bilinear(xl, zl, f(min(i,i2),j2,min(k,k2)), f(max(i,i2),j2,min(k,k2)), &
-                                     f(min(i,i2),j2,max(k,k2)), f(max(i,i2),j2,max(k,k2)))
+                q = bilinear_interpolation(xl, zl, v%f(min(i,i2),j2,min(k,k2)), &
+                                                   v%f(max(i,i2),j2,min(k,k2)), &
+                                                   v%f(min(i,i2),j2,max(k,k2)), &
+                                                   v%f(max(i,i2),j2,max(k,k2)))
 
                 ! Distance between solid surface and virtual point
                 d = sqrt((xv - xb)**2 + (yv - yb)**2 + (zv - zb)**2)
@@ -546,8 +539,10 @@ contains
                 yl = (yv - min(y,y2))/delta
 
                 ! Bilinear interpolation in the virtual point
-                q = bilinear(xl, yl, f(min(i,i2),min(j,j2),k2), f(max(i,i2),min(j,j2),k2), &
-                                     f(min(i,i2),max(j,j2),k2), f(max(i,i2),max(j,j2),k2))
+                q = bilinear_interpolation(xl, yl, v%f(min(i,i2),min(j,j2),k2), &
+                                                   v%f(max(i,i2),min(j,j2),k2), &
+                                                   v%f(min(i,i2),max(j,j2),k2), &
+                                                   v%f(max(i,i2),max(j,j2),k2))
 
                 ! Distance between solid surface and virtual point
                 d = sqrt((xv - xb)**2 + (yv - yb)**2 + (zv - zb)**2)
@@ -565,8 +560,10 @@ contains
                 zl = (zv - min(z,z2))/delta
 
                 ! Bilinear interpolation in the virtual point
-                q = bilinear(yl, zl, f(i2,min(j,j2),min(k,k2)), f(i2,max(j,j2),min(k,k2)), &
-                                     f(i2,min(j,j2),max(k,k2)), f(i2,max(j,j2),max(k,k2)))
+                q = bilinear_interpolation(yl, zl, v%f(i2,min(j,j2),min(k,k2)), &
+                                                   v%f(i2,max(j,j2),min(k,k2)), &
+                                                   v%f(i2,min(j,j2),max(k,k2)), &
+                                                   v%f(i2,max(j,j2),max(k,k2)))
 
                 ! Distance between solid surface and virtual point
                 d = sqrt((xv - xb)**2 + (yv - yb)**2 + (zv - zb)**2)
@@ -582,8 +579,10 @@ contains
                 yl = (yv - min(y,y2))/delta
 
                 ! Bilinear interpolation in the virtual point
-                q = bilinear(xl, yl, f(min(i,i2),min(j,j2),k2), f(max(i,i2),min(j,j2),k2), &
-                                     f(min(i,i2),max(j,j2),k2), f(max(i,i2),max(j,j2),k2))
+                q = bilinear_interpolation(xl, yl, v%f(min(i,i2),min(j,j2),k2), &
+                                                   v%f(max(i,i2),min(j,j2),k2), &
+                                                   v%f(min(i,i2),max(j,j2),k2), &
+                                                   v%f(max(i,i2),max(j,j2),k2))
 
                 ! Distance between solid surface and virtual point
                 d = sqrt((xv - xb)**2 + (yv - yb)**2 + (zv - zb)**2)
@@ -600,8 +599,10 @@ contains
                 yl = (yv - min(y,y2))/delta
                 zl = (zv - min(z,z2))/delta
                 ! Bilinear interpolation in the virtual point
-                q = bilinear(yl, zl, f(i2,min(j,j2),min(k,k2)), f(i2,max(j,j2),min(k,k2)), &
-                                     f(i2,min(j,j2),max(k,k2)), f(i2,max(j,j2),max(k,k2)))
+                q = bilinear_interpolation(yl, zl, v%f(i2,min(j,j2),min(k,k2)), &
+                                                   v%f(i2,max(j,j2),min(k,k2)), &
+                                                   v%f(i2,min(j,j2),max(k,k2)), &
+                                                   v%f(i2,max(j,j2),max(k,k2)))
 
                 ! Distance between solid surface and virtual point
                 d = sqrt((xv - xb)**2 + (yv - yb)**2 + (zv - zb)**2)
@@ -617,8 +618,10 @@ contains
                 zl = (zv - min(z,z2))/delta
 
                 ! Bilinear interpolation in the virtual point
-                q = bilinear(xl, zl, f(min(i,i2),j2,min(k,k2)), f(max(i,i2),j2,min(k,k2)), &
-                                     f(min(i,i2),j2,max(k,k2)), f(max(i,i2),j2,max(k,k2)))
+                q = bilinear_interpolation(xl, zl, v%f(min(i,i2),j2,min(k,k2)), &
+                                                   v%f(max(i,i2),j2,min(k,k2)), &
+                                                   v%f(min(i,i2),j2,max(k,k2)), &
+                                                   v%f(max(i,i2),j2,max(k,k2)))
 
                 ! Distance between solid surface and virtual point
                 d = sqrt((xv - xb)**2 + (yv - yb)**2 + (zv - zb)**2)
@@ -639,14 +642,14 @@ contains
             zl = (zv - min(z,z2))/delta
 
             ! Trilinear interpolation
-            q = trilinear(xl,yl,zl,f(min(i,i2),min(j,j2),min(k,k2)), &
-                                   f(max(i,i2),min(j,j2),min(k,k2)), &
-                                   f(min(i,i2),max(j,j2),min(k,k2)), &
-                                   f(min(i,i2),min(j,j2),max(k,k2)), &
-                                   f(max(i,i2),max(j,j2),min(k,k2)), &
-                                   f(max(i,i2),min(j,j2),max(k,k2)), &
-                                   f(min(i,i2),max(j,j2),max(k,k2)), &
-                                   f(max(i,i2),max(j,j2),max(k,k2)))
+            q = trilinear_interpolation(xl,yl,zl,v%f(min(i,i2),min(j,j2),min(k,k2)), &
+                                                 v%f(max(i,i2),min(j,j2),min(k,k2)), &
+                                                 v%f(min(i,i2),max(j,j2),min(k,k2)), &
+                                                 v%f(min(i,i2),min(j,j2),max(k,k2)), &
+                                                 v%f(max(i,i2),max(j,j2),min(k,k2)), &
+                                                 v%f(max(i,i2),min(j,j2),max(k,k2)), &
+                                                 v%f(min(i,i2),max(j,j2),max(k,k2)), &
+                                                 v%f(max(i,i2),max(j,j2),max(k,k2)))
 
             ! Interpolated velocity in the forcing point
             fl = velb + (q - velb)*0.5_dp
@@ -663,13 +666,11 @@ contains
         ! method.
 
         use mpi
-        use utils               , only : bilinear, integrate_1D
-        use constants           , only : pi, Ndim
-        use class_Grid          , only : base_grid
-        use class_Eulerian_Solid, only : eulerian_solid
-        use class_Scalar
-        use class_Vector
-        use class_Tensor
+        use utils_mod           , only : bilinear_interpolation, integrate_1D
+        use global_mod          , only : pi, Ndim
+        use scalar_mod
+        use vector_mod
+        use tensor_mod
 
         ! In/Out variables
         real(dp)             , intent(in   ) :: g(2)
@@ -680,28 +681,25 @@ contains
         ! Local variables
         integer :: i, j, k, ip, im, jp, jm, n, error, nr, build_matrix
         integer , dimension(3) :: Ic, I1, I2
-        real(dp) :: delta, idelta, ds, pl, Dxxl, Dxyl, Dyyl, Lymax
+        real(dp) :: delta, idelta, ds, pl, Dxxl, Dxyl, Dyyl
         real(dp) :: Fvx, Fvy, Fpx, Fpy, accl_tot(2), rr(3)
         real(dp), dimension(:), allocatable :: Fvxl, Fvyl, Fpxl, Fpyl, Fxl, Fyl, s, rx, ry
         real(dp), dimension(3) :: loc_norm, X_probe, X_center, X, Xl
         type(scalar) :: pB
         type(tensor) :: D
 
-        delta = base_grid%delta
+        delta = v%G%delta
         idelta = 1.0_dp/delta
 
-        ! Lymax is the physical dimension in y on each processor
-        Lymax = base_grid%Ly/float(base_grid%prow)
-
         ! Compute shear stress and pressure
-        call pB%allocate(1)
-        call D%allocate(1)
+        call pB%allocate(v%G, 1)
+        call D%allocate(v%G, 1)
 
-        do k = base_grid%lo(3),base_grid%hi(3)
-            do j = base_grid%lo(2),base_grid%hi(2)
+        do k = v%G%lo(3),v%G%hi(3)
+            do j = v%G%lo(2),v%G%hi(2)
                 jp = j + 1
                 jm = j - 1
-                do i = base_grid%lo(1),base_grid%hi(1)
+                do i = v%G%lo(1),v%G%hi(1)
                     ip = i + 1
                     im = i - 1
                     pB%f(i,j,k) = p%f(i,j,k)
@@ -715,8 +713,8 @@ contains
         end do
 
         ! Update BC and ghost nodes
-        call pB%apply_bc()
-        call D%apply_bc()
+        call pB%update_ghost_nodes()
+        call D%update_ghost_nodes()
 
         ! Set the number of auxiliary points
         nr = size(solid%surface_points(:))
@@ -740,14 +738,14 @@ contains
             X_probe = solid%surface_points(n)%X + ds*loc_norm
 
             ! Check if the probe is out of the domain and in case traslate it.
-            X_probe = traslate(X_probe)
+            X_probe = traslate(X_probe, v%G)
 
             ! Search neighbours for the interplation
             build_matrix = 1
             buid_matrix: do while (build_matrix == 1)
 
                 ! Closest cell center to the probe
-                Ic = base_grid%closest_grid_node(X_probe, 0)
+                Ic = v%G%closest_grid_node(X_probe, 0)
 
                 ! Phyiscal coordinates in this cell
                 X_center = (Ic - 0.5_dp)*delta
@@ -779,14 +777,14 @@ contains
                 ! Check that all neighbours are fluid points
                 ! The check must be done on the proper rank
                 build_matrix = 0
-                if (Ic(2) >= base_grid%lo(2) .and. Ic(2) <= base_grid%hi(2)) then
+                if (Ic(2) >= v%G%lo(2) .and. Ic(2) <= v%G%hi(2)) then
                     if (ibm_index(I2(1),I1(2),1,0) < 2 .or. &
                         ibm_index(I1(1),I2(2),1,0) < 2 .or. ibm_index(I2(1),I2(2),1,0) < 2) then
                         ! Move the probe
                         ds = ds*1.25_dp
                         X_probe = solid%surface_points(n)%X + ds*loc_norm
                         ! Check if the probes is outside of the domain
-                        X_probe = traslate(X_probe)
+                        X_probe = traslate(X_probe, v%G)
                         build_matrix = 1
                     else
 
@@ -803,17 +801,17 @@ contains
 
             ! Interpolate shear tensor and pressure on the probe.
             ! Select the rank containing the probe.
-            if (Ic(2) >= base_grid%lo(2) .and. Ic(2) <= base_grid%hi(2)) then
+            if (Ic(2) >= v%G%lo(2) .and. Ic(2) <= v%G%hi(2)) then
                 Xl   = (X_probe - X)*idelta
 
-                pl   = bilinear(Xl(1), Xl(2),    pB%f(I1(1),I1(2),1),    pB%f(I2(1),I1(2),1), &
-                                                 pB%f(I1(1),I2(2),1),    pB%f(I2(1),I2(2),1))
-                Dxxl = bilinear(Xl(1), Xl(2), D%x%x%f(I1(1),I1(2),1), D%x%x%f(I2(1),I1(2),1), &
-                                              D%x%x%f(I1(1),I2(2),1), D%x%x%f(I2(1),I2(2),1))
-                Dxyl = bilinear(Xl(1), Xl(2), D%x%y%f(I1(1),I1(2),1), D%x%y%f(I2(1),I1(2),1), &
-                                              D%x%y%f(I1(1),I2(2),1), D%x%y%f(I2(1),I2(2),1))
-                Dyyl = bilinear(Xl(1), Xl(2), D%y%y%f(I1(1),I1(2),1), D%y%y%f(I2(1),I1(2),1), &
-                                              D%y%y%f(I1(1),I2(2),1), D%y%y%f(I2(1),I2(2),1))
+                pl   = bilinear_interpolation(Xl(1), Xl(2),    pB%f(I1(1),I1(2),1),    pB%f(I2(1),I1(2),1), &
+                                                               pB%f(I1(1),I2(2),1),    pB%f(I2(1),I2(2),1))
+                Dxxl = bilinear_interpolation(Xl(1), Xl(2), D%x%x%f(I1(1),I1(2),1), D%x%x%f(I2(1),I1(2),1), &
+                                                            D%x%x%f(I1(1),I2(2),1), D%x%x%f(I2(1),I2(2),1))
+                Dxyl = bilinear_interpolation(Xl(1), Xl(2), D%x%y%f(I1(1),I1(2),1), D%x%y%f(I2(1),I1(2),1), &
+                                                            D%x%y%f(I1(1),I2(2),1), D%x%y%f(I2(1),I2(2),1))
+                Dyyl = bilinear_interpolation(Xl(1), Xl(2), D%y%y%f(I1(1),I1(2),1), D%y%y%f(I2(1),I1(2),1), &
+                                                            D%y%y%f(I1(1),I2(2),1), D%y%y%f(I2(1),I2(2),1))
 
                 ! The pressure on the solid body boundary depends on the acceleartion
                 accl_tot(1) = solid%acceleration(solid%surface_points(n)%X, 1)
@@ -873,8 +871,8 @@ contains
         ry = 0.0_dp
         do n = 1,nr
             rr = [solid%surface_points(n)%X(1) - solid%rot_center(1),                &
-                  solid%surface_points(n)%X(1) - solid%rot_center(1) + base_grid%Lx, &
-                  solid%surface_points(n)%X(1) - solid%rot_center(1) - base_grid%Lx]
+                  solid%surface_points(n)%X(1) - solid%rot_center(1) + v%G%Lx, &
+                  solid%surface_points(n)%X(1) - solid%rot_center(1) - v%G%Lx]
             rx(n) = rr(minloc(abs(rr),1))
             ry(n) = solid%surface_points(n)%X(2) - solid%rot_center(2)
         end do
@@ -899,141 +897,140 @@ contains
     end subroutine compute_hydrodynamic_loads
     !========================================================================================
 
+    ! !========================================================================================
+    ! subroutine pressure_extrapolation(p, rho, g, solid_list)
+
+    !     ! TODO: mpi implementation
+
+    !     use precision           , only : dp
+    !     use class_Grid          , only : base_grid
+    !     use class_eulerian_solid, only : eulerian_solid_pointer
+    !     use utils               , only : linear, bilinear
+    !     use class_Scalar
+
+    !     ! In/Out variables
+    !     type(scalar)                , intent(inout) :: p
+    !     type(scalar)                , intent(in   ) :: rho
+    !     real(dp)                    , intent(in   ) :: g(3)
+    !     type(eulerian_solid_pointer), intent(in   ) :: solid_list(:)
+
+    !     ! Local variables
+    !     integer  :: i, j, k, b, ie(3), i2, j2, i1, j1
+    !     real(dp) :: x, y, d, nn(3), xb, yb, xp, yp, x1, y1, x2, y2, xl, yl, h_probe
+    !     real(dp) :: a(2), p_probe, p_s
+    !     logical  :: setting_probe
+
+    !     do k = base_grid%lo(3),base_grid%hi(3)
+    !         do j = base_grid%lo(2),base_grid%hi(2)
+    !             do i = base_grid%lo(1),base_grid%hi(1)
+
+    !                 ! Check if the point is an extrapolation point
+    !                 if (ibm_index(i,j,k,0) == -1) then
+
+    !                     ! Local coordinates
+    !                     x = base_grid%x(i)
+    !                     y = base_grid%y(j)
+
+    !                     ! Select the closest solid object
+    !                     b = closest(i,j,k,0)
+
+    !                     ! Compute the distance between the local point and the solid surface
+    !                     d = -solid_list(b)%pS%distance([x, y, 0.0_dp])
+
+    !                     ! Evaluate normal vector
+    !                     nn = solid_list(b)%pS%norm([x, y, 0.0_dp])
+
+    !                     ! Location on the solid surface along normal direction
+    !                     xb = x + d*nn(1)
+    !                     yb = y + d*nn(2)
+
+    !                     ! Start a loop to find the optimal location of the probe. Place
+    !                     ! the probe at an initial distance equal to delta
+    !                     h_probe = base_grid%delta
+    !                     setting_probe = .true.
+    !                     do while (setting_probe)
+    !                         ! Locate a probe in a point at a distance delta from the solid surface
+    !                         xp = xb + h_probe*nn(1)
+    !                         yp = yb + h_probe*nn(2)
+
+    !                         ! Select the closest eulerian grid node to the probe
+    !                         ie = base_grid%closest_grid_node([xp, yp, 0.0_dp], 0)
+    !                         i1 = ie(1)
+    !                         j1 = ie(2)
+    !                         x1 = (i1 - 0.5_dp)*base_grid%delta
+    !                         y1 = (j1 - 0.5_dp)*base_grid%delta
+
+    !                         ! Select the support domain for the interpolation based on the local normal vector
+    !                         i2 = i1 + int(sign(1.0_dp,nn(1)))
+    !                         j2 = j1 + int(sign(1.0_dp,nn(2)))
+    !                         x2 = (i2 - 0.5_dp)*base_grid%delta
+    !                         y2 = (j2 - 0.5_dp)*base_grid%delta
+
+    !                         ! Check if one node is solid
+    !                         if (ibm_index(i1,j1,k,0) < 1 .or. ibm_index(i2,j1,k,0) < 1 .or. &
+    !                             ibm_index(i1,j2,k,0) < 1 .or. ibm_index(i2,j2,k,0) < 1) then
+    !                             ! The support domain contains one solid point, must moove away the probe
+    !                             h_probe = h_probe*1.25_dp
+    !                         else
+    !                             ! Perform bilinear interpolation of the pressure on the probe
+    !                             xl = (xp - min(x1,x2))/base_grid%delta
+    !                             yl = (yp - min(y1,y2))/base_grid%delta
+    !                             p_probe = bilinear(xl, yl, p%f(min(i1,i2),min(j1,j2),k), p%f(max(i1,i2),min(j1,j2),k), &
+    !                                                        p%f(min(i1,i2),max(j1,j2),k), p%f(max(i1,i2),max(j1,j2),k))
+
+    !                             setting_probe = .false.
+    !                         endif
+    !                     end do
+
+    !                     ! Evaluate local acceleration of the solid object
+    !                     a(1) = solid_list(b)%pS%acceleration([xb, yb, 0.0_dp], 1)
+    !                     a(2) = solid_list(b)%pS%acceleration([xb, yb, 0.0_dp], 2)
+
+    !                     ! Find pressure on the solid surface from boundary condition
+    !                     p_s = p_probe - rho%f(i,j,k)*h_probe*(a(1)*nn(1) + a(2)*nn(2) - g(1)*nn(1) - g(2)*nn(2))
+
+    !                     ! Extrapolate pressure on the extrapolation point
+    !                     p%f(i,j,k) = p_probe + (p_s - p_probe)*(d + h_probe)/h_probe
+
+    !                 endif
+    !             end do
+    !         end do
+    !     end do
+
+    !     ! Update ghost nodes
+    !     call p%apply_bc()
+
+    ! end subroutine pressure_extrapolation
+    ! !========================================================================================
+
     !========================================================================================
-    subroutine pressure_extrapolation(p, rho, g, solid_list)
-
-        ! TODO: mpi implementation
-
-        use precision           , only : dp
-        use class_Grid          , only : base_grid
-        use class_eulerian_solid, only : eulerian_solid_pointer
-        use utils               , only : linear, bilinear
-        use class_Scalar
-
-        ! In/Out variables
-        type(scalar)                , intent(inout) :: p
-        type(scalar)                , intent(in   ) :: rho
-        real(dp)                    , intent(in   ) :: g(3)
-        type(eulerian_solid_pointer), intent(in   ) :: solid_list(:)
-
-        ! Local variables
-        integer  :: i, j, k, b, ie(3), i2, j2, i1, j1
-        real(dp) :: x, y, d, nn(3), xb, yb, xp, yp, x1, y1, x2, y2, xl, yl, h_probe
-        real(dp) :: a(2), p_probe, p_s
-        logical  :: setting_probe
-
-        do k = base_grid%lo(3),base_grid%hi(3)
-            do j = base_grid%lo(2),base_grid%hi(2)
-                do i = base_grid%lo(1),base_grid%hi(1)
-
-                    ! Check if the point is an extrapolation point
-                    if (ibm_index(i,j,k,0) == -1) then
-
-                        ! Local coordinates
-                        x = base_grid%x(i)
-                        y = base_grid%y(j)
-
-                        ! Select the closest solid object
-                        b = closest(i,j,k,0)
-
-                        ! Compute the distance between the local point and the solid surface
-                        d = -solid_list(b)%pS%distance([x, y, 0.0_dp])
-
-                        ! Evaluate normal vector
-                        nn = solid_list(b)%pS%norm([x, y, 0.0_dp])
-
-                        ! Location on the solid surface along normal direction
-                        xb = x + d*nn(1)
-                        yb = y + d*nn(2)
-
-                        ! Start a loop to find the optimal location of the probe. Place
-                        ! the probe at an initial distance equal to delta
-                        h_probe = base_grid%delta
-                        setting_probe = .true.
-                        do while (setting_probe)
-                            ! Locate a probe in a point at a distance delta from the solid surface
-                            xp = xb + h_probe*nn(1)
-                            yp = yb + h_probe*nn(2)
-
-                            ! Select the closest eulerian grid node to the probe
-                            ie = base_grid%closest_grid_node([xp, yp, 0.0_dp], 0)
-                            i1 = ie(1)
-                            j1 = ie(2)
-                            x1 = (i1 - 0.5_dp)*base_grid%delta
-                            y1 = (j1 - 0.5_dp)*base_grid%delta
-
-                            ! Select the support domain for the interpolation based on the local normal vector
-                            i2 = i1 + int(sign(1.0_dp,nn(1)))
-                            j2 = j1 + int(sign(1.0_dp,nn(2)))
-                            x2 = (i2 - 0.5_dp)*base_grid%delta
-                            y2 = (j2 - 0.5_dp)*base_grid%delta
-
-                            ! Check if one node is solid
-                            if (ibm_index(i1,j1,k,0) < 1 .or. ibm_index(i2,j1,k,0) < 1 .or. &
-                                ibm_index(i1,j2,k,0) < 1 .or. ibm_index(i2,j2,k,0) < 1) then
-                                ! The support domain contains one solid point, must moove away the probe
-                                h_probe = h_probe*1.25_dp
-                            else
-                                ! Perform bilinear interpolation of the pressure on the probe
-                                xl = (xp - min(x1,x2))/base_grid%delta
-                                yl = (yp - min(y1,y2))/base_grid%delta
-                                p_probe = bilinear(xl, yl, p%f(min(i1,i2),min(j1,j2),k), p%f(max(i1,i2),min(j1,j2),k), &
-                                                           p%f(min(i1,i2),max(j1,j2),k), p%f(max(i1,i2),max(j1,j2),k))
-
-                                setting_probe = .false.
-                            endif
-                        end do
-
-                        ! Evaluate local acceleration of the solid object
-                        a(1) = solid_list(b)%pS%acceleration([xb, yb, 0.0_dp], 1)
-                        a(2) = solid_list(b)%pS%acceleration([xb, yb, 0.0_dp], 2)
-
-                        ! Find pressure on the solid surface from boundary condition
-                        p_s = p_probe - rho%f(i,j,k)*h_probe*(a(1)*nn(1) + a(2)*nn(2) - g(1)*nn(1) - g(2)*nn(2))
-
-                        ! Extrapolate pressure on the extrapolation point
-                        p%f(i,j,k) = p_probe + (p_s - p_probe)*(d + h_probe)/h_probe
-
-                    endif
-                end do
-            end do
-        end do
-
-        ! Update ghost nodes
-        call p%apply_bc()
-
-    end subroutine pressure_extrapolation
-    !========================================================================================
-
-    !========================================================================================
-    function traslate(X) result(X1)
-
-        use class_Grid, only : base_grid
-    
+    function traslate(X, G) result(X1)
+   
         ! In/out variables
-        real(dp), intent(in) :: X(3)
+        real(dp)  , intent(in) :: X(3)
+        type(grid), intent(in) :: G
         real(dp) :: X1(3)
     
         X1 = X
     
-        if (base_grid%periodic_bc(1) .eqv. .true.) then
-           if (X(1) > base_grid%Lx) then
-              X1(1) = X(1) - base_grid%Lx
+        if (G%periodic_bc(1) .eqv. .true.) then
+           if (X(1) > G%Lx) then
+              X1(1) = X(1) - G%Lx
            elseif (X(1) < 0.0_dp) then
-              X1(1) = X(1) + base_grid%Lx
+              X1(1) = X(1) + G%Lx
            endif
         endif
     
     end function traslate
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
-    subroutine update_halo_bc_solid(f)
+    !==============================================================================================
+    subroutine update_halo_bc_solid(f, base_grid)
 
         use decomp_2d
-        use class_Grid, only : base_grid
 
         ! In/Out variables
+        type(grid), intent(in) :: base_grid
         real(mytype), intent(inout) :: &
             f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
 
@@ -1077,74 +1074,74 @@ contains
         endif
 
     end subroutine update_halo_bc_solid
-    !========================================================================================
+    !==============================================================================================
 
-    !========================================================================================
-    subroutine update_halo_bc_ibm_index(ff)
+    !==============================================================================================
+    subroutine update_halo_bc_ibm_index(ff, base_grid)
 
         use decomp_2d
-        use class_Grid, only : base_grid
 
-      ! In/Out variables
-      integer, intent(inout) :: &
-         ff(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
+        ! In/Out variables
+        type(grid), intent(in) :: base_grid
+        integer, intent(inout) :: &
+            ff(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
 
-      real(dp) :: &
-         f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
+        real(dp) :: &
+            f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
 
-      ! Local variables
-      real(dp), dimension(:,:,:), allocatable :: fh
+        ! Local variables
+        real(dp), dimension(:,:,:), allocatable :: fh
 
-      f = ff*1.0_dp
+        f = ff*1.0_dp
 
-      ! Call decomp_2d function to update halos
-      call update_halo(f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2):base_grid%hi(2),base_grid%lo(3):base_grid%hi(3)), &
-         fh, level = 1, opt_global = .true.)
+        ! Call decomp_2d function to update halos
+        call update_halo(f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2):base_grid%hi(2),base_grid%lo(3):base_grid%hi(3)), &
+            fh, level = 1, opt_global = .true.)
 
-      ! Copy into f
-      f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1) = &
-         fh(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
+        ! Copy into f
+        f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1) = &
+            fh(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
 
-      ! Free memroy
-      deallocate(fh)
+        ! Free memroy
+        deallocate(fh)
 
-      ! X direction
-      if (base_grid%periodic_bc(1)) then
-         f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
-         f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
-      else
-         f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
-         f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
-      endif
+        ! X direction
+        if (base_grid%periodic_bc(1)) then
+            f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
+            f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
+        else
+            f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
+            f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
+        endif
 
-      ! If using periodic bc in y and 1 proc need to overwrite the physical bc
-      if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
-         f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
-         f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
-      endif
+        ! If using periodic bc in y and 1 proc need to overwrite the physical bc
+        if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
+            f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
+            f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
+        endif
 
-      ! If non periodic in y select physical bc
-      if (base_grid%periodic_bc(2) .eqv. .false.) then
-         if (nrank == 0) then
-            f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
-         endif
-         if (base_grid%rank == base_grid%nranks - 1) then
-            f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
-         endif
-      endif
+        ! If non periodic in y select physical bc
+        if (base_grid%periodic_bc(2) .eqv. .false.) then
+            if (nrank == 0) then
+                f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
+            endif
+            if (base_grid%rank == base_grid%nranks - 1) then
+                f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
+            endif
+        endif
 
-      ff = int(f)
+        ff = int(f)
 
-   end subroutine update_halo_bc_ibm_index
-   !========================================================================================
+    end subroutine update_halo_bc_ibm_index
+    !===============================================================================================
 
-   !========================================================================================
-   subroutine destroy_ibm
+    !===============================================================================================
+    subroutine destroy_ibm
 
-        ! Free the allocated memory
-        deallocate(closest, ibm_index)
+            ! Free the allocated memory
+            deallocate(closest, ibm_index)
 
-   end subroutine destroy_ibm
-   !========================================================================================
+    end subroutine destroy_ibm
+    !===============================================================================================
 
-end module eulerian_ibm
+end module

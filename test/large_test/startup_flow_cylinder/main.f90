@@ -3,18 +3,17 @@ program main
     ! Startup flow around a fixed cylinder at Re = 1000
 
     use mpi
-    use precision            , only : dp
-    use constants            , only : pi
-    use class_Grid           , only : base_grid, bc_type
-    use class_Vector         , only : vector
-    use class_eulerian_circle, only : circle
-    use navier_stokes        , only : v, set_timestep, viscosity, p, mu, rho, g
-    use fields               , only : curl
-    use ibm
-    use eulerian_ibm         , only : compute_hydrodynamic_loads
-    use solver
-    use io                   , only : stdout
-    use json
+    use precision_mod        , only : dp
+    use global_mod           , only : ierror, myrank, pi
+    use grid_mod
+    use vector_mod           , only : vector
+    use eulerian_circle_mod  , only : circle
+    use navier_stokes_mod    , only : v, set_timestep, viscosity, p, mu, rho, g
+    use fields_mod           , only : curl
+    use ibm_mod
+    use eulerian_ibm_mod     , only : compute_hydrodynamic_loads
+    use solver_mod
+    use IO_mod               , only : stdout
     
     implicit none
 
@@ -25,8 +24,9 @@ program main
     real(dp), parameter :: Re = 1.0e+3_dp    !< Reynolds number
 
     ! Variables
-    integer              :: ierror, Nx, Ny, Nz, step, out_id
+    integer              :: Nx, Ny, Nz, step, out_id
     real(dp)             :: Lx, Ly, Lz, time, dt, origin(3), Cd
+    type(grid), target   :: comp_grid          
     type(vector)         :: omega
     type(bc_type)        :: bc(4)
     type(circle), target :: C
@@ -35,6 +35,7 @@ program main
 
     ! Initialize MPI
     call mpi_init(ierror)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! The domain has size [18D, 12D]
     Lx = 12.0_dp*D
@@ -54,10 +55,11 @@ program main
     bc(3)%s = 'Inflow'
     bc(4)%s = 'Outflow'
     origin = [0.0_dp, 0.0_dp, 0.0_dp]
-    call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 8, 1, bc)
+    call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 8, 1, bc)
 
     ! Create the circle
     C = circle(X = [6.0_dp, 6.0_dp, 6.0_dp], R = radius, name = 'C')
+    C%G => comp_grid
     allocate(Eulerian_Solid_list(1))
     Eulerian_Solid_list(1)%pS => C
     ! Need to create the surface mesh to use probes for hydrodynamic forces component 
@@ -68,24 +70,23 @@ program main
     viscosity = 1.0_dp/Re
     
     ! Initialize the solver
-    call init_solver
+    call init_solver(comp_grid)
     step = 0
     time = 0.0_dp
-    call set_timestep(dt, 3*U)
+    call set_timestep(comp_grid, dt, 3*U)
 
     ! Set the inflow boundary condition
-    v%y%bc%l = U
-    v%y%bc%r = U
-    v%y%bc%b = U
+    v%y%bc%left = U
+    v%y%bc%right = U
+    v%y%bc%bottom = U
 
     ! Open output file
     open(newunit = out_id, file = 'out.txt')
 
-    call print_setup_json(dt)
     call save_fields(0)
 
     ! Allocate memory for vorticity field (for output only)
-    call omega%allocate()
+    call omega%allocate(comp_grid)
 
     !==== Start Time loop ===================================================================
     time_loop: do while (time < 3.0_dp)
@@ -94,7 +95,7 @@ program main
         time = time + dt
 
         ! Advance in time the solution
-        call advance_solution(step, dt)
+        call advance_solution(comp_grid, step, dt)
 
         ! Advance solver status to log file
         call print_solver_status(stdout, step, time, dt)
@@ -116,7 +117,7 @@ program main
             ! Must use the probes to evaluate viscous contribution and 
             call compute_hydrodynamic_loads(C, v, p, mu, rho, g)
             ! Write output
-            if (base_grid%rank == 0) write(out_id, *) time, Cd, 2.0_dp*C%hFv(2)/U**2/D, 2.0_dp*C%hFp(2)/U**2/D
+            if (myrank == 0) write(out_id, *) time, Cd, 2.0_dp*C%hFv(2)/U**2/D, 2.0_dp*C%hFp(2)/U**2/D
         endif
 
     end do time_loop

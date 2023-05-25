@@ -39,7 +39,6 @@ program main
 
     ! Create the grid
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
-    comp_grid%name = 'grid'
     call comp_grid%print_json
 
     ! Set the viscosity equal to 1/Re

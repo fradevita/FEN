@@ -30,9 +30,9 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(evmax))
 c, d = pars
 
 if (-a > 1.8 and -c > 1.8):
-  print('2D test completed.')
+  print('        2D test completed.')
 else:
-  print('The convergence rate of the Poisson solver is less than second order')
+  print('        The convergence rate of the 2D eulerian velocity interpolation is less than second order')
  
 # Plot
 scalingu = np.zeros(np.size(N))

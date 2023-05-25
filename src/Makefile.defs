@@ -61,12 +61,24 @@ fsi.o: $(SRC)/fsi.f90 precision.o grid.o ibm.o navier_stokes.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for ibm module
-ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o
+ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o eulerian_ibm.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for eulerian ibm
+eulerian_ibm.o: $(SRC)/eulerian_ibm.f90 precision.o grid.o global.o eulerian_solid.o scalar.o vector.o tensor.o utils.o
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for eulerian_solid module
+eulerian_circle.o: $(SRC)/eulerian_circle.f90 precision.o global.o eulerian_solid.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for eulerian_solid module
+eulerian_solid.o: $(SRC)/eulerian_solid.f90 precision.o utils.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for lagrangian_ibm module
 lagrangian_ibm.o: $(SRC)/lagrangian_ibm.f90 precision.o grid.o global.o mls.o scalar.o vector.o lagrangian_solid.o
-	$(FC) $(FLAGS) -c $< -o$(ODIR)/$
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # RUle for the mls module
 mls.o: $(SRC)/mls.f90 precision.o grid.o global.o scalar.o
@@ -128,14 +140,8 @@ global.o: $(SRC)/global.f90 precision.o
 precision.o: $(SRC)/precision.f90
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
-# class_eulerian_solid.o: $(FEN_DIR)/src/class_eulerian_solid.f90 precision.o utils.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
-
 # polynomial_reconstruction.o: $(FEN_DIR)/src/polynomial_reconstruction.f90 precision.o class_Grid.o functions.o
 # 	$(FC) $(FLAGS) -c $< -llapack
-
-# eulerian_ibm.o: $(FEN_DIR)/src/eulerian_ibm.f90 precision.o class_Vector.o class_Grid.o class_Tensor.o class_eulerian_solid.o utils.o
-# 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<
 
 # non_newtonian.o: $(FEN_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o class_Tensor.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<

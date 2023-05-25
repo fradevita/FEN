@@ -49,7 +49,6 @@ program main
     bc(4)%s = 'Wall'
     ! Create the grid
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1, bc)
-    comp_grid%name = 'grid'
 
     ! Create the cylinder
     ! Set the mass of the solid body

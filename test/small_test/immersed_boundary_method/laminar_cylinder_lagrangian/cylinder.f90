@@ -52,7 +52,6 @@ program main
     bc(3)%s = 'Inflow'
     bc(4)%s = 'Outflow'
     ! Create the grid
-    comp_grid%name = 'grid'
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
 
     ! Create the cylinder

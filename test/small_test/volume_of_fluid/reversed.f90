@@ -33,7 +33,6 @@ program main
 
     ! Create the grid
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1)
-    comp_grid%name = 'grid'
 
     ! Allocate all vof fields
     call allocate_vof_fields(comp_grid)

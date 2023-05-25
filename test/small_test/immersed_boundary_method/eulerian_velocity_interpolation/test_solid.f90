@@ -1,8 +1,8 @@
 !> ! Define the eulerian solid objects for the Immersed Boundary Method
-module class_test_solid
+module test_solid_mod
 
-    use precision           , only : dp
-    use class_eulerian_solid, only : eulerian_solid
+    use precision_mod     , only : dp
+    use eulerian_solid_mod, only : eulerian_solid
 
     implicit none
 
@@ -21,9 +21,6 @@ contains
     !=====================================================================================
     function distance(self, X) result(d)
 
-        use class_Grid
-        use precision , only : dp
-
         class(test_solid), intent(in) :: self
         real(dp)         , intent(in) :: X(3)
         real(dp)                      :: d
@@ -34,10 +31,10 @@ contains
         d = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 + (self%X(3) - X(3))**2) - self%R
 #else
         d = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 ) - self%R
-        if (base_grid%periodic_bc(1)) then
+        if (self%G%periodic_bc(1)) then
             temp(1) = d
-            temp(2) = sqrt((X(1) - self%X(1) + base_grid%Lx)**2 + (X(2) - self%X(2))**2) - self%R
-            temp(3) = sqrt((X(1) - self%X(1) - base_grid%Lx)**2 + (X(2) - self%X(2))**2) - self%R
+            temp(2) = sqrt((X(1) - self%X(1) + self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
+            temp(3) = sqrt((X(1) - self%X(1) - self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
             d = temp(minloc(abs(temp), 1))
             d = minval(temp)
         endif
@@ -49,9 +46,7 @@ contains
     !=====================================================================================
     function norm(self, X) result(n)
 
-        use class_Grid
-        use precision, only : dp
-        use constants, only : small
+        use global_mod, only : small
 
         class(test_solid), intent(in) :: self
         real(dp)     , intent(in) :: X(3)
@@ -61,24 +56,24 @@ contains
         real(dp) :: d(3), temp(3), nx, ny, nz
         real(dp) :: modnorm
 
-        if (base_grid%periodic_bc(1)) then
-            d(1) = sqrt((X(1) - self%X(1))**2                + (X(2) - self%X(2))**2) - self%R
-            d(2) = sqrt((X(1) - self%X(1) + base_grid%Lx)**2 + (X(2) - self%X(2))**2) - self%R
-            d(3) = sqrt((X(1) - self%X(1) - base_grid%Lx)**2 + (X(2) - self%X(2))**2) - self%R
+        if (self%G%periodic_bc(1)) then
+            d(1) = sqrt((X(1) - self%X(1))**2             + (X(2) - self%X(2))**2) - self%R
+            d(2) = sqrt((X(1) - self%X(1) + self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
+            d(3) = sqrt((X(1) - self%X(1) - self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
             temp(1) = X(1) - self%X(1)
-            temp(2) = X(1) - self%X(1) + base_grid%Lx
-            temp(3) = X(1) - self%X(1) - base_grid%Lx
+            temp(2) = X(1) - self%X(1) + self%G%Lx
+            temp(3) = X(1) - self%X(1) - self%G%Lx
             nx = temp(minloc(d,1))
         else
             nx = X(1) - self%X(1)
         endif
-        if (base_grid%periodic_bc(2)) then
+        if (self%G%periodic_bc(2)) then
             d(1) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2               ) - self%R
-            d(2) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 + base_grid%Ly) - self%R
-            d(3) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 - base_grid%Ly) - self%R
+            d(2) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 + self%G%Ly) - self%R
+            d(3) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 - self%G%Ly) - self%R
             temp(1) = X(2) - self%X(2)
-            temp(2) = X(2) - self%X(2) + base_grid%Ly
-            temp(3) = X(2) - self%X(2) - base_grid%Ly
+            temp(2) = X(2) - self%X(2) + self%G%Ly
+            temp(3) = X(2) - self%X(2) - self%G%Ly
             ny = temp(minloc(d,1))
         else
             ny = X(2) - self%X(2)
@@ -101,8 +96,7 @@ contains
 
         ! Override velocity function to force velocity on the solid boundary.
 
-        use precision, only : dp
-        use constants, only : pi
+        use global_mod , only : pi
 
         class(test_solid), intent(in) :: self
         real(dp)     , intent(in)     :: X(3)
@@ -126,6 +120,8 @@ contains
         class(test_solid), intent(in) :: self
         real(dp)                      :: v
 
+        v = 0.0_dp
+
     end function volume
     !=====================================================================================
 
@@ -135,7 +131,9 @@ contains
         class(test_solid), intent(in) :: self
         real(dp)                      :: v(3)
 
+        v = 0._dp
+
     end function rotational_inertia
     !=====================================================================================
 
-end module class_test_solid
+end module

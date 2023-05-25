@@ -9,11 +9,11 @@ contains
 
         use precision_mod     , only : dp
         use grid_mod
-        use ibm_mod           , only : lagrangian_solid_list
+        use ibm_mod           , only : lagrangian_solid_list, eulerian_solid_list
         use lagrangian_ibm_mod, only : lagrangian_compute_hydrodynamic_loads => compute_hydrodynamic_loads
         use lagrangian_ibm_mod, only : advance_structure
-        !use eulerian_ibm , only : tag_cells, compute_hydrodynamic_loads
-        use navier_stokes_mod, only : navier_stokes_solver, v, p, mu, rho, density, g
+        use eulerian_ibm_mod  , only : tag_cells, compute_hydrodynamic_loads
+        use navier_stokes_mod , only : navier_stokes_solver, v, p, mu, rho, density, g
 
         ! In/Out variables
         type(grid), intent(in   ) :: comp_grid
@@ -23,23 +23,25 @@ contains
         ! Local variables
         integer :: b
 
-        ! First solve solid object motion
-        ! do b = 1,size(Eulerian_Solid_list)
-        !     ! Evalute hydrodynamic loads on solid object b
-        !     call compute_hydrodynamic_loads(eulerian_solid_list(b)%pS, v, p, mu, rho, g)
+        if (allocated(Eulerian_Solid_list)) then
+            ! First solve solid object motion
+            do b = 1,size(eulerian_solid_list)
+                ! Evalute hydrodynamic loads on solid object b
+                call compute_hydrodynamic_loads(eulerian_solid_list(b)%pS, v, p, mu, rho, g)
 
-        !     ! Advance solid object b
-        !     call eulerian_solid_list(b)%pS%advance(dt)
+                ! Advance solid object b
+                call eulerian_solid_list(b)%pS%advance(dt)
 
-        !     ! Check if the solid object is outside of the domain and in case traslate it
-        !     call check_periodicity(Eulerian_Solid_list(b)%pS)
+                ! Check if the solid object is outside of the domain and in case traslate it
+                call check_periodicity(Eulerian_Solid_list(b)%pS)
+            end do
 
-        !     ! Update eularian ibm variables
-        !     call tag_cells(Eulerian_Solid_list)
-        ! end do
+            ! Update eularian ibm variables
+            call tag_cells(Eulerian_Solid_list)
+        endif
 
         ! If solving solid body dynamics with Lagrangian IBM
-        if (size(lagrangian_solid_list) > 0) then
+        if (allocated(lagrangian_solid_list)) then
             ! For every solid body:
             do b = 1,size(lagrangian_solid_list)
                ! Compute hydrodynamic loads with fluid fields at step n + 1 and structure
@@ -69,37 +71,36 @@ contains
     end subroutine weak_coupling_solver
     !========================================================================================
 
-    ! !========================================================================================
-    ! subroutine check_periodicity(solid)
+    !========================================================================================
+    subroutine check_periodicity(solid)
 
-    !     use precision           , only : dp
-    !     use class_Grid          , only : base_grid
-    !     use class_eulerian_solid
+        use precision_mod     , only : dp
+        use eulerian_solid_mod
 
-    !     ! In/Out variables
-    !     class(eulerian_solid), intent(inout) :: solid
+        ! In/Out variables
+        class(eulerian_solid), intent(inout) :: solid
 
-    !     ! Local variables
-    !     integer :: n
+        ! Local variables
+        integer :: n
 
-    !     if (base_grid%periodic_bc(1) .eqv. .true.) then
-    !         if (solid%X(1) > base_grid%origin(1) + base_grid%Lx) then
-    !             solid%X(1) = solid%X(1) - base_grid%Lx
-    !             do n = 1,size(solid%surface_points)
-    !                 solid%surface_points(n)%X = solid%surface_points(n)%X - [base_grid%Lx, 0.0_dp, 0.0_dp]
-    !             end do
-    !         elseif (solid%X(1) < base_grid%origin(1)) then
-    !             solid%X(1) = solid%X(1) + base_grid%Lx
-    !             do n = 1,size(solid%surface_points)
-    !                 solid%surface_points(n)%X = solid%surface_points(n)%X + [base_grid%Lx, 0.0_dp, 0.0_dp]
-    !             end do
-    !         endif
-    !     endif
+        if (solid%G%periodic_bc(1) .eqv. .true.) then
+            if (solid%X(1) > solid%G%origin(1) + solid%G%Lx) then
+                solid%X(1) = solid%X(1) - solid%G%Lx
+                do n = 1,size(solid%surface_points)
+                    solid%surface_points(n)%X = solid%surface_points(n)%X - [solid%G%Lx, 0.0_dp, 0.0_dp]
+                end do
+            elseif (solid%X(1) < solid%G%origin(1)) then
+                solid%X(1) = solid%X(1) + solid%G%Lx
+                do n = 1,size(solid%surface_points)
+                    solid%surface_points(n)%X = solid%surface_points(n)%X + [solid%G%Lx, 0.0_dp, 0.0_dp]
+                end do
+            endif
+        endif
 
-    !     ! Update rotation center
-    !     solid%rot_center = solid%X(1:3)
+        ! Update rotation center
+        solid%rot_center = solid%X(1:3)
 
-    ! end subroutine check_periodicity
-    ! !========================================================================================
+    end subroutine check_periodicity
+    !========================================================================================
 
 end module

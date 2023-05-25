@@ -67,7 +67,6 @@ program spring_mass
     bc(4)%s = 'Outflow'
 
     ! Create the grid
-    comp_grid%name = 'grid'
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, [0.0_dp, 0.0_dp, 0.0_dp], 8, 1, bc)
 
     ! Create the filament

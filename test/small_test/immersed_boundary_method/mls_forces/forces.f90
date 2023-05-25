@@ -27,7 +27,6 @@ program forces
     call get_command_argument(1, args)
     read(args,'(I03)') r
     N = 2**r
-    comp_grid%name = 'grid'
     call comp_grid%setup(N, N, 1, 2.0_dp*pi, 2.0_dp*pi, 2.0*pi/real(N, dp), [0.0_dp, 0.0_dp, 0.0_dp], 1, 1)    
     
     call p%allocate(comp_grid, 1)

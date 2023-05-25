@@ -3,7 +3,7 @@ import os
 
 SOURCE=sys.argv[1]
 
-command = "grep 'use' " + SOURCE + " | awk '{print $2}'"
+command = "grep 'use ' " + SOURCE + " | awk '{print $2}'"
 stream = os.popen(command)
 list = stream.read()
 object = ''

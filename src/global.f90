@@ -24,6 +24,12 @@ module global_mod
                                                                 0.5_dp, 0.0_dp, 0.0_dp, &
                                                                 0.0_dp, 0.5_dp, 0.0_dp, &
                                                                 0.0_dp, 0.0_dp, 0.5_dp], shape(stagger))
+    ! This is the staggering to be used in addition to grid index
+    real(dp), dimension(3,0:3), parameter :: istagger = reshape([0.5_dp, 0.5_dp, 0.5_dp, &
+                                                                 0.0_dp, 0.5_dp, 0.5_dp, &
+                                                                 0.5_dp, 0.0_dp, 0.5_dp, &
+                                                                 0.5_dp, 0.5_dp, 0.5_dp], shape(istagger))
+
 
     integer :: myrank = 0
     integer :: ierror

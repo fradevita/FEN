@@ -42,3 +42,9 @@ plt.savefig("plot.png")
 if (display): plt.show()
 plt.close()
 
+# Plot
+plt.figure()
+plt.plot(data["t"], data["v"])
+plt.show()
+plt.close()
+

@@ -16,8 +16,7 @@ else:
 ##########################################################################################
 # READ SETUP FILE
 ##########################################################################################
-setup_file = open('setup.json')
-setup = json.load(setup_file)
+setup = json.load(open('grid.json'))
 
 # Setup Grid
 Nx = setup["Grid"]["Nx"]

@@ -34,9 +34,9 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(ewmax))
 e, f = pars
 
 if (-a > 1.8 and -c > 1.8 and -e > 1.8):
-  print('3D test completed.')
+  print('        3D test completed.')
 else:
-  print('The convergence rate of the eulerian interpolation is less than second order')
+  print(         'The convergence rate of the 3D eulerian interpolation is less than second order')
  
 # Plot
 scalingu = np.zeros(np.size(N))
