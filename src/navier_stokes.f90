@@ -122,7 +122,7 @@ contains
 #endif
         call solve_Poisson(phi)
         call phi%update_ghost_nodes()
-
+ 
         ! Correct the velocity field
         call correct_velocity_field(comp_grid, dt)
 
@@ -963,6 +963,22 @@ contains
             v%x%bc%type_front = 0
             v%y%bc%type_front = 0
             v%z%bc%type_front = 0
+        elseif  (comp_grid%boundary_conditions(5)%s == 'Wall') then
+            p%bc%type_front = 2
+            phi%bc%type_front = 2
+            rho%bc%type_front = 2
+            mu%bc%type_front = 2
+            v%x%bc%type_front = 1
+            v%y%bc%type_front = 1
+            v%z%bc%type_front = 1    
+        elseif  (comp_grid%boundary_conditions(5)%s == 'Inflow') then
+            p%bc%type_front = 2
+            phi%bc%type_front = 2
+            rho%bc%type_front = 2
+            mu%bc%type_front = 2
+            v%x%bc%type_front = 1
+            v%y%bc%type_front = 1
+            v%z%bc%type_front = 1
         else
             call print_error_message('ERROR: wrong bc on top boundary')
         endif
@@ -976,11 +992,26 @@ contains
             v%x%bc%type_back = 0
             v%y%bc%type_back = 0
             v%z%bc%type_back = 0
+        elseif (comp_grid%boundary_conditions(6)%s == 'Wall') then
+            p%bc%type_back = 2
+            phi%bc%type_back = 2
+            rho%bc%type_back = 2
+            mu%bc%type_back = 2
+            v%x%bc%type_back = 1
+            v%y%bc%type_back = 1
+            v%z%bc%type_back = 1
+        elseif (comp_grid%boundary_conditions(6)%s == 'Outflow') then
+            p%bc%type_back = 1
+            phi%bc%type_back = 1
+            rho%bc%type_back = 2
+            mu%bc%type_back = 2
+            v%x%bc%type_back = 2
+            v%y%bc%type_back = 2
+            v%z%bc%type_back = 2
         else
             call print_error_message('ERROR: wrong bc on top boundary')
         endif
 #endif
-
 
         ! Search for internal boundaries
         if (comp_grid%prow > 1) then
@@ -1003,21 +1034,23 @@ contains
         endif
 #if DIM==3
         if (comp_grid%pcol > 1) then
-            if (comp_grid%lo(3) /= 1) then
+            if (comp_grid%lo(3) > 1) then
                 p%bc%type_front = -1
                 phi%bc%type_front = -1
                 rho%bc%type_front = -1
                 mu%bc%type_front = -1
                 v%x%bc%type_front = -1
                 v%y%bc%type_front = -1
+                v%z%bc%type_front = -1
             endif
-            if (comp_grid%hi(2) /= comp_grid%Ny) then
+            if (comp_grid%hi(3) < comp_grid%Nz) then
                 p%bc%type_back = -1
                 phi%bc%type_back = -1
                 rho%bc%type_back = -1
                 mu%bc%type_back = -1
                 v%x%bc%type_back = -1
                 v%y%bc%type_back = -1
+                v%z%bc%type_back = -1
             endif 
         endif
 #endif

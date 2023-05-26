@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo 'Running Navier-Stokes solver test cases ...'
+echo 'Running immersed boundary method test cases ...'
 
 # Run the test suite
 for d in ./*/ ; do (cd "$d" && sh run.sh $1); done

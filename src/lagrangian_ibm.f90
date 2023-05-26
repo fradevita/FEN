@@ -317,12 +317,12 @@ contains
                 ! Normal pressure gradient on the lagrangian marker
                 dpdn_m = -rho%f(ie(1),ie(2),1)*((l_edge%C%A(1) - g(1))*l_edge%n(1)  + &
                                                 (l_edge%C%A(2) - g(2))*l_edge%n(2))*probe_sign
-                !pl(l) = ppl(1) - h_probe*(dpdn_m)
+                pl(l) = ppl(1) - h_probe*(dpdn_m)
 
                 ! Wang et al 2019 JCP eq 20 correction 
                 ! Normal pressure gradient on the probe
-                dpdn_p = (ppl(2)*l_edge%n(1) + ppl(3)*l_edge%n(2))*probe_sign
-                pl(l) = ppl(1) - h_probe*(dpdn_m + dpdn_p)*0.5_dp
+                !dpdn_p = (ppl(2)*l_edge%n(1) + ppl(3)*l_edge%n(2))*probe_sign
+                !pl(l) = ppl(1) - h_probe*(dpdn_m + dpdn_p)*0.5_dp
                 
                 ! Viscous stresses
                 tau11(l) = 2.0_dp*mu%f(ie(1),ie(2),1)*Ul(2)

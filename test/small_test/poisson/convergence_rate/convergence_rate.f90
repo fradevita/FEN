@@ -31,39 +31,51 @@ program test_Poisson_FDS_2D
 
     call get_command_argument(1, test_case)
 
-    ! The test accept as input argument the case:
+    ! The test accept as input argument the case
     ! case 1: test solver nn
     ! case 2: test solver pp
     ! case 3: test solver pn
+    ! case 1: test solver ppp (3D only)
+    ! case 2: test solver ppn (3D only)
+#if DIM==3
+    bc(1)%s = 'Periodic'
+    bc(2)%s = 'Periodic'
+    bc(3)%s = 'Periodic'
+    bc(4)%s = 'Periodic'
     select case(test_case)
     case('1')
-        bc(1)%s = 'wall'
-        bc(2)%s = 'wall'
-        bc(3)%s = 'wall'
-        bc(4)%s = 'wall'
-        ! Open the output for the first test
-        open(1, file = 'error_nn')
-    case('2')
-        bc(1)%s = 'Periodic'
-        bc(2)%s = 'Periodic'
-        bc(3)%s = 'Periodic'
-        bc(4)%s = 'Periodic'
-#if DIM==3
         bc(5)%s = 'Periodic'
         bc(6)%s = 'Periodic'
         ! Open the output for the second test
         open(1, file = 'error_ppp')
+    case('2')
+        bc(5)%s = 'Wall'
+        bc(6)%s = 'Wall'
+        ! Open the output for the second test
+        open(1, file = 'error_ppn')
+    end select
 #else
+    select case(test_case)
+    case('1')
+        bc(1)%s = 'Periodic'
+        bc(2)%s = 'Periodic'
+        bc(3)%s = 'Periodic'
+        bc(4)%s = 'Periodic'
         open(1, file = 'error_pp')
-#endif
-    case('3')
+    case('2')
         bc(1)%s = 'Periodic'
         bc(2)%s = 'Periodic'
         bc(3)%s = 'wall'
         bc(4)%s = 'wall'
-        ! Open the output for the third test
         open(1, file = 'error_pn')
+    case('3')
+        bc(1)%s = 'wall'
+        bc(2)%s = 'wall'
+        bc(3)%s = 'wall'
+        bc(4)%s = 'wall'
+        open(1, file = 'error_nn')
     end select  
+#endif
 
     ! Solve Poisson equation for 5 levels of refinement
     do n = 1,5
@@ -133,22 +145,26 @@ contains
     real(dp) function RHS(x, y, z)
 
         real(dp), intent(in) :: x, y, z
-    
+
+#if DIM==3
         select case(test_case)
         case('1')
-            RHS = -8.0_dp*pi*pi*cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
-        case('2')
-#if DIM==3
             RHS = -12.0_dp*pi*pi*sin(2.0_dp*pi*x)* &
                                  cos(2.0_dp*pi*y)* &
                                  sin(2.0_dp*pi*z)
-#else
-            RHS = -8.0_dp*pi*pi*sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
-#endif
-        case('3')
-            RHS = -4.0_dp*pi*pi*(sin(2.0_dp*pi*x) + cos(2.0_dp*pi*y))
+        case('2')
+            RHS = -4.0_dp*pi*pi*(sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z))
         end select
-
+#else
+        select case(test_case)
+        case('1')
+            RHS = -8.0_dp*pi*pi*sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
+        case('2')
+            RHS = -4.0_dp*pi*pi*(sin(2.0_dp*pi*x) + cos(2.0_dp*pi*y))
+        case('3')
+            RHS = -8.0_dp*pi*pi*cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
+        end select
+#endif
     end function
     !===============================================================================================
 
@@ -157,19 +173,24 @@ contains
 
         real(dp), intent(in) :: x, y, z
 
+#if DIM==3
         select case(test_case)
         case('1')
-            solution = cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
-        case('2')
-#if DIM==3
             solution = sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*sin(2.0_dp*pi*z)
-#else
-            solution = sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
-#endif
-        case('3')
-            solution = sin(2.0_dp*pi*x) + cos(2.0_dp*pi*y)
+        case('2')
+            solution = sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z)            
         end select
+#else
 
+        select case(test_case)
+        case('1')
+            solution = sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
+        case('2')
+            solution = sin(2.0_dp*pi*x) + cos(2.0_dp*pi*y)            
+        case('3')
+            solution = cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)
+        end select
+#endif
     end function
     !===============================================================================================
 

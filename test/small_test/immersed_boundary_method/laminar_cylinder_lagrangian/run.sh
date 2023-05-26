@@ -1,4 +1,4 @@
-echo "Running laminar cylinder at Re = 20 test case with Lagrangian IBM"
+echo "    Running laminar cylinder at Re = 20 test case with Lagrangian IBM"
 
 mkdir -p data ./.fmod ./.fobj
 make SOURCE=cylinder.f90 > compilation_log 2> compilation_warning

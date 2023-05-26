@@ -101,7 +101,7 @@ contains
         self%boundary_conditions(6)%s = 'Periodic'
 #endif
         if (present(bc)) self%boundary_conditions = bc
-        pbc = [.false., .false., .false.]
+        pbc = [.false., .false., .true.]
         if (self%boundary_conditions(1)%s == 'Periodic' .and. &
             self%boundary_conditions(2)%s == 'Periodic') then
             pbc(1) = .true.
@@ -110,7 +110,14 @@ contains
             self%boundary_conditions(4)%s == 'Periodic') then
             pbc(2) = .true.
         endif
-        pbc(3) = .true. ! For now only periodic BC in z is available.
+#if DIM==3
+        if (self%boundary_conditions(5)%s == 'Periodic' .and. &
+            self%boundary_conditions(6)%s == 'Periodic') then
+            pbc(3) = .true.
+        else        
+            pbc(3) = .false.
+        endif
+#endif
 
 #ifdef MPI
         ! Create the domain decomposition with 2decomp

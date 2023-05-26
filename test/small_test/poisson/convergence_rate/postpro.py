@@ -26,9 +26,9 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(emax))
 a, b = pars
 
 if (-a > 1.8):
-  print('Test completed for the Neumann-Neumann Poisson solver.')
+  print('    Test completed for the Neumann-Neumann Poisson solver.')
 else:
-  print('The convergence rate of the Neumann-Neumann Poisson solver is less than second order')
+  print('    The convergence rate of the Neumann-Neumann Poisson solver is less than second order')
 
 # Plot
 scaling = np.zeros(np.size(N))
@@ -62,9 +62,9 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(emax))
 a, b = pars
 
 if (-a > 1.8):
-  print('Test completed for the Periodic-Periodic Poisson solver.')
+  print('    Test completed for the Periodic-Periodic Poisson solver.')
 else:
-  print('The convergence rate of the Periodic-Periodic Poisson solver is less than second order')
+  print('    The convergence rate of the Periodic-Periodic Poisson solver is less than second order')
 
 # Plot
 scaling = np.zeros(np.size(N))
@@ -98,9 +98,9 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(emax))
 a, b = pars
 
 if (-a > 1.8):
-  print('Test completed for the Periodic-Neumann Poisson solver.')
+  print('    Test completed for the Periodic-Neumann Poisson solver.')
 else:
-  print('The convergence rate of the Periodic-Neumann Poisson solver is less than second order')
+  print('    The convergence rate of the Periodic-Neumann Poisson solver is less than second order')
 
 # Plot
 scaling = np.zeros(np.size(N))
@@ -134,9 +134,9 @@ pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(emax))
 a, b = pars
 
 if (-a > 1.8):
-  print('Test completed for the Periodic-Periodic-Periodic Poisson solver.')
+  print('    Test completed for the Periodic-Periodic-Periodic Poisson solver.')
 else:
-  print('The convergence rate of the Periodic-Periodic Periodic Poisson solver is less than second order')
+  print('    The convergence rate of the Periodic-Periodic Periodic Poisson solver is less than second order')
 
 # Plot
 scaling = np.zeros(np.size(N))
@@ -156,3 +156,40 @@ plt.legend()
 plt.savefig("plot_PPP.png")
 if (display): plt.show()
 plt.close()
+
+# Plot for the 3D test
+data = np.genfromtxt('error_ppn')
+N = data[:,0]
+emax = data[:,1]
+
+# Fit the error
+def objective(x, a, b):
+  return a*x + b
+
+pars, cov = curve_fit(f = objective, xdata = np.log(N), ydata = np.log(emax))
+a, b = pars
+
+if (-a > 1.8):
+  print('    Test completed for the Periodic-Periodic-Neumann Poisson solver.')
+else:
+  print('    The convergence rate of the Periodic-Periodic Neumann Poisson solver is less than second order')
+
+# Plot
+scaling = np.zeros(np.size(N))
+for i in range(0,np.size(N)):
+  scaling[i] = np.exp(b)*N[i]**a
+
+plt.figure()
+plt.plot(N, emax, 'o', label = 'data')
+plt.plot(N, scaling, 'black', linestyle='solid', label = '$N^{%2.2f}$' % a)
+plt.xlabel("N")
+plt.ylabel("error")
+plt.title("Convergence rate of the Poisson Solver with PPN BC")
+plt.xscale("log")
+plt.yscale("log")
+plt.xticks(N, N)
+plt.legend()
+plt.savefig("plot_PPN.png")
+if (display): plt.show()
+plt.close()
+
