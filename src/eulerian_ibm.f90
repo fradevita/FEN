@@ -286,7 +286,6 @@ contains
         ! Force the velocity field v based on the location of the solid body.
         ! Use this function instead of compute_ibm_forcing
     
-        use mpi
         use vector_mod
         use scalar_mod
         use global_mod, only : Ndim, istagger
@@ -331,6 +330,7 @@ contains
                             vs = interpolate_velocity(i, j, k, vi, solid_list(b)%pS, dir)
                             ! Evaluate the integral of the forcing 
                             Fi%f(i,j,k) = (vs - vi%f(i,j,k))/dt
+                            ! Force i-th velocity component
                             vi%f(i,j,k) = vs
                         else 
                             ! Solid point
@@ -341,6 +341,7 @@ contains
                             vs = solid_list(b)%pS%velocity([x, y, z], dir)
                             ! Evaluate the integral of the forcing 
                             Fi%f(i,j,k) = (vs - vi%f(i,j,k))/dt
+                            ! Force i-th velocity component 
                             vi%f(i,j,k) = vs
                         endif
 
@@ -512,10 +513,10 @@ contains
         use scalar_mod 
 
         ! In/Out variables
-        integer              , intent(in) :: i, j, k                      !< Cell index
+        integer              , intent(in) :: i, j, k !< Cell index
         type(scalar)         , intent(in) :: v
-        class(eulerian_solid), intent(in) :: solid                        !< Solid object 
-        integer              , intent(in) :: dir                          !< velocity direction
+        class(eulerian_solid), intent(in) :: solid   !< Solid object 
+        integer              , intent(in) :: dir     !< velocity direction
 
         ! Varibili locali
         integer :: i2, j2, k2
@@ -524,7 +525,6 @@ contains
         type(grid) :: bg
 
         bg = v%G
-
         delta = bg%delta
 
         ! Local coordinates

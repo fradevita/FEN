@@ -5,7 +5,7 @@ program main
     use global_mod          , only : ierror, myrank, pi
     use grid_mod
     use eulerian_sphere_mod
-    use navier_stokes_mod   , only : g, set_timestep, dt_o
+    use navier_stokes_mod   , only : g, set_timestep
     use ibm_mod             , only : Eulerian_Solid_list
     use solver_mod
     use IO_mod
@@ -27,7 +27,7 @@ program main
     call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! Create the grid
-    call comp_grid%setup(2*N, 2*N, 2*N, L, L, L, [-L/2.0_dp,-L/2.0_dp,-L/2.0_dp], 2, 4)
+    call comp_grid%setup(2*N, 2*N, 2*N, L, L, L, [-L/2.0_dp,-L/2.0_dp,-L/2.0_dp], 1, 1)
 
     ! Create the sphere
     S = sphere(R = D/2.0_dp, name = 'S')
@@ -48,7 +48,7 @@ program main
     call save_fields(step)
 
     !==== Start Time loop ===================================================================
-    time_loop: do while(step < 100)
+    time_loop: do while(step < 1000)
 
         step = step + 1
         time = time + dt

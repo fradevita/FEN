@@ -91,7 +91,7 @@ contains
         nx = X(1) - self%X(1)
         ny = X(2) - self%X(2)
         nz = X(3) - self%X(3)
-        modnorm = sqrt(nx**2 + ny**2) + small
+        modnorm = sqrt(nx**2 + ny**2 + nz**2) + small
         n(1) = nx/modnorm
         n(2) = ny/modnorm
         n(3) = nz/modnorm
