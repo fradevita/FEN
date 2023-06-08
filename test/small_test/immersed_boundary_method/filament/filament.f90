@@ -88,7 +88,7 @@ program spring_mass
     call S%create('mesh.txt')
 
     ! Half the last mass since it is connected to one single edge
-    !S%mass_points(S%number_of_mass_points)%M = S%mass_points(S%number_of_mass_points)%M*0.5_dp
+    S%mass_points(S%number_of_mass_points)%M = S%mass_points(S%number_of_mass_points)%M*0.5_dp
 
     ! Set the elastic in-plane constant of the springs
     ! eq. 25 of de Tullio and Pascazio JCP 2016.
@@ -97,6 +97,7 @@ program spring_mass
     ! A = l*1
     ! l = L/number_of_mass_points
     S%ke = E*h*real(S%number_of_edges, dp)/L
+    S%edges%ke = E*h*real(S%number_of_edges, dp)/L
 
     ! Set the bending constant
     ! eq. 30 of de Tullio and Pascazio JCP 2016.
@@ -192,26 +193,13 @@ contains
         ! In/Out variables
         class(solid), intent(inout) :: self
 
-        ! Local variables
-        integer  :: nmp, ne
-        real(dp) :: t(2)
-
         ! Clamped condition at X = 0
         self%mass_points(1)%X(1) = Lx/2.0_dp
         self%mass_points(1)%X(2) = 2.0_dp
         self%mass_points(1)%V = 0.0_dp
         self%mass_points(1)%A = 0.0_dp
 
-        ! Free condition at X = L
-        ! First compute tanget vector for second last edge
-        nmp = self%number_of_mass_points
-        ne = self%number_of_edges
-        t(1) = -self%edges(ne-1)%n(2)
-        t(2) =  self%edges(ne-1)%n(1)
-        ! Apply displacement equal to l0 to last point in the tangent direction
-        !self%mass_points(nmp)%X = self%mass_points(nmp-1)%X + self%edges(ne)%l0*t
-
     end subroutine test_constraints
     !========================================================================================
-  
+
 end program spring_mass

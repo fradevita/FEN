@@ -713,14 +713,19 @@ contains
         call mpi_allreduce(mpi_in_place,max_vel,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
 #endif
         ! Compute convective timetep
-        dt_conv = CFL*comp_grid%delta/max_vel
+        if (max_vel > 0.0_dp) then
+            dt_conv = CFL*comp_grid%delta/max_vel
+        else
+            dt_conv = 1.0_dp
+        endif
 
         ! Set actual timestep
 #ifdef MF
         dt = min(dt_conv,dt_visc,dt_surf)
 #else
-        dt = min(dt_conv,dt_visc)
+        dt = min(dt_conv, dt_visc)
 #endif
+
         if (dt > 1.1_dp*dt_o) dt = 1.1_dp*dt_o
 
     end subroutine update_timestep

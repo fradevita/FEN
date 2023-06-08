@@ -379,8 +379,8 @@ contains
             r21 = l_edge%x2%X - l_edge%x1%X
 
             ! Elastic in-place forces, eqs (26-27) of de Tullio and Pascazio JCP 2016.
-            l_edge%x1%Fi = l_edge%x1%Fi - self%ke*(l_edge%l - l_edge%l0)*r12/l_edge%l
-            l_edge%x2%Fi = l_edge%x2%Fi - self%ke*(l_edge%l - l_edge%l0)*r21/l_edge%l
+            l_edge%x1%Fi = l_edge%x1%Fi - l_edge%ke*(l_edge%l - l_edge%l0)*r12/l_edge%l
+            l_edge%x2%Fi = l_edge%x2%Fi - l_edge%ke*(l_edge%l - l_edge%l0)*r21/l_edge%l
         end do
 
       ! Each mass node connected to two edges has also blending rigidity
