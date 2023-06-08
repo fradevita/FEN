@@ -14,6 +14,10 @@ contains
         use lagrangian_ibm_mod, only : advance_structure
         use eulerian_ibm_mod  , only : tag_cells, compute_hydrodynamic_loads
         use navier_stokes_mod , only : navier_stokes_solver, v, p, mu, rho, density, g
+#ifdef MF
+        use mpi
+        use global_mod, only : ierror
+#endif
 
         ! In/Out variables
         type(grid), intent(in   ) :: comp_grid
@@ -22,6 +26,10 @@ contains
 
         ! Local variables
         integer :: b
+#ifdef MF
+        integer :: ie(3)
+        real(dp) :: rhof
+#endif
 
         if (allocated(Eulerian_Solid_list)) then
             ! First solve solid object motion
@@ -44,26 +52,26 @@ contains
         if (allocated(lagrangian_solid_list)) then
             ! For every solid body:
             do b = 1,size(lagrangian_solid_list)
-               ! Compute hydrodynamic loads with fluid fields at step n + 1 and structure
-               ! variables at step n
-               call lagrangian_compute_hydrodynamic_loads(lagrangian_solid_list(b)%pS, v, p, mu, rho, g)
+                ! Compute hydrodynamic loads with fluid fields at step n + 1 and structure
+                ! variables at step n
+                call lagrangian_compute_hydrodynamic_loads(lagrangian_solid_list(b)%pS, v, p, mu, rho, g)
    
-               ! Solve the structure dynamics with the compute hydrodynamic loads
+                ! Solve the structure dynamics with the compute hydrodynamic loads
 #ifdef MF
-               ! For multiphase flows find the density of the surrounding fluid
-               ie = base_grid%closest_grid_node(lagrangian_solid_array(b)%center_of_mass(), 0)
-               if (ie(2) >= base_grid%lo(2) .and. ie(2) <= base_grid%hi(2)) then
-                  rhof = rho%f(ie(1),ie(2),1)
-               else
-                  rhof = 0.0_dp
-               endif
-               call mpi_allreduce(mpi_in_place,rhof,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
-               call advance_structure(lagrangian_solid_list(b)%pS, step, dt, g, rhof, comp_grid)
+                ! For multiphase flows find the density of the surrounding fluid
+                ie = comp_grid%closest_grid_node(lagrangian_solid_list(b)%pS%center_of_mass%X(1:3), 0)
+                if (ie(2) >= comp_grid%lo(2) .and. ie(2) <= comp_grid%hi(2)) then
+                    rhof = rho%f(ie(1),ie(2),1)
+                else
+                    rhof = 0.0_dp
+                endif
+                call mpi_allreduce(mpi_in_place,rhof,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
+                call advance_structure(lagrangian_solid_list(b)%pS, step, dt, g, rhof, comp_grid)
 #else
-               call advance_structure(lagrangian_solid_list(b)%pS, step, dt, g, density, comp_grid)
+                call advance_structure(lagrangian_solid_list(b)%pS, step, dt, g, density, comp_grid)
 #endif
             end do
-         endif
+        endif
    
         ! then solve fluid motion
         call navier_stokes_solver(comp_grid, step, dt)
