@@ -36,7 +36,8 @@ program main
     Ly = 1.0_dp
     origin = [0.0_dp, 0.0_dp, 0.0_dp]
 
-    C = test_solid(R = 0.25_dp)
+    call C%setup()
+    C%R = 0.25_dp
     C%G => comp_grid
     solid_list(1)%pS => C
 
@@ -74,10 +75,10 @@ program main
         circle_position: do l = 1,100
 
             ! Set the center of the circle
-            C%X(1) = 0.5_dp + rand()*0.1_dp
-            C%X(2) = 0.5_dp + rand()*0.1_dp
+            C%center_of_mass%X(1) = 0.5_dp + rand()*0.1_dp
+            C%center_of_mass%X(2) = 0.5_dp + rand()*0.1_dp
 #if DIM==3
-            C%X(3) = 0.5_dp + rand()*0.1_dp
+            C%center_of_mass%X(3) = 0.5_dp + rand()*0.1_dp
 #endif
 
             ! Tag eulerian cells

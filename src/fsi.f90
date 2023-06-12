@@ -41,7 +41,7 @@ contains
                 call eulerian_solid_list(b)%pS%advance(dt)
 
                 ! Check if the solid object is outside of the domain and in case traslate it
-                call check_periodicity(Eulerian_Solid_list(b)%pS)
+                call Eulerian_Solid_list(b)%pS%check_periodicity()
             end do
 
             ! Update eularian ibm variables
@@ -77,38 +77,6 @@ contains
         call navier_stokes_solver(comp_grid, step, dt)
 
     end subroutine weak_coupling_solver
-    !========================================================================================
-
-    !========================================================================================
-    subroutine check_periodicity(solid)
-
-        use precision_mod     , only : dp
-        use eulerian_solid_mod
-
-        ! In/Out variables
-        class(eulerian_solid), intent(inout) :: solid
-
-        ! Local variables
-        integer :: n
-
-        if (solid%G%periodic_bc(1) .eqv. .true.) then
-            if (solid%X(1) > solid%G%origin(1) + solid%G%Lx) then
-                solid%X(1) = solid%X(1) - solid%G%Lx
-                do n = 1,size(solid%surface_points)
-                    solid%surface_points(n)%X = solid%surface_points(n)%X - [solid%G%Lx, 0.0_dp, 0.0_dp]
-                end do
-            elseif (solid%X(1) < solid%G%origin(1)) then
-                solid%X(1) = solid%X(1) + solid%G%Lx
-                do n = 1,size(solid%surface_points)
-                    solid%surface_points(n)%X = solid%surface_points(n)%X + [solid%G%Lx, 0.0_dp, 0.0_dp]
-                end do
-            endif
-        endif
-
-        ! Update rotation center
-        solid%rot_center = solid%X(1:3)
-
-    end subroutine check_periodicity
     !========================================================================================
 
 end module

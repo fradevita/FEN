@@ -13,7 +13,7 @@ module lagrangian_solid_mod
     type, extends(marker) ::  mass_point
         !< A mass point is a marker with a mass connected to one or more edges.
         real(dp)                           :: Fi(tdof) = 0.0_dp !< Internal forces vector
-        real(dp)                           :: Fe(tdof) = 0.0_dp !< External forces vector
+        !real(dp)                           :: Fe(tdof) = 0.0_dp !< External forces vector
         integer                            :: number_of_edges   !< self exp.
         integer, dimension(:), allocatable :: edges_index       !< self exp.
     end type mass_point

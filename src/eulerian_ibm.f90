@@ -897,7 +897,7 @@ contains
 
         ! *** Forces integral ***
         ! Init variables to zero
-        solid%hF = 0.0_dp
+        solid%center_of_mass%Fh = 0.0_dp
         Fvx = 0.0_dp
         Fvy = 0.0_dp
         Fpx = 0.0_dp
@@ -926,16 +926,16 @@ contains
         end do
 
         ! Integrate forces
-        solid%hF(1) = integrate_1D(s, Fxl, .true.)
-        solid%hF(2) = integrate_1D(s, Fyl, .true.)
-        solid%hF(3:5) = 0.0_dp ! TODO: For now only 2D, extend to 3D
-        solid%hF(6) = integrate_1D(s, rx*Fyl - ry*Fxl, .true.)
+        solid%center_of_mass%Fh(1) = integrate_1D(s, Fxl, .true.)
+        solid%center_of_mass%Fh(2) = integrate_1D(s, Fyl, .true.)
+        solid%center_of_mass%Fh(3:5) = 0.0_dp ! TODO: For now only 2D, extend to 3D
+        solid%center_of_mass%Fh(6) = integrate_1D(s, rx*Fyl - ry*Fxl, .true.)
 
         ! Evalute also froces contribution (viscous and pressure)
-        solid%hFv(1) = integrate_1D(s, Fvxl, .true.)
-        solid%hFp(1) = integrate_1D(s, Fpxl, .true.)
-        solid%hFv(2) = integrate_1D(s, Fvyl, .true.)
-        solid%hFp(2) = integrate_1D(s, Fpyl, .true.)
+        solid%center_of_mass%Fv(1) = integrate_1D(s, Fvxl, .true.)
+        solid%center_of_mass%Fp(1) = integrate_1D(s, Fpxl, .true.)
+        solid%center_of_mass%Fv(2) = integrate_1D(s, Fvyl, .true.)
+        solid%center_of_mass%Fp(2) = integrate_1D(s, Fpyl, .true.)
 
         ! Free the memory
         deallocate(Fvxl, Fvyl, Fpxl, Fpyl, Fxl, Fyl, s, rx, ry)

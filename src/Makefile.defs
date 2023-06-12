@@ -61,7 +61,7 @@ fsi.o: $(SRC)/fsi.f90 precision.o grid.o ibm.o navier_stokes.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for ibm module
-ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o eulerian_ibm.o
+ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o eulerian_ibm.o solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian ibm
@@ -77,7 +77,7 @@ eulerian_circle.o: $(SRC)/eulerian_circle.f90 precision.o global.o eulerian_soli
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian_solid module
-eulerian_solid.o: $(SRC)/eulerian_solid.f90 precision.o utils.o
+eulerian_solid.o: $(SRC)/eulerian_solid.f90 precision.o utils.o solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for lagrangian_ibm module
@@ -91,6 +91,10 @@ mls.o: $(SRC)/mls.f90 precision.o grid.o global.o scalar.o
 # Rule for lagrangian solid module
 lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for solid module
+solid.o: $(SRC)/solid.f90 precision.o marker.o
+	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for marker module
 marker.o: $(SRC)/marker.f90 precision.o

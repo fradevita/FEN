@@ -2,51 +2,41 @@
 module eulerian_solid_mod
 
     use precision_mod, only : dp
+    use global_mod
     use grid_mod     , only : grid
+    use solid_mod
+    use marker_mod
 
     implicit none
     private
     public :: eulerian_solid
     public :: eulerian_solid_pointer
 
-    type :: point
-        real(dp) :: X(3)
-    end type point
-
-    !> Base object for eulerian IBM. Must define a distance function and a norm function.
-    type, abstract :: eulerian_solid
-        real(dp) :: density = 1.0_dp                  !< density of the solid
-        real(dp) :: mass = 1.0_dp                     !< mass of the solid
-        real(dp) :: X(6) = 0.0_dp                     !< center of mass position
-        real(dp) :: V(6) = 0.0_dp                     !< center of mass velocity
-        real(dp) :: A(6) = 0.0_dp                     !< center of mass acceleration
-        real(dp) :: hF(6) = 0.0_dp                    !< center of mass hydrodynamic forces
-        real(dp) :: hFv(6) = 0.0_dp                   !< center of mass hydrodynamic viscous forces
-        real(dp) :: hFp(6) = 0.0_dp                   !< center of mass hydrodynamic pressure forces
-        real(dp) :: eF(6) = 0.0_dp                    !< center of mass external forces
-        real(dp) :: M(6) = 1.0_dp                     !< inertial mass
-        real(dp) :: rotation(3) = 0.0_dp              !< center of mass rotation
-        real(dp) :: traslation(3) = 0.0_dp            !< center of mass traslation
-        real(dp) :: rot_center(3) = 0.0_dp            !< center of rotation
-        type(grid), pointer :: G => Null()            !< grid where the solid is defined
-        type(point), allocatable :: surface_points(:) !< array of surface points
-        integer  :: file_id = 1                       !< output file id
-        character(len=99) :: name = 'unset'           !< variable name
-        contains
-            ! List of object-dependent procedure
-            procedure(distance_interface          ), pass(self), deferred :: distance           !< distance from the solid surface
-            procedure(norm_interface              ), pass(self), deferred :: norm               !< local norm vector
-            procedure(volume_interface            ), pass(self), deferred :: volume             !< volume (area in 2D) of the solid
-            procedure(rotational_inertia_interface), pass(self), deferred :: rotational_inertia !< rotational inertia around center of mass
-            ! List of object-independent procedure
-            procedure, pass(self) :: setup
-            procedure, pass(self) :: advance               !< Timestep advancing of the solid
-            procedure, pass(self) :: load_surface_points   !< Initialize surface points for the probe
-            procedure, pass(self) :: update_surface_points !< Update position of the surface points
-            procedure, pass(self) :: velocity              !< Rigid body velocity
-            procedure, pass(self) :: acceleration          !< Rigid body acceleration
-            procedure, pass(self) :: print_csv             !< Output solid center of mass data
-            procedure, pass(self) :: print_surface_points  !< Output surface points
+    !> Base object for eulerian IBM
+    type, extends(solid), abstract :: eulerian_solid
+        real(dp) :: mass = 1.0_dp                      !< mass of the solid
+        real(dp) :: M(6) = 1.0_dp                      !< inertial mass
+        real(dp) :: rotation(3) = 0.0_dp               !< center of mass rotation
+        real(dp) :: traslation(3) = 0.0_dp             !< center of mass traslation
+        real(dp) :: rot_center(3) = 0.0_dp             !< center of rotation
+        type(grid), pointer :: G => Null()             !< grid where the solid is defined
+        type(marker), allocatable :: surface_points(:) !< array of surface points
+    contains
+        ! List of object-dependent procedure
+        procedure(distance_interface          ), pass(self), deferred :: distance           !< distance from the solid surface
+        procedure(norm_interface              ), pass(self), deferred :: norm               !< local norm vector
+        procedure(volume_interface            ), pass(self), deferred :: volume             !< volume (area in 2D) of the solid
+        procedure(rotational_inertia_interface), pass(self), deferred :: rotational_inertia !< rotational inertia around center of mass
+        ! List of object-independent procedure
+        procedure, pass(self) :: setup
+        procedure, pass(self) :: advance               !< Timestep advancing of the solid
+        procedure, pass(self) :: load_surface_points   !< Initialize surface points for the probe
+        procedure, pass(self) :: update_surface_points !< Update position of the surface points
+        procedure, pass(self) :: velocity              !< Rigid body velocity
+        procedure, pass(self) :: acceleration          !< Rigid body acceleration
+        procedure, pass(self) :: check_periodicity
+        procedure, pass(self) :: print_csv             !< Output solid center of mass data
+        procedure, pass(self) :: print_surface_points  !< Output surface points
     end type eulerian_solid
 
     abstract interface
@@ -92,7 +82,7 @@ module eulerian_solid_mod
 
 contains
 
-    !======================================================================================
+    !==============================================================================================
     subroutine setup(self)
 
         ! In/Out variables
@@ -107,8 +97,11 @@ contains
         ! Build inertial mass matrix
         self%M = [self%mass, self%mass, self%mass, [self%rotational_inertia()]]
 
+        ! Create the center of mass marker
+        call self%center_of_mass%create(6)
+
         ! Set the rotation center equal to the center of mass
-        self%rot_center = self%X(1:3)
+        self%rot_center = self%center_of_mass%X(1:3)
 
         ! Open output file
         outfile = './data/'//trim(self%name)
@@ -118,43 +111,46 @@ contains
 11    format(A99)
 
     end subroutine setup
-    !======================================================================================
+    !==============================================================================================
     
-    !======================================================================================
+    !==============================================================================================
     subroutine advance(self, dt)
 
         ! In/Out variables
-        class(eulerian_solid), intent(inout) :: self
-        real(dp)             , intent(in   ) :: dt
+        class(eulerian_solid), intent(inout), target :: self
+        real(dp)             , intent(in   )         :: dt
 
         ! Local variables
         real(dp), dimension(6) :: Vnp1, Xnp1
+        type(marker), pointer  :: CoM
+
+        CoM => self%center_of_mass
 
         ! Acceleration
-        self%A = (self%hF + self%eF)/self%M
+        CoM%A = (CoM%Fh + CoM%Fe)/self%M
         
         ! New velocity and position
-        Vnp1 = self%V + dt*self%A
-        Xnp1 = self%X + dt*0.5_dp*(Vnp1 + self%V)
+        Vnp1 = CoM%V + dt*CoM%A
+        Xnp1 = CoM%X + dt*0.5_dp*(Vnp1 + CoM%V)
 
         ! Evaluate rotation and traslation
-        self%traslation = Xnp1(1:3) - self%X(1:3)
-        self%rotation   = Xnp1(4:6) - self%X(4:6)
+        self%traslation = Xnp1(1:3) - CoM%X(1:3)
+        self%rotation   = Xnp1(4:6) - CoM%X(4:6)
 
         ! Update solution
-        self%V = Vnp1
-        self%X = Xnp1
+        CoM%V = Vnp1
+        CoM%X = Xnp1
 
         ! Update rotation center
-        self%rot_center = self%X(1:3)
+        self%rot_center = CoM%X(1:3)
 
         ! Update surface points position
         call self%update_surface_points()
 
     end subroutine advance
-    !======================================================================================
+    !==============================================================================================
    
-    !======================================================================================
+    !==============================================================================================
     subroutine load_surface_points(self, mesh_file)
 
         ! When using the probe method to evaluate hydrodynamic forces, must load surface
@@ -179,15 +175,16 @@ contains
 
         allocate(self%surface_points(nl))
         do n = 1,nl
+            call self%surface_points(n)%create(6)
             read(mesh_file_id,*) X(1), X(2), X(3)
             self%surface_points(n)%X = X
         end do
         close(mesh_file_id)
 
     end subroutine load_surface_points
-    !======================================================================================
+    !==============================================================================================
   
-    !======================================================================================
+    !==============================================================================================
     subroutine update_surface_points(self)
   
         ! In/Out variables
@@ -213,9 +210,9 @@ contains
         end do
   
     end subroutine update_surface_points
-    !=====================================================================================
+    !==============================================================================================
 
-    !======================================================================================
+    !==============================================================================================
     subroutine print_surface_points(self, step)
   
         ! In/Out variables
@@ -237,9 +234,9 @@ contains
         close(out_id)
 
     end subroutine print_surface_points
-    !=====================================================================================
+    !==============================================================================================
     
-    !=====================================================================================
+    !==============================================================================================
     function Rx(alpha)
 
         ! Rotation matrix around x axis
@@ -252,9 +249,9 @@ contains
         Rx(3,:) = [0.0_dp, sin(alpha),  cos(alpha)]
         
     end function Rx
-    !=====================================================================================
+    !==============================================================================================
     
-    !=====================================================================================
+    !==============================================================================================
     function Ry(beta)
 
         ! Rotation matrix around y axis
@@ -267,9 +264,9 @@ contains
         Ry(3,:) = [-sin(beta), 0.0_dp, cos(beta)]
         
     end function Ry
-    !======================================================================================
+    !==============================================================================================
     
-    !======================================================================================
+    !==============================================================================================
     function Rz(gamma)
 
         ! Rotation matrix around z axis
@@ -282,9 +279,9 @@ contains
         Rz(3,:) = [    0.0_dp,      0.0_dp, 1.0_dp]
         
     end function Rz
-    !======================================================================================
+    !==============================================================================================
 
-    !=====================================================================================
+    !==============================================================================================
     function velocity(self, X, dir) result(v)
 
         ! Return dir component of velocity due to rigid body motion in X
@@ -304,9 +301,9 @@ contains
         real(dp) :: d(3), r(3), omega_vec_r(3)
 
         ! Position vector of the point X with respect to the rotation center
-        d(1) = sqrt( (X(1) - self%rot_center(1))**2 + (X(2) - self%rot_center(2))**2)
-        d(2) = sqrt( (X(1) + self%G%Lx - self%rot_center(1))**2 + (X(2) - self%rot_center(2))**2)
-        d(3) = sqrt( (X(1) - self%G%Lx - self%rot_center(1))**2 + (X(2) - self%rot_center(2))**2)
+        d(1) = sqrt( (X(1) - self%rot_center(1)            )**2 + (X(2) - self%rot_center(2))**2)
+        d(2) = sqrt( (X(1) - self%rot_center(1) + self%G%Lx)**2 + (X(2) - self%rot_center(2))**2)
+        d(3) = sqrt( (X(1) - self%rot_center(1) - self%G%Lx)**2 + (X(2) - self%rot_center(2))**2)
         i = minloc(d, 1)
         if (i == 1) then
             r = X - self%rot_center
@@ -317,15 +314,15 @@ contains
         endif
 
         ! Velocity due to rotation
-        omega_vec_r = cross_product(self%V(4:6), r)
+        omega_vec_r = cross_product(self%center_of_mass%V(4:6), r)
 
         ! Total velocity
-        v = self%V(dir) + omega_vec_r(dir)
+        v = self%center_of_mass%V(dir) + omega_vec_r(dir)
 
     end function velocity
-    !=====================================================================================
+    !==============================================================================================
 
-    !=====================================================================================
+    !==============================================================================================
     function acceleration(self, X, dir) result(a)
 
         ! Return dir component of acceleration due to rigid body motion in X
@@ -358,42 +355,75 @@ contains
         endif
 
         ! Velocity due to rotation
-        omega_vec_r = cross_product(self%V(4:6), r)
+        omega_vec_r = cross_product(self%center_of_mass%V(4:6), r)
 
         ! Acceleration due to this velocity
-        omega_vec_omega_vec_r = cross_product(self%V(4:6), omega_vec_r)
+        omega_vec_omega_vec_r = cross_product(self%center_of_mass%V(4:6), omega_vec_r)
 
         ! Angular acceleration contribution
-        alpha_vec_r = cross_product(self%A(4:6), r)
+        alpha_vec_r = cross_product(self%center_of_mass%A(4:6), r)
 
         ! Final acceleration
-        a = self%A(dir) + omega_vec_omega_vec_r(dir) + alpha_vec_r(dir)
+        a = self%center_of_mass%A(dir) + omega_vec_omega_vec_r(dir) + alpha_vec_r(dir)
 
     end function acceleration
-    !=====================================================================================
+    !==============================================================================================
 
-    !======================================================================================
+    !==============================================================================================
+    subroutine check_periodicity(self)
+
+        use precision_mod     , only : dp
+
+        ! In/Out variables
+        class(eulerian_solid), intent(inout) :: self
+
+        ! Local variables
+        integer :: n
+
+        if (self%G%periodic_bc(1) .eqv. .true.) then
+            if (self%center_of_mass%X(1) > self%G%origin(1) + self%G%Lx) then
+                self%center_of_mass%X(1) = self%center_of_mass%X(1) - self%G%Lx
+                do n = 1,size(self%surface_points)
+                    self%surface_points(n)%X = self%surface_points(n)%X - [self%G%Lx, 0.0_dp, 0.0_dp]
+                end do
+            elseif (self%center_of_mass%X(1) < self%G%origin(1)) then
+                self%center_of_mass%X(1) = self%center_of_mass%X(1) + self%G%Lx
+                do n = 1,size(self%surface_points)
+                    self%surface_points(n)%X = self%surface_points(n)%X + [self%G%Lx, 0.0_dp, 0.0_dp]
+                end do
+            endif
+        endif
+
+        ! Update rotation center
+        self%rot_center = self%center_of_mass%X(1:3)
+
+    end subroutine check_periodicity
+    !==============================================================================================
+
+    !==============================================================================================
     subroutine print_csv(self, time)
+
+        ! Output center of mass variables
 
         ! In/Out variables
         class(eulerian_solid), intent(in) :: self
         real(dp)             , intent(in) :: time
   
         write(self%file_id,12) time, &
-           ",", self%X(1) , ",", self%X(2) , ",", self%X(3) , &
-           ",", self%X(4) , ",", self%X(5) , ",", self%X(6) , &
-           ",", self%V(1) , ",", self%V(2) , ",", self%V(3) , &
-           ",", self%V(4) , ",", self%V(5) , ",", self%V(6) , &
-           ",", self%A(1) , ",", self%A(2) , ",", self%A(2) , &
-           ",", self%A(4) , ",", self%A(5) , ",", self%A(6) , &
-           ",", self%hF(1), ",", self%hF(2), ",", self%hF(3), &
-           ",", self%hF(4), ",", self%hF(5), ",", self%hF(6)
+           ",", self%center_of_mass%X(1) , ",", self%center_of_mass%X(2) , ",", self%center_of_mass%X(3) , &
+           ",", self%center_of_mass%X(4) , ",", self%center_of_mass%X(5) , ",", self%center_of_mass%X(6) , &
+           ",", self%center_of_mass%V(1) , ",", self%center_of_mass%V(2) , ",", self%center_of_mass%V(3) , &
+           ",", self%center_of_mass%V(4) , ",", self%center_of_mass%V(5) , ",", self%center_of_mass%V(6) , &
+           ",", self%center_of_mass%A(1) , ",", self%center_of_mass%A(2) , ",", self%center_of_mass%A(2) , &
+           ",", self%center_of_mass%A(4) , ",", self%center_of_mass%A(5) , ",", self%center_of_mass%A(6) , &
+           ",", self%center_of_mass%Fh(1), ",", self%center_of_mass%Fh(2), ",", self%center_of_mass%Fh(3), &
+           ",", self%center_of_mass%Fh(4), ",", self%center_of_mass%Fh(5), ",", self%center_of_mass%Fh(6)
   
         flush(self%file_id)
 12 format(E16.8,24(A1,E16.8))
   
     end subroutine print_csv
-    !======================================================================================
+    !==============================================================================================
   
 end module 
 
