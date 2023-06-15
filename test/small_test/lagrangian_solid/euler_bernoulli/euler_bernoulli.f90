@@ -5,7 +5,7 @@ program Euler_Bernoulli
 
     use precision_mod        , only : dp
     use global_mod           , only : pi
-    use lagrangian_solid_mod , only : solid, mass_point
+    use lagrangian_solid_mod , only : lagrangian_solid, mass_point
 
     implicit none
 
@@ -23,7 +23,7 @@ program Euler_Bernoulli
     integer :: step, substep, n, r, res
     real(dp) :: time, dt
     real(dp), allocatable :: diff(:)
-    type(solid) :: test_solid
+    type(lagrangian_solid) :: test_solid
     type(mass_point), allocatable :: oldX(:)
     character(len=3) :: sres
     character(len=11) :: outfile
@@ -132,7 +132,7 @@ contains
     !========================================================================================
     subroutine test_constraints(self)
         
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         self%mass_points(1)%X = 0.0_dp
         self%mass_points(1)%V = 0.0_dp

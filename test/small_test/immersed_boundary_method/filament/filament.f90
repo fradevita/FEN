@@ -7,13 +7,11 @@ program spring_mass
     use global_mod           , only : ierror, myrank, pi
     use grid_mod
     use vector_mod
-    use ibm_mod              , only : lagrangian_solid_list
+    use ibm_mod
     use navier_stokes_mod    , only : viscosity, g, v, set_timestep, dt_o
     use IO_mod               , only : stdout
     use solver_mod
     use fields_mod           , only : curl
-    use lagrangian_solid_mod
-    use lagrangian_ibm_mod   , only : Nfstep
     
     implicit none
 
@@ -42,7 +40,7 @@ program spring_mass
     character(len=7)    :: sn
     character(len=16)   :: filename
     type(grid)          :: comp_grid
-    type(solid), target :: S
+    type(lagrangian_solid), target :: S
     type(bc_type)       :: bc(4)
     type(vector)        :: omega
 
@@ -115,8 +113,8 @@ program spring_mass
     S%apply_constraints => test_constraints
 
     ! Allocate the array of solid
-    allocate(lagrangian_solid_list(1))
-    lagrangian_solid_list(1)%pS => S
+    allocate(solid_list(1))
+    solid_list(1)%pS => S
 
     ! Set the viscosity
     viscosity = rhof*nu
@@ -148,8 +146,6 @@ program spring_mass
 
     ! Allocate the vorticity vector
     call omega%allocate(comp_grid, 1)
-    
-    Nfstep = 3
 
     !==== Start Time loop =========================================================================
     time_loop: do while(time < 30)
@@ -191,7 +187,7 @@ contains
     subroutine test_constraints(self)
         
         ! In/Out variables
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         ! Clamped condition at X = 0
         self%mass_points(1)%X(1) = Lx/2.0_dp

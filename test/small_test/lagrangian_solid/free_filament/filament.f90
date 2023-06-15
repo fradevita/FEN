@@ -14,7 +14,7 @@ program filament
     ! Variables
     integer :: step, n, out_id, substep
     real(dp) :: time, dt
-    type(solid) :: test_solid
+    type(lagrangian_solid) :: test_solid
 
     ! Set the mass of the solid body: rho*Volume
     test_solid%M = 1.00_dp
@@ -34,6 +34,7 @@ program filament
 
     ! Set the elastic in-plane constant of the springs
     test_solid%ke = 1.0e+6_dp
+    test_solid%edges%ke = 1.0e+6_dp
 
     ! Set the bending constant
     test_solid%kb = 0.0_dp
@@ -86,25 +87,10 @@ contains
     !========================================================================================
     subroutine test_constraints(self)
 
-        class(solid), intent(inout) :: self
-
-        integer  :: nmp, ne
-        real(dp) :: h01, h12, r, a, b
+        class(lagrangian_solid), intent(inout) :: self
 
         self%mass_points(1)%X = 0.0_dp
         self%mass_points(1)%V = 0.0_dp
-
-        ! Free condition at X = L
-        ! First compute tanget vector for second last edge
-        nmp = self%number_of_mass_points
-        ne = self%number_of_edges
-        h01 = self%edges(ne-1)%l
-        h12 = self%edges(ne)%l0
-        r = h01/h12
-        a = -2.0_dp*(r + 1.0_dp)/(r**2 + r)
-        b = 2.0_dp/(r**2 + r)
-        self%mass_points(nmp)%X(1:2) = (a*self%mass_points(nmp-1)%X(1:2) + &
-                                        b*self%mass_points(nmp-2)%X(1:2))/(a+b)  
 
     end subroutine test_constraints
     !========================================================================================

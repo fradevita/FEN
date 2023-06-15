@@ -4,16 +4,16 @@ module lagrangian_solid_mod
     use precision_mod
     use global_mod
     use marker_mod
+    use solid_mod
 
     implicit none
     private
-    public :: solid, mass_point, solid_pointer, edge
+    public :: lagrangian_solid, mass_point, lagrangian_solid_pointer, edge
 
     ! Define the mass point type
     type, extends(marker) ::  mass_point
         !< A mass point is a marker with a mass connected to one or more edges.
         real(dp)                           :: Fi(tdof) = 0.0_dp !< Internal forces vector
-        !real(dp)                           :: Fe(tdof) = 0.0_dp !< External forces vector
         integer                            :: number_of_edges   !< self exp.
         integer, dimension(:), allocatable :: edges_index       !< self exp.
     end type mass_point
@@ -36,7 +36,7 @@ module lagrangian_solid_mod
     end type edge
 
     ! Define a solid object
-    type solid
+    type, extends(solid) :: lagrangian_solid
         integer                       :: number_of_mass_points   !< self exp.
         integer                       :: number_of_edges         !< self exp.
         type(mass_point), allocatable :: mass_points(:)          !< array of mass points
@@ -44,7 +44,6 @@ module lagrangian_solid_mod
         real(dp)                      :: Vol                     !< volume of the solid
         real(dp)                      :: rho                     !< density of the solid
         real(dp)                      :: M(tdof+rdof) = 1.0_dp   !< inertial mass (applied to the center of mass)
-        type(marker)                  :: center_of_mass          !< self exp.
         real(dp)                      :: tra(tdof)               !< rigid body traslation
         real(dp)                      :: rot(rdof)               !< rigid body rotation
         integer                       :: nsubsteps = 200         !< number of substep for the structural solver
@@ -55,7 +54,6 @@ module lagrangian_solid_mod
         logical                       :: is_deformable = .false. !< flag for solving deformation
         logical                       :: is_open = .false.       !< flag for open structure
         logical                       :: is_out = .false.        !< flag for checking if the solid is outside the domain
-        character(len=99)             :: name = 'unset'          !< solid name
         procedure(constraints), pass(self), pointer :: apply_constraints => Null()
     contains
         procedure :: create
@@ -70,22 +68,18 @@ module lagrangian_solid_mod
         procedure :: get_potential_energy
         procedure :: get_kinetic_energy
         procedure :: velocity_verlet
-        procedure :: write_csv
         procedure :: destroy
-        
-    end type solid
+    end type lagrangian_solid
 
     abstract interface
         subroutine constraints(self)
-            import solid
-            class(solid), intent(inout) :: self
+            import lagrangian_solid
+            class(lagrangian_solid), intent(inout) :: self
         end subroutine constraints
     end interface
-    !procedure(constraints), pointer :: apply_constraints => Null()
-
-    type solid_pointer
-        class(solid), pointer :: pS => Null()
-    end type solid_pointer
+    type lagrangian_solid_pointer
+        class(lagrangian_solid), pointer :: pS => Null()
+    end type lagrangian_solid_pointer
 
 contains
 
@@ -96,7 +90,7 @@ contains
         ! The file filename must contains the location of the mass points.
 
         ! In/Out variables
-        class(solid)    , intent(inout), target   :: self
+        class(lagrangian_solid)    , intent(inout), target   :: self
         character(len=*), intent(in   )           :: filename
         character(len=*), intent(in   ), optional :: name
 
@@ -229,7 +223,7 @@ contains
         ! Find the center of mass location of the solid.
 
         ! In/Out variables
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         ! Local variables
         integer  :: n
@@ -251,7 +245,7 @@ contains
         ! Find the center of mass location of the solid.
 
         ! In/Out variables
-        class(solid), intent(in) :: self
+        class(lagrangian_solid), intent(in) :: self
 
         ! Local variables
         integer  :: n
@@ -317,7 +311,7 @@ contains
     function get_total_length(self) result(L)
 
         ! In/Out variables
-        class(solid), intent(in) :: self
+        class(lagrangian_solid), intent(in) :: self
 
         ! Local variables
         integer  :: n
@@ -356,7 +350,7 @@ contains
     subroutine compute_internal_forces(self)
 
         ! In/Out variables
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         ! Local variables
         integer    :: n, l, np1, nm1
@@ -426,7 +420,7 @@ contains
         ! Get integral forces on the solid.
 
         ! In/Out variables
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         ! Local variables
         integer :: l
@@ -456,7 +450,7 @@ contains
         use global_mod , only : Ndim, tdof, rdof
 
         ! In/Out variables
-        class(solid), intent(inout)           :: self
+        class(lagrangian_solid), intent(inout)           :: self
         real(dp)   , intent(in   ), optional :: central_axis(tdof)
 
         ! Local variables
@@ -542,7 +536,7 @@ contains
         ! data structure
 
         ! In/Out variables
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         ! Local variables
         integer :: l
@@ -574,7 +568,7 @@ contains
         use utils_mod, only : clamp
 
         ! In/Out variables
-        class(solid), intent(in) :: self
+        class(lagrangian_solid), intent(in) :: self
         real(dp) :: Ep
 
         ! Local variables
@@ -621,7 +615,7 @@ contains
     function get_kinetic_energy(self) result(Ek)
 
         ! In/Out variables
-        class(solid), intent(in) :: self
+        class(lagrangian_solid), intent(in) :: self
         real(dp) :: Ek
 
         ! Local variables
@@ -642,7 +636,7 @@ contains
         ! Advance the solution array with the velocity verlet scheme
 
         ! In/Out variables
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
         real(dp)    , intent(in   ) :: dt
 
         ! Local variables
@@ -674,7 +668,7 @@ contains
     subroutine write_csv(self, time)
 
         ! In/Out variables
-        class(solid), intent(in) :: self
+        class(lagrangian_solid), intent(in) :: self
         real(dp)    , intent(in) :: time
 
         ! If writing the first line write first the header
@@ -699,7 +693,7 @@ contains
     subroutine print_configuration(self, step)
 
         ! In/Out variables
-        class(solid), intent(in) :: self
+        class(lagrangian_solid), intent(in) :: self
         integer     , intent(in) :: step
 
         ! Local vraiables
@@ -725,7 +719,7 @@ contains
     !==============================================================================================
     subroutine destroy(self)
 
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         deallocate(self%edges)
         deallocate(self%mass_points)

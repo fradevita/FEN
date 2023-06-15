@@ -4,7 +4,7 @@ program cantilever
 
     use precision_mod        , only : dp
     use global_mod           , only : pi
-    use lagrangian_solid_mod , only : solid
+    use lagrangian_solid_mod , only : lagrangian_solid
 
     implicit none
 
@@ -20,9 +20,9 @@ program cantilever
     real(dp), parameter :: ymax = -0.338_dp               ! Maximum displacment in preload
 
     ! Variables
-    integer     :: step, n, out_id, substep
-    real(dp)    :: time, dt
-    type(solid) :: test_solid
+    integer                :: step, n, out_id, substep
+    real(dp)               :: time, dt
+    type(lagrangian_solid) :: test_solid
 
     ! Set the mass of the solid body: rho*Volume
     test_solid%M = rhos*length*width*thickness
@@ -119,7 +119,7 @@ contains
     !========================================================================================
     subroutine test_constraints(self)
 
-        class(solid), intent(inout) :: self
+        class(lagrangian_solid), intent(inout) :: self
 
         self%mass_points(1)%X = 0.0_dp
         self%mass_points(1)%V = 0.0_dp

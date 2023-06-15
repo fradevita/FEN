@@ -35,7 +35,7 @@ module eulerian_solid_mod
         procedure, pass(self) :: velocity              !< Rigid body velocity
         procedure, pass(self) :: acceleration          !< Rigid body acceleration
         procedure, pass(self) :: check_periodicity
-        procedure, pass(self) :: print_csv             !< Output solid center of mass data
+        !procedure, pass(self) :: print_csv             !< Output solid center of mass data
         procedure, pass(self) :: print_surface_points  !< Output surface points
     end type eulerian_solid
 
@@ -187,6 +187,8 @@ contains
     !==============================================================================================
     subroutine update_surface_points(self)
   
+        use utils_mod, only : Rx, Ry, Rz
+
         ! In/Out variables
         class(eulerian_solid), intent(inout) :: self
 
@@ -236,50 +238,7 @@ contains
     end subroutine print_surface_points
     !==============================================================================================
     
-    !==============================================================================================
-    function Rx(alpha)
-
-        ! Rotation matrix around x axis
-
-        real(dp), intent(in) :: alpha
-        real(dp) :: Rx(3,3)
-
-        Rx(1,:) = [1.0_dp,     0.0_dp,      0.0_dp]
-        Rx(2,:) = [0.0_dp, cos(alpha), -sin(alpha)]
-        Rx(3,:) = [0.0_dp, sin(alpha),  cos(alpha)]
-        
-    end function Rx
-    !==============================================================================================
-    
-    !==============================================================================================
-    function Ry(beta)
-
-        ! Rotation matrix around y axis
-
-        real(dp), intent(in) :: beta
-        real(dp) :: Ry(3,3)
-
-        Ry(1,:) = [ cos(beta), 0.0_dp, sin(beta)]
-        Ry(2,:) = [    0.0_dp, 1.0_dp,    0.0_dp]
-        Ry(3,:) = [-sin(beta), 0.0_dp, cos(beta)]
-        
-    end function Ry
-    !==============================================================================================
-    
-    !==============================================================================================
-    function Rz(gamma)
-
-        ! Rotation matrix around z axis
-
-        real(dp), intent(in) :: gamma
-        real(dp) :: Rz(3,3)
-
-        Rz(1,:) = [cos(gamma), -sin(gamma), 0.0_dp]
-        Rz(2,:) = [sin(gamma),  cos(gamma), 0.0_dp]
-        Rz(3,:) = [    0.0_dp,      0.0_dp, 1.0_dp]
-        
-    end function Rz
-    !==============================================================================================
+ 
 
     !==============================================================================================
     function velocity(self, X, dir) result(v)
@@ -400,30 +359,30 @@ contains
     end subroutine check_periodicity
     !==============================================================================================
 
-    !==============================================================================================
-    subroutine print_csv(self, time)
+!     !==============================================================================================
+!     subroutine print_csv(self, time)
 
-        ! Output center of mass variables
+!         ! Output center of mass variables
 
-        ! In/Out variables
-        class(eulerian_solid), intent(in) :: self
-        real(dp)             , intent(in) :: time
+!         ! In/Out variables
+!         class(eulerian_solid), intent(in) :: self
+!         real(dp)             , intent(in) :: time
   
-        write(self%file_id,12) time, &
-           ",", self%center_of_mass%X(1) , ",", self%center_of_mass%X(2) , ",", self%center_of_mass%X(3) , &
-           ",", self%center_of_mass%X(4) , ",", self%center_of_mass%X(5) , ",", self%center_of_mass%X(6) , &
-           ",", self%center_of_mass%V(1) , ",", self%center_of_mass%V(2) , ",", self%center_of_mass%V(3) , &
-           ",", self%center_of_mass%V(4) , ",", self%center_of_mass%V(5) , ",", self%center_of_mass%V(6) , &
-           ",", self%center_of_mass%A(1) , ",", self%center_of_mass%A(2) , ",", self%center_of_mass%A(2) , &
-           ",", self%center_of_mass%A(4) , ",", self%center_of_mass%A(5) , ",", self%center_of_mass%A(6) , &
-           ",", self%center_of_mass%Fh(1), ",", self%center_of_mass%Fh(2), ",", self%center_of_mass%Fh(3), &
-           ",", self%center_of_mass%Fh(4), ",", self%center_of_mass%Fh(5), ",", self%center_of_mass%Fh(6)
+!         write(self%file_id,12) time, &
+!            ",", self%center_of_mass%X(1) , ",", self%center_of_mass%X(2) , ",", self%center_of_mass%X(3) , &
+!            ",", self%center_of_mass%X(4) , ",", self%center_of_mass%X(5) , ",", self%center_of_mass%X(6) , &
+!            ",", self%center_of_mass%V(1) , ",", self%center_of_mass%V(2) , ",", self%center_of_mass%V(3) , &
+!            ",", self%center_of_mass%V(4) , ",", self%center_of_mass%V(5) , ",", self%center_of_mass%V(6) , &
+!            ",", self%center_of_mass%A(1) , ",", self%center_of_mass%A(2) , ",", self%center_of_mass%A(2) , &
+!            ",", self%center_of_mass%A(4) , ",", self%center_of_mass%A(5) , ",", self%center_of_mass%A(6) , &
+!            ",", self%center_of_mass%Fh(1), ",", self%center_of_mass%Fh(2), ",", self%center_of_mass%Fh(3), &
+!            ",", self%center_of_mass%Fh(4), ",", self%center_of_mass%Fh(5), ",", self%center_of_mass%Fh(6)
   
-        flush(self%file_id)
-12 format(E16.8,24(A1,E16.8))
+!         flush(self%file_id)
+! 12 format(E16.8,24(A1,E16.8))
   
-    end subroutine print_csv
-    !==============================================================================================
+!     end subroutine print_csv
+!     !==============================================================================================
   
 end module 
 

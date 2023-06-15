@@ -89,7 +89,7 @@ mls.o: $(SRC)/mls.f90 precision.o grid.o global.o scalar.o
 	$(FC) $(FLAGS) -c $< -o$(ODIR)/$@
 
 # Rule for lagrangian solid module
-lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o
+lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for solid module

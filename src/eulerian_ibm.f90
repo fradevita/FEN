@@ -346,42 +346,6 @@ contains
                         endif
 
                     end do velocity_component_cycle
-
-                !  ! Force x component of velocity
-                !  if (ibm_index(i,j,k,1) == 2) then
-                !     ! Fluid point do nothing
-                !  elseif (ibm_index(i,j,k,1) == 1) then
-                !     ! Interface point
-                !     b = closest(i,j,k,1)
-                !     vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
-                !     v%x%f(i,j,k) = vs
-                !  else
-                !     ! Solid point
-                !     x = (i - 0.0_dp)*delta
-                !     y = (j - 0.5_dp)*delta
-                !     z = (k - 0.5_dp)*delta
-                !     b = closest(i,j,k,1)
-                !     vs = solid_list(b)%pS%velocity([x, y, z], 1)
-                !     v%x%f(i,j,k) = vs
-                !  endif
-    
-                !  ! Force y component of velocity
-                !  if (ibm_index(i,j,k,2) == 2) then
-                !     ! Fluid point, do nothing
-                !  elseif (ibm_index(i,j,k,2) == 1) then
-                !     ! Interface point
-                !     b = closest(i,j,k,2)
-                !     vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
-                !     v%y%f(i,j,k) = vs
-                !  else
-                !     ! Solid point
-                !     x = (i - 0.5_dp)*delta
-                !     y = (j - 0.0_dp)*delta
-                !     z = (k - 0.5_dp)*delta
-                !     b = closest(i,j,k,2)
-                !     vs = solid_list(b)%pS%velocity([x, y, z], 2)
-                !     v%y%f(i,j,k) = vs
-                !  endif
     
               end do
            end do
@@ -1071,58 +1035,6 @@ contains
     
     end function traslate
     !==============================================================================================
-
-    ! !==============================================================================================
-    ! subroutine update_halo_bc_solid(f, base_grid)
-
-    !     use decomp_2d
-
-    !     ! In/Out variables
-    !     type(grid), intent(in) :: base_grid
-    !     real(mytype), intent(inout) :: &
-    !         f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
-
-    !     ! Local variables
-    !     real(mytype), dimension(:,:,:), allocatable :: fh
-
-    !     ! Call decomp_2d function to update halos
-    !     call update_halo(f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2):base_grid%hi(2),base_grid%lo(3):base_grid%hi(3)), &
-    !         fh, level = 1, opt_global = .true.)
-
-    !     ! Copy into f
-    !     f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1) = &
-    !         fh(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
-
-    !     ! Free memroy
-    !     deallocate(fh)
-
-    !     ! X direction
-    !     if (base_grid%periodic_bc(1)) then
-    !         f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
-    !         f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
-    !     else
-    !         f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
-    !         f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
-    !     endif
-
-    !     ! If using periodic bc in y and 1 proc need to overwrite the physical bc
-    !     if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
-    !         f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
-    !         f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
-    !     endif
-
-    !     ! If non periodic in y select physical bc
-    !     if (base_grid%periodic_bc(2) .eqv. .false.) then
-    !         if (base_grid%rank == 0) then
-    !             f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
-    !         endif
-    !         if (base_grid%rank == base_grid%nranks-1) then
-    !             f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
-    !         endif
-    !     endif
-
-    ! end subroutine update_halo_bc_solid
-    ! !==============================================================================================
 
     !==============================================================================================
     subroutine update_halo_bc_ibm_index(ff, base_grid)

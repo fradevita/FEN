@@ -8,7 +8,7 @@ program Pan
     use IO_mod              , only : stdout
     use grid_mod
     use eulerian_circle_mod , only : Circle
-    use ibm_mod             , only : Eulerian_Solid_list
+    use ibm_mod             , only : solid_list
     use eulerian_ibm_mod
     use navier_stokes_mod   , only : set_timestep, g, viscosity
     use solver_mod
@@ -61,15 +61,17 @@ program Pan
     C%R = radius
     C%G => comp_grid
     call C%setup()
-    allocate(Eulerian_Solid_list(1))
-    Eulerian_Solid_list(1)%pS => C
     call C%load_surface_points('mesh.txt')
- 
+    
     ! Set initial position
     C%center_of_mass%X(1:2) = [0.5_dp, 0.4_dp]
     
     ! Set body force on the solid
     C%center_of_mass%Fe(1) = g(1)*C%mass
+
+    ! Setup the solid list 
+    allocate(solid_list(1))
+    solid_list(1)%pS => C
     
     ! Set the viscoisty
     viscosity = mu
@@ -94,7 +96,7 @@ program Pan
 
         ! Print position
         if (myrank == 0) then
-            call C%print_csv(time)
+            call C%write_csv(time)
         endif
 
     end do time_loop

@@ -4,8 +4,8 @@ module ibm_mod
     use precision_mod       , only : dp
     use vector_mod          , only : vector
     use solid_mod           , only : solid_pointer
-    use eulerian_solid_mod  , only : eulerian_Solid_pointer
-    use lagrangian_solid_mod, only : lagrangian_solid_pointer => solid_pointer
+    use eulerian_solid_mod  , only : eulerian_solid, eulerian_Solid_pointer
+    use lagrangian_solid_mod, only : lagrangian_solid, lagrangian_solid_pointer
 
     implicit none
 
@@ -23,7 +23,7 @@ contains
         use grid_mod
         use eulerian_solid_mod  , only : eulerian_solid
         use eulerian_ibm_mod    , only : init_eulerian_ibm
-        use lagrangian_solid_mod, only : lagrangian_solid => solid
+        use lagrangian_solid_mod, only : lagrangian_solid
         use lagrangian_ibm_mod  , only : init_lagrangian_ibm => init_ibm
         
         ! In/Out variables
@@ -42,11 +42,11 @@ contains
             select type(var => solid_list(n)%pS)
             class is (eulerian_solid)
                 nes = nes + 1
-            ! class is (lagrangian_solid)
-            !     nls = nls + 1
+            class is (lagrangian_solid)
+                nls = nls + 1
             end select
         end do
-        if (nes > 0) allocate(Eulerian_Solid_list(nes))
+        if (nes > 0) allocate(eulerian_solid_list(nes))
         nes = 1
         do n = 1,size(solid_list)
             select type(var => solid_list(n)%pS)
@@ -55,12 +55,21 @@ contains
                 nes = nes + 1
             end select
         end do
+        if (nls > 0) allocate(lagrangian_solid_list(nes))
+        nls = 1
+        do n = 1,size(solid_list)
+            select type(var => solid_list(n)%pS)
+            class is (lagrangian_solid)
+                lagrangian_solid_list(nls)%pS => var
+                nls = nls + 1
+            end select
+        end do
 
         ! If the list of eulerian solid has been created, initialize the eulerian ibm variables 
-        if (allocated(Eulerian_Solid_list)) call init_eulerian_ibm(Eulerian_Solid_list, comp_grid)
+        if (allocated(eulerian_solid_list)) call init_eulerian_ibm(eulerian_solid_list, comp_grid)
 
         ! If the list of lagrangian solid has been created, initialize the lagrangian ibm variables 
-        if (allocated(lagrangian_Solid_list)) call init_lagrangian_ibm(comp_grid)
+        if (allocated(lagrangian_solid_list)) call init_lagrangian_ibm(comp_grid)
 
     end subroutine init_ibm
     !==============================================================================================
@@ -76,9 +85,13 @@ contains
         real(dp)    , intent(in   ) :: dt  !< timestep
 
         ! Evaluate the forcing due to eulerian solids
-        if (allocated(Eulerian_Solid_list)) call eulerian_forcing_velocity(v, eulerian_Solid_list, Fe, dt)
+        if (allocated(Eulerian_Solid_list)) then
+            call eulerian_forcing_velocity(v, eulerian_Solid_list, Fe, dt)
+        endif
 
-        if (allocated(Lagrangian_Solid_list)) call lagrangian_forcing_velocity(v, lagrangian_Solid_list, dt)
+        if (allocated(Lagrangian_Solid_list)) then
+            call lagrangian_forcing_velocity(v, lagrangian_Solid_list, dt)
+        endif
 
     end subroutine apply_ibm_forcing
     !==============================================================================================
