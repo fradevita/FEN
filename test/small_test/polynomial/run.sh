@@ -1,8 +1,8 @@
 echo "Running polynomial reconstruction test case ..."
 
-make SOURCE=main > compilation_log 2> compilation_warning
+make SOURCE=main.f90 > compilation_log 2> compilation_warning
  
-mpirun -n 1 ./code.e > log 2> error.err
+mpirun -n 1 ./run.e > log 2> error.err
 
 python3 postpro.py $1
 

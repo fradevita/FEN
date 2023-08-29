@@ -16,4 +16,4 @@ do
     cd ..
 done
 
-echo 'Navier-Stokes test cases completed.'
+echo 'Multiphase test cases completed.'

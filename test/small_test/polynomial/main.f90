@@ -3,11 +3,11 @@ program main
     ! Test the polynomial reconstruction of a given function
 
     use mpi
-    use precision                , only : dp
-    use constants                , only : pi
-    use class_Grid               , only : base_grid, bc_type
+    use precision_mod            , only : dp
+    use global_mod               , only : pi
+    use grid_mod                 , only : grid, bc_type
     use polynomial_reconstruction
-    use utils                    , only : urandom_seed
+    use utils_mod                , only : urandom_seed
     
     implicit none
 
