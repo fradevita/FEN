@@ -2,10 +2,10 @@ program forces
 
     use mpi
     use precision_mod
-    use global_mod           , only : ierror, stagger, pi
+    use global_mod         , only : ierror, stagger, pi
     use grid_mod
-    use lagrangian_solid_mod , only : solid
-    use lagrangian_ibm_mod   , only : compute_hydrodynamic_loads
+    use ibm_mod
+    use lagrangian_ibm_mod , only : compute_hydrodynamic_loads
     use scalar_mod
     use vector_mod
     use utils_mod
@@ -18,7 +18,7 @@ program forces
     real(dp)            :: e_Fvx_max(ns), e_Fvy_max(ns), e_Fpx_max(ns), e_Fpy_max(ns)
     character(len=3)    :: args
     type(grid)          :: comp_grid
-    type(solid), target :: C, C1
+    type(lagrangian_solid), target :: C, C1
     type(scalar)        :: p, rho, mu
     type(vector)        :: v
     

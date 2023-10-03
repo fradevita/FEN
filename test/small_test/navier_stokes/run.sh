@@ -9,9 +9,11 @@ for d in ./*/ ; do (cd "$d" && sh run.sh $1); done
 for d in ./*/
 do
     cd "$d"
-    WC=$(wc error.err | awk '{print $1}')
-    if [ "$WC" -ne "0" ]; then
-        echo "ERROR in the ${d:2:-1} test case";
+    if [ -f error.err ]; then
+        WC=$(wc error.err | awk '{print $1}')
+        if [ "$WC" -ne "0" ]; then
+            echo "ERROR in the ${d:2:-1} test case";
+        fi
     fi
     cd ..
 done

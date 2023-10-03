@@ -90,9 +90,9 @@ contains
         ! The file filename must contains the location of the mass points.
 
         ! In/Out variables
-        class(lagrangian_solid)    , intent(inout), target   :: self
-        character(len=*), intent(in   )           :: filename
-        character(len=*), intent(in   ), optional :: name
+        class(lagrangian_solid), intent(inout), target   :: self
+        character(len=*)       , intent(in   )           :: filename
+        character(len=*)       , intent(in   ), optional :: name
 
         ! Local variables
         integer  :: fid, nl, io, n, l
@@ -212,7 +212,15 @@ contains
         if (present(name)) self%name = name
 
         ! Open output file
-        open(newunit = self%output_file_id, file = trim('data/'//self%name))
+        open(newunit = self%file_id, file = trim('data/'//self%name))
+        if (myrank == 0) then
+            if (dofs == 3) then
+                write(self%file_id,'(A45)') 't,x,y,thetaz,u,v,omegaz,ax,ay,alphaz,Fx,Fy,Mz'
+            else
+                write(self%file_id,'(A103)') 't,x,y,z,thetax,thetay,thetaz,u,v,w,omegax,omegay,omegaz,'&
+                            'ax,ay,az,alphax,alphay,alphaz,Fx,Fy,Fz,Mx,My,Mz'
+            endif
+        endif
 
     end subroutine create
     !========================================================================================

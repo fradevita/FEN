@@ -1,13 +1,12 @@
 program main
 
-    ! Flow around a fixed cylinder at Re = 20
+    ! Particle migration in channel flow.
 
     use mpi
     use precision_mod        , only : dp
     use global_mod           , only : ierror, pi
     use grid_mod
-    use ibm_mod              , only : Lagrangian_Solid_list
-    use lagrangian_solid_mod , only : solid
+    use ibm_mod
     use solver_mod        
     use navier_stokes_mod    , only : set_timestep, g, viscosity
     use lagrangian_ibm_mod   , only : compute_hydrodynamic_loads
@@ -25,7 +24,7 @@ program main
     real(dp)            :: Lx, Ly, Lz, time, dt, origin(3)
     type(grid)          :: comp_grid
     type(bc_type)       :: bc(4)
-    type(solid), target :: C 
+    type(lagrangian_solid), target :: C 
 
     ! Initialize MPI
     call mpi_init(ierror)
@@ -57,8 +56,8 @@ program main
     ! Create the lagrangian solid
     call C%create('mesh.txt', name = 'C')
     ! Allocate the array of solid
-    allocate(lagrangian_solid_list(1))
-    Lagrangian_Solid_list(1)%pS => C
+    allocate(solid_list(1))
+    solid_list(1)%pS => C
 
     ! Set body force
     g(1) = Deltap

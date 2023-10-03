@@ -77,7 +77,7 @@ eulerian_circle.o: $(SRC)/eulerian_circle.f90 precision.o global.o eulerian_soli
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian_solid module
-eulerian_solid.o: $(SRC)/eulerian_solid.f90 precision.o utils.o solid.o
+eulerian_solid.o: $(SRC)/solid/eulerian_solid.f90 precision.o utils.o solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for lagrangian_ibm module
@@ -89,11 +89,11 @@ mls.o: $(SRC)/mls.f90 precision.o grid.o global.o scalar.o
 	$(FC) $(FLAGS) -c $< -o$(ODIR)/$@
 
 # Rule for lagrangian solid module
-lagrangian_solid.o: $(SRC)/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o solid.o
+lagrangian_solid.o: $(SRC)/solid/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for solid module
-solid.o: $(SRC)/solid.f90 precision.o marker.o
+solid.o: $(SRC)/solid/solid.f90 precision.o marker.o
 	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for marker module
@@ -119,6 +119,10 @@ vector.o: $(SRC)/vector.f90 precision.o grid.o scalar.o
 # Rule for scalar module
 scalar.o: $(SRC)/scalar.f90 precision.o grid.o halo.o IO.o function.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for polynomial reconstruction module
+polynomial_reconstruction.o: $(SRC)/polynomial_reconstruction.f90 precision.o function.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for halo module
 halo.o: $(SRC)/halo.f90 precision.o grid.o

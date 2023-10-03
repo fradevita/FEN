@@ -1,9 +1,9 @@
 !> This module conains procedures for reconstructing any field locally with a 
 !> polynomial expression of a given order.
-module polynomial_reconstruction
+module polynomial_reconstruction_mod
 
-    use precision, only : dp
-    use functions
+    use precision_mod, only : dp
+    use function_mod
 
     implicit none
 
@@ -39,13 +39,12 @@ module polynomial_reconstruction
 contains
 
     !=====================================================================================
-    subroutine init(order)
-
-        use class_Grid, only : base_grid
+    subroutine init(order, delta)
 
         ! In/Out variables
-        integer :: order
-
+        integer , intent(in) :: order
+        real(dp), intent(in) :: delta
+        
         ! Local variables
         integer :: info, row, j, i, lwork
         integer , dimension(:)  , allocatable :: ipiv
@@ -85,9 +84,9 @@ contains
         ! Build the matrix A
         row = 1
         do j = -ks,ks
-            yc = base_grid%delta*real(j, dp)
+            yc = delta*real(j, dp)
             do i = -ks,ks
-                xc = base_grid%delta*real(i, dp)
+                xc = delta*real(i, dp)
                 
                 if (order == 1) then
                     !          [ a00,  a10, a01]
@@ -191,4 +190,4 @@ contains
     end subroutine destroy
     !=====================================================================================
 
-end module polynomial_reconstruction
+end module polynomial_reconstruction_mod

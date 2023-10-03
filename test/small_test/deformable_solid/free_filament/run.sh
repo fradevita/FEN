@@ -1,4 +1,4 @@
-echo "Running cantilever test case..."
+echo "    running free filament test case..."
 
 python3 mesh.py
 

@@ -1,6 +1,6 @@
 #!/run/bash
 
-echo "Running test case for the Fast Direct Solver of the Poisson equation ..."
+echo "    Running test case for the Fast Direct Solver of the Poisson equation ..."
 
 mkdir -p ./.fmod ./.fobj
 make SOURCE=convergence_rate.f90 > compilation_log 2> compilation_warnings
