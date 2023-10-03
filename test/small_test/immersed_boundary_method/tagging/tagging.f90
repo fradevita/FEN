@@ -19,10 +19,10 @@ program tagging
     real(dp), parameter :: rc = 0.25_dp
 
     ! Variables
-    integer       :: Nx, Ny, Nz
-    real(dp)      :: Lx, Ly, Lz, origin(3)
+    integer            :: Nx, Ny, Nz
+    real(dp)           :: Lx, Ly, Lz, origin(3)
     type(grid), target :: comp_grid
-    type(scalar)  :: temp
+    type(scalar)       :: temp
 
     ! Create one solid of type circle, it must be target
     type(circle), target :: C
@@ -40,10 +40,14 @@ program tagging
     Ly = 1.0_dp
     Lz = Lx*float(Nz)/float(Nx)
     origin = [0.0_dp, 0.0_dp, 0.0_dp]
+
     ! Create the grid
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1)
 
-    C = circle(X = [xc, yc, 0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp], R = rc)
+    ! Setup the solid
+    call C%setup()
+    C%center_of_mass%X(1:2) = [xc, yc]
+    C%R = rc
     C%G => comp_grid
     solid_list(1)%pS => C
 

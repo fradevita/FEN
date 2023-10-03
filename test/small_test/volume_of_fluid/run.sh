@@ -1,18 +1,21 @@
 #!/bin/bash
 
-mkdir -p ./.fmod ./.fobj
+echo 'Running Volume of Fluid solver test cases ...'
 
-echo "    Running vof reconstruction test case ..."
-make SOURCE=reconstruction.f90 > compilation_log 2> compilation_warning
-mpirun -n 1 ./run.e > log 2> error.err
-python3 reconstruction_postpro.py $1
-echo "        Check image, test completed."
+# Run the test suite
+for d in ./*/ ; do (cd "$d" && sh run.sh $1); done
 
-make clean > /dev/null
+# Check for failed test
+for d in ./*/
+do
+    cd "$d"
+    if [ -f error.err ]; then
+        WC=$(wc error.err | awk '{print $1}')
+        if [ "$WC" -ne "0" ]; then
+            echo "ERROR in the ${d:2:-1} test case";
+        fi
+    fi
+    cd ..
+done
 
-echo "    Running vof reversed advection test case ..."
-mkdir -p data
-make SOURCE=reversed.f90 > compilation_log 2> compilation_warning
-mpirun -n 4 ./run.e > log 2> error.err
-python3 reversed_postpro.py $1
-echo "        Check image, test completed."
+echo 'Volume of Fluid test cases completed.'

@@ -6,8 +6,8 @@ program main
     use precision_mod        , only : dp
     use global_mod           , only : ierror, myrank, pi
     use grid_mod
-    use ibm_mod              , only : Lagrangian_Solid_list
-    use lagrangian_solid_mod , only : solid
+    use ibm_mod !             , only : Lagrangian_Solid_list
+    !use lagrangian_solid_mod , only : solid
     use solver_mod        
     use navier_stokes_mod    , only : v, p, set_timestep, g, viscosity, mu, rho
     use lagrangian_ibm_mod   , only : compute_hydrodynamic_loads
@@ -25,7 +25,7 @@ program main
     character(len=3)    :: arg
     type(grid)          :: comp_grid
     type(bc_type)       :: bc(4)
-    type(solid), target :: C 
+    type(lagrangian_solid), target :: C 
 
     ! Initialize MPI
     call mpi_init(ierror)
@@ -58,8 +58,8 @@ program main
     call C%create('mesh.txt', name = trim('C_'//arg))
 
     ! Allocate the array of solid
-    allocate(lagrangian_solid_list(1))
-    Lagrangian_Solid_list(1)%pS => C
+    allocate(solid_list(1))
+    solid_list(1)%pS => C
     
     ! Set the viscoisty
     viscosity = 0.001_dp
@@ -97,7 +97,7 @@ program main
 
         ! Output forces
         if (comp_grid%rank == 0) call C%write_csv(time)
-        if (mod(step,10)==0) call save_fields(step)
+        
     end do time_loop
 
     ! free memory

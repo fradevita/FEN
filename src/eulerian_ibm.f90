@@ -286,7 +286,6 @@ contains
         ! Force the velocity field v based on the location of the solid body.
         ! Use this function instead of compute_ibm_forcing
     
-        use mpi
         use vector_mod
         use scalar_mod
         use global_mod, only : Ndim, istagger
@@ -331,6 +330,7 @@ contains
                             vs = interpolate_velocity(i, j, k, vi, solid_list(b)%pS, dir)
                             ! Evaluate the integral of the forcing 
                             Fi%f(i,j,k) = (vs - vi%f(i,j,k))/dt
+                            ! Force i-th velocity component
                             vi%f(i,j,k) = vs
                         else 
                             ! Solid point
@@ -341,46 +341,11 @@ contains
                             vs = solid_list(b)%pS%velocity([x, y, z], dir)
                             ! Evaluate the integral of the forcing 
                             Fi%f(i,j,k) = (vs - vi%f(i,j,k))/dt
+                            ! Force i-th velocity component 
                             vi%f(i,j,k) = vs
                         endif
 
                     end do velocity_component_cycle
-
-                !  ! Force x component of velocity
-                !  if (ibm_index(i,j,k,1) == 2) then
-                !     ! Fluid point do nothing
-                !  elseif (ibm_index(i,j,k,1) == 1) then
-                !     ! Interface point
-                !     b = closest(i,j,k,1)
-                !     vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
-                !     v%x%f(i,j,k) = vs
-                !  else
-                !     ! Solid point
-                !     x = (i - 0.0_dp)*delta
-                !     y = (j - 0.5_dp)*delta
-                !     z = (k - 0.5_dp)*delta
-                !     b = closest(i,j,k,1)
-                !     vs = solid_list(b)%pS%velocity([x, y, z], 1)
-                !     v%x%f(i,j,k) = vs
-                !  endif
-    
-                !  ! Force y component of velocity
-                !  if (ibm_index(i,j,k,2) == 2) then
-                !     ! Fluid point, do nothing
-                !  elseif (ibm_index(i,j,k,2) == 1) then
-                !     ! Interface point
-                !     b = closest(i,j,k,2)
-                !     vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
-                !     v%y%f(i,j,k) = vs
-                !  else
-                !     ! Solid point
-                !     x = (i - 0.5_dp)*delta
-                !     y = (j - 0.0_dp)*delta
-                !     z = (k - 0.5_dp)*delta
-                !     b = closest(i,j,k,2)
-                !     vs = solid_list(b)%pS%velocity([x, y, z], 2)
-                !     v%y%f(i,j,k) = vs
-                !  endif
     
               end do
            end do
@@ -512,10 +477,10 @@ contains
         use scalar_mod 
 
         ! In/Out variables
-        integer              , intent(in) :: i, j, k                      !< Cell index
+        integer              , intent(in) :: i, j, k !< Cell index
         type(scalar)         , intent(in) :: v
-        class(eulerian_solid), intent(in) :: solid                        !< Solid object 
-        integer              , intent(in) :: dir                          !< velocity direction
+        class(eulerian_solid), intent(in) :: solid   !< Solid object 
+        integer              , intent(in) :: dir     !< velocity direction
 
         ! Varibili locali
         integer :: i2, j2, k2
@@ -524,7 +489,6 @@ contains
         type(grid) :: bg
 
         bg = v%G
-
         delta = bg%delta
 
         ! Local coordinates
@@ -897,7 +861,7 @@ contains
 
         ! *** Forces integral ***
         ! Init variables to zero
-        solid%hF = 0.0_dp
+        solid%center_of_mass%Fh = 0.0_dp
         Fvx = 0.0_dp
         Fvy = 0.0_dp
         Fpx = 0.0_dp
@@ -926,16 +890,16 @@ contains
         end do
 
         ! Integrate forces
-        solid%hF(1) = integrate_1D(s, Fxl, .true.)
-        solid%hF(2) = integrate_1D(s, Fyl, .true.)
-        solid%hF(3:5) = 0.0_dp ! TODO: For now only 2D, extend to 3D
-        solid%hF(6) = integrate_1D(s, rx*Fyl - ry*Fxl, .true.)
+        solid%center_of_mass%Fh(1) = integrate_1D(s, Fxl, .true.)
+        solid%center_of_mass%Fh(2) = integrate_1D(s, Fyl, .true.)
+        solid%center_of_mass%Fh(3:5) = 0.0_dp ! TODO: For now only 2D, extend to 3D
+        solid%center_of_mass%Fh(6) = integrate_1D(s, rx*Fyl - ry*Fxl, .true.)
 
         ! Evalute also froces contribution (viscous and pressure)
-        solid%hFv(1) = integrate_1D(s, Fvxl, .true.)
-        solid%hFp(1) = integrate_1D(s, Fpxl, .true.)
-        solid%hFv(2) = integrate_1D(s, Fvyl, .true.)
-        solid%hFp(2) = integrate_1D(s, Fpyl, .true.)
+        solid%center_of_mass%Fv(1) = integrate_1D(s, Fvxl, .true.)
+        solid%center_of_mass%Fp(1) = integrate_1D(s, Fpxl, .true.)
+        solid%center_of_mass%Fv(2) = integrate_1D(s, Fvyl, .true.)
+        solid%center_of_mass%Fp(2) = integrate_1D(s, Fpyl, .true.)
 
         ! Free the memory
         deallocate(Fvxl, Fvyl, Fpxl, Fpyl, Fxl, Fyl, s, rx, ry)
@@ -1071,58 +1035,6 @@ contains
     
     end function traslate
     !==============================================================================================
-
-    ! !==============================================================================================
-    ! subroutine update_halo_bc_solid(f, base_grid)
-
-    !     use decomp_2d
-
-    !     ! In/Out variables
-    !     type(grid), intent(in) :: base_grid
-    !     real(mytype), intent(inout) :: &
-    !         f(base_grid%lo(1)-1:base_grid%hi(1)+1,base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
-
-    !     ! Local variables
-    !     real(mytype), dimension(:,:,:), allocatable :: fh
-
-    !     ! Call decomp_2d function to update halos
-    !     call update_halo(f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2):base_grid%hi(2),base_grid%lo(3):base_grid%hi(3)), &
-    !         fh, level = 1, opt_global = .true.)
-
-    !     ! Copy into f
-    !     f(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1) = &
-    !         fh(base_grid%lo(1):base_grid%hi(1),base_grid%lo(2)-1:base_grid%hi(2)+1,base_grid%lo(3)-1:base_grid%hi(3)+1)
-
-    !     ! Free memroy
-    !     deallocate(fh)
-
-    !     ! X direction
-    !     if (base_grid%periodic_bc(1)) then
-    !         f(base_grid%lo(1)-1,:,:) = f(base_grid%hi(1),:,:)
-    !         f(base_grid%hi(1)+1,:,:) = f(base_grid%lo(1),:,:)
-    !     else
-    !         f(base_grid%lo(1)-1,:,:) = f(base_grid%lo(1),:,:)
-    !         f(base_grid%hi(1)+1,:,:) = f(base_grid%hi(1),:,:)
-    !     endif
-
-    !     ! If using periodic bc in y and 1 proc need to overwrite the physical bc
-    !     if (base_grid%nranks == 1 .and. base_grid%periodic_bc(2) .eqv. .true.) then
-    !         f(:,base_grid%lo(2)-1,:) = f(:,base_grid%hi(2),:)
-    !         f(:,base_grid%hi(2)+1,:) = f(:,base_grid%lo(2),:)
-    !     endif
-
-    !     ! If non periodic in y select physical bc
-    !     if (base_grid%periodic_bc(2) .eqv. .false.) then
-    !         if (base_grid%rank == 0) then
-    !             f(:,base_grid%lo(2)-1,:) = f(:,base_grid%lo(2),:)
-    !         endif
-    !         if (base_grid%rank == base_grid%nranks-1) then
-    !             f(:,base_grid%hi(2)+1,:) = f(:,base_grid%hi(2),:)
-    !         endif
-    !     endif
-
-    ! end subroutine update_halo_bc_solid
-    ! !==============================================================================================
 
     !==============================================================================================
     subroutine update_halo_bc_ibm_index(ff, base_grid)

@@ -1,4 +1,4 @@
-echo "    Running MLS interpolation test case ..."
+echo "    running MLS interpolation test case ..."
 
 mkdir -p ./.fmod ./.fobj
 make SOURCE=test.f90 > compilation_log 2> compilation_warning

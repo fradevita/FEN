@@ -1,6 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas
+import sys
+
+if (len(sys.argv) > 1):
+    if (sys.argv[1] == 'silent'):
+        display = 0
+    else:
+        print('wrong option in the run_all.sh script.')
+        display = 0
+else:
+    display = 1
 
 # Load data
 data_064 = np.genfromtxt('out_064.txt')
@@ -29,7 +39,8 @@ ax.plot(data_256[:,0],  data_256[:,3], 'o', color = 'red', label = 'Ny =256, pro
 ax.plot(data_128[:,0], Cdref*Cd, '--', color = 'black', label = r'reference $C_d$')
 plt.tight_layout()
 plt.legend()
-plt.show()
+plt.savefig('drag.png')
+if (display): plt.show()
 plt.close()
 
 # Compute error
@@ -56,10 +67,11 @@ for i in range(0,np.size(N)):
 plt.figure()
 plt.xlabel(r'$N$')
 plt.ylabel(r'$|C_d - C_d^{ref}|/C_d^{ref}$')
-plt.loglog(N, eCd_eul, '-o', label = r'$C_d, eulerian$')
-plt.loglog(N, eCd_prb, '-s', label = r'$C_d, probes$')
+plt.loglog(N, eCd_eul, '-o', label = r'$|e|, eulerian$')
+plt.loglog(N, eCd_prb, '-s', label = r'$|e|, probes$')
 plt.loglog(N, scaling1, '--', color = 'black', label = '1/N')
 plt.loglog(N, scaling2, '-.', color = 'black', label = r'$1/N^{2}$')
 plt.legend()
-plt.show()
+plt.savefig('error.png')
+if (display): plt.show()
 plt.close()

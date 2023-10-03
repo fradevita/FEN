@@ -329,10 +329,50 @@ contains
         endif
 
 #if DIM==3
-        if (self%G%pcol == 1) then
-            self%f(:,:,lo(3)-1) = self%f(:,:,hi(3))
-            self%f(:,:,hi(3)+1) = self%f(:,:,lo(3))
-        end if
+        if (self%bc%type_front == 0) then ! Periodic 
+             ! When using 2decomp decomposition this ghost nodes is updated automatically
+            ! Must be overwritten only when using 1 proc
+            if (self%G%pcol == 1) then
+                self%f(:,:,lo(3)-1) = self%f(:,:,hi(3))
+            endif
+        elseif (self%bc%type_front == 1) then ! Dirichlet
+            if (self%c == 'c' .or. self%c == 'x' .or. self%c == 'y') then
+                self%f(:,:,lo(3)-1) = 2.0_dp*self%bc%front(:,:) - self%f(:,:,lo(3))
+            elseif (self%c == 'z') then
+                   self%f(:,:,lo(3)) = self%bc%front
+            else
+                call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name)) 
+            endif
+        elseif (self%bc%type_front == 2) then ! Neumann
+            self%f(:,:,lo(3)-1) = self%f(:,:,lo(3))
+        elseif(self%bc%type_front == -1) then ! internal
+            ! do nothing
+        else 
+            call print_error_message('ERROR: wrong front boundary condition type for scalar s')
+        endif
+
+        if (self%bc%type_back == 0) then ! Periodic 
+            ! When using 2decomp decomposition this ghost nodes is updated automatically
+           ! Must be overwritten only when using 1 proc
+           if (self%G%pcol == 1) then
+               self%f(:,:,hi(3)+1) = self%f(:,:,lo(3))
+           endif
+       elseif (self%bc%type_back == 1) then ! Dirichlet
+           if (self%c == 'c' .or. self%c == 'x' .or. self%c == 'y') then
+               self%f(:,:,hi(3)+1) = 2.0_dp*self%bc%back(:,:) - self%f(:,:,hi(3))
+           elseif (self%c == 'z') then
+                self%f(:,:,hi(3)  ) = self%bc%back
+                self%f(:,:,hi(3)+1) = self%bc%back
+           else
+               call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name)) 
+           endif
+       elseif (self%bc%type_back == 2) then ! Neumann
+           self%f(:,:,hi(3)+1) = self%f(:,:,hi(3))
+       elseif(self%bc%type_back == -1) then ! internal
+           ! do nothing
+       else 
+           call print_error_message('ERROR: wrong back boundary condition type for scalar s')
+       endif
 #endif
 
 #ifdef MPI

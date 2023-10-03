@@ -2,10 +2,10 @@ program forces
 
     use mpi
     use precision_mod
-    use global_mod           , only : ierror, stagger, pi
+    use global_mod         , only : ierror, stagger, pi
     use grid_mod
-    use lagrangian_solid_mod , only : solid
-    use lagrangian_ibm_mod   , only : compute_hydrodynamic_loads
+    use ibm_mod
+    use lagrangian_ibm_mod , only : compute_hydrodynamic_loads
     use scalar_mod
     use vector_mod
     use utils_mod
@@ -18,7 +18,7 @@ program forces
     real(dp)            :: e_Fvx_max(ns), e_Fvy_max(ns), e_Fpx_max(ns), e_Fpy_max(ns)
     character(len=3)    :: args
     type(grid)          :: comp_grid
-    type(solid), target :: C, C1
+    type(lagrangian_solid), target :: C, C1
     type(scalar)        :: p, rho, mu
     type(vector)        :: v
     
@@ -27,7 +27,7 @@ program forces
     call get_command_argument(1, args)
     read(args,'(I03)') r
     N = 2**r
-    call comp_grid%setup(N, N, 1, 2.0_dp*pi, 2.0_dp*pi, 2.0*pi/real(N, dp), [0.0_dp, 0.0_dp, 0.0_dp], 1, 1)    
+    call comp_grid%setup(N, N, 1, 2.0_dp*pi, 2.0_dp*pi, 2.0*pi/real(N, dp), [0.0_dp, 0.0_dp, 0.0_dp], 4, 1)    
     
     call p%allocate(comp_grid, 1)
     call mu%allocate(comp_grid, 1)
@@ -61,27 +61,19 @@ program forces
         call random_number(shift)
         call mpi_allreduce(mpi_in_place,shift,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
         shift = shift/4
-        !shift = 0.60210422092342508
 
         ! Apply the shift
-        ! do l = 1,C%number_of_mass_points
-        !     C%mass_points(l)%X(1) = C%mass_points(l)%X(1) + shift
-        ! end do
-        !call C%update_lagrangian_markers()
-        !call C%update_center_of_mass()
-        C%tra(1) = shift
-        call C%rigid_body_motion
+        do l = 1,C%number_of_mass_points
+            C%mass_points(l)%X(1) = C%mass_points(l)%X(1) + shift
+        end do
+        call C%update_lagrangian_markers()
+        call C%update_center_of_mass()
+        !C%tra(1) = shift
+        !call C%rigid_body_motion
 
         do l = 1,C%number_of_edges
             C%edges(l)%C%Fv = 0.0_dp
             C%edges(l)%C%Fp = 0.0_dp
-        end do
-
-        ! Check that the shift has not modified some solid quantities
-        do l = 1,C%number_of_edges
-            print *, abs(C1%edges(l)%n - C%edges(l)%n)
-            print *, abs(C1%edges(l)%l - C%edges(l)%l)
-            print *, abs(C1%center_of_mass%X - C%center_of_mass%X)
         end do
 
         call compute_hydrodynamic_loads(C, v, p, mu, rho, [0.0_dp, 0.0_dp, 0.0_dp])
@@ -106,12 +98,11 @@ program forces
             if (e_Fpx > e_Fpx_max(s)) e_Fpx_max(s) = e_Fpx
             if (e_Fpy > e_Fpy_max(s)) e_Fpy_max(s) = e_Fpy
         end do
-        if (comp_grid%rank == 0) print *, s, shift, e_Fvx_max(s), e_Fvy_max(s), e_Fpx_max(s), e_Fpy_max(s) 
     
-        ! call mpi_allreduce(mpi_in_place,e_Fvx_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
-        ! call mpi_allreduce(mpi_in_place,e_Fvy_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
-        ! call mpi_allreduce(mpi_in_place,e_Fpx_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
-        ! call mpi_allreduce(mpi_in_place,e_Fpy_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
+        call mpi_allreduce(mpi_in_place,e_Fvx_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
+        call mpi_allreduce(mpi_in_place,e_Fvy_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
+        call mpi_allreduce(mpi_in_place,e_Fpx_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
+        call mpi_allreduce(mpi_in_place,e_Fpy_max,1,mpi_real8,mpi_max,mpi_comm_world,ierror)
    
         call C%destroy()
     end do

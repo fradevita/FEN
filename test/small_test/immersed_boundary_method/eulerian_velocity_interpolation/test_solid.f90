@@ -28,13 +28,14 @@ contains
         ! Local variables
         real(dp) :: temp(3)
 #if DIM==3
-        d = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 + (self%X(3) - X(3))**2) - self%R
+        d = sqrt((X(1) - self%center_of_mass%X(1))**2 + (X(2) - self%center_of_mass%X(2))**2 + &
+            (self%center_of_mass%X(3) - X(3))**2) - self%R
 #else
-        d = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 ) - self%R
+        d = sqrt((X(1) - self%center_of_mass%X(1))**2 + (X(2) - self%center_of_mass%X(2))**2 ) - self%R
         if (self%G%periodic_bc(1)) then
             temp(1) = d
-            temp(2) = sqrt((X(1) - self%X(1) + self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
-            temp(3) = sqrt((X(1) - self%X(1) - self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
+            temp(2) = sqrt((X(1) - self%center_of_mass%X(1) + self%G%Lx)**2 + (X(2) - self%center_of_mass%X(2))**2) - self%R
+            temp(3) = sqrt((X(1) - self%center_of_mass%X(1) - self%G%Lx)**2 + (X(2) - self%center_of_mass%X(2))**2) - self%R
             d = temp(minloc(abs(temp), 1))
             d = minval(temp)
         endif
@@ -57,29 +58,29 @@ contains
         real(dp) :: modnorm
 
         if (self%G%periodic_bc(1)) then
-            d(1) = sqrt((X(1) - self%X(1))**2             + (X(2) - self%X(2))**2) - self%R
-            d(2) = sqrt((X(1) - self%X(1) + self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
-            d(3) = sqrt((X(1) - self%X(1) - self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
-            temp(1) = X(1) - self%X(1)
-            temp(2) = X(1) - self%X(1) + self%G%Lx
-            temp(3) = X(1) - self%X(1) - self%G%Lx
+            d(1) = sqrt((X(1) - self%center_of_mass%X(1))**2             + (X(2) - self%center_of_mass%X(2))**2) - self%R
+            d(2) = sqrt((X(1) - self%center_of_mass%X(1) + self%G%Lx)**2 + (X(2) - self%center_of_mass%X(2))**2) - self%R
+            d(3) = sqrt((X(1) - self%center_of_mass%X(1) - self%G%Lx)**2 + (X(2) - self%center_of_mass%X(2))**2) - self%R
+            temp(1) = X(1) - self%center_of_mass%X(1)
+            temp(2) = X(1) - self%center_of_mass%X(1) + self%G%Lx
+            temp(3) = X(1) - self%center_of_mass%X(1) - self%G%Lx
             nx = temp(minloc(d,1))
         else
-            nx = X(1) - self%X(1)
+            nx = X(1) - self%center_of_mass%X(1)
         endif
         if (self%G%periodic_bc(2)) then
-            d(1) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2               ) - self%R
-            d(2) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 + self%G%Ly) - self%R
-            d(3) = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 - self%G%Ly) - self%R
-            temp(1) = X(2) - self%X(2)
-            temp(2) = X(2) - self%X(2) + self%G%Ly
-            temp(3) = X(2) - self%X(2) - self%G%Ly
+            d(1) = sqrt((X(1) - self%center_of_mass%X(1))**2 + (X(2) - self%center_of_mass%X(2))**2               ) - self%R
+            d(2) = sqrt((X(1) - self%center_of_mass%X(1))**2 + (X(2) - self%center_of_mass%X(2))**2 + self%G%Ly) - self%R
+            d(3) = sqrt((X(1) - self%center_of_mass%X(1))**2 + (X(2) - self%center_of_mass%X(2))**2 - self%G%Ly) - self%R
+            temp(1) = X(2) - self%center_of_mass%X(2)
+            temp(2) = X(2) - self%center_of_mass%X(2) + self%G%Ly
+            temp(3) = X(2) - self%center_of_mass%X(2) - self%G%Ly
             ny = temp(minloc(d,1))
         else
-            ny = X(2) - self%X(2)
+            ny = X(2) - self%center_of_mass%X(2)
         endif
 #if DIM==3
-        nz = X(3) - self%X(3)
+        nz = X(3) - self%center_of_mass%X(3)
 #else
         nz = 0.0_dp
 #endif

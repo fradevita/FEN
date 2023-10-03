@@ -1,6 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas
+import sys
+
+if (len(sys.argv) > 1):
+    if (sys.argv[1] == 'silent'):
+        display = 0
+    else:
+        print('wrong option in the run_all.sh script.')
+        display = 0
+else:
+    display = 1
 
 # Load data
 #data_064 = pandas.read_csv('data_64/out.txt')
@@ -39,7 +49,8 @@ ax.plot(data_256["t"], Cdref*Cd, '--', color = 'black', label = r'reference $C_d
 
 plt.tight_layout()
 plt.legend()
-plt.show()
+plt.savefig('drag.png')
+if (display): plt.show()
 plt.close()
 
 # Compute error
@@ -67,5 +78,6 @@ plt.loglog(N, e_P, '-o', label = 'probes')
 plt.loglog(N, scaling1, '--', color = 'black', label = '1/N')
 plt.loglog(N, scaling2, '-.', color = 'black', label = r'$1/N^{2}$')
 plt.legend()
-plt.show()
+plt.savefig('error.png')
+if (display): plt.show()
 plt.close()

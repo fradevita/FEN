@@ -1,4 +1,4 @@
-echo "Running Pan test case ..."
+echo "    running Pan test case ..."
 
 make SOURCE=Pan.f90 > compilation_log 2> compilation_warning
 python3 mesh.py

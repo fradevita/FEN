@@ -3,17 +3,18 @@ program main
     ! Test the polynomial reconstruction of a given function
 
     use mpi
-    use precision                , only : dp
-    use constants                , only : pi
-    use class_Grid               , only : base_grid, bc_type
-    use polynomial_reconstruction
-    use utils                    , only : urandom_seed
+    use precision_mod            , only : dp
+    use global_mod               , only : pi
+    use grid_mod                 , only : grid, bc_type
+    use polynomial_reconstruction_mod
+    use utils_mod                , only : urandom_seed
     
     implicit none
 
     integer  :: ierror, Nx, Ny, Nz, i, ie(3), j, l, res, out2nd_id, out4th_id, n
     real(dp) :: Lx, Ly, Lz, x, y, f_reconstructed, e, e_Linf, e_L2
     real(dp), allocatable :: f(:,:)
+    type(grid) :: comp_grid
     type(bc_type) :: bc(4)
 
     call mpi_init(ierror)
@@ -33,10 +34,10 @@ program main
         do i = 1,4
             bc(i)%s = 'Periodic'
         end do 
-        call base_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, [0.0_dp, 0.0_dp, 0.0_dp], 1, 1, bc)
+        call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, [0.0_dp, 0.0_dp, 0.0_dp], 1, 1, bc)
 
         ! First perform the reconstruction with 2nd order polynomial
-        call init(2)
+        call init(2, comp_grid%delta)
 
         ! In this case the kernel size is 3x3
         allocate(f(-ks:ks,-ks:ks))
@@ -54,18 +55,18 @@ program main
             call random_number(y)
 
             ! Find the closest grid cell center
-            ie = base_grid%closest_grid_node([x, y, 0.0_dp], 0)
+            ie = comp_grid%closest_grid_node([x, y, 0.0_dp], 0)
 
             ! Build the support kernel for the polynomail interpolation   
             do j = -ks,ks
                 do i = -ks,ks
-                    f(i,j) = test_function([base_grid%x(ie(1)) + i*base_grid%delta, &
-                                            base_grid%y(ie(2)) + j*base_grid%delta])
+                    f(i,j) = test_function([comp_grid%x(ie(1)) + i*comp_grid%delta, &
+                                            comp_grid%y(ie(2)) + j*comp_grid%delta])
                 end do
             end do
  
             ! Evaluate the polynomial on (x, y)
-            f_reconstructed = P([x - base_grid%x(ie(1)), y - base_grid%y(ie(2))], &
+            f_reconstructed = P([x - comp_grid%x(ie(1)), y - comp_grid%y(ie(2))], &
                                 get_coefficients(f))
  
             ! Evaluate error
@@ -79,7 +80,7 @@ program main
         deallocate(f)
 
         ! Now perform the reconstruction with 4th order polynomial
-        call init(4)
+        call init(4, comp_grid%delta)
 
         ! In this case the kernel size is 3x3
         allocate(f(-ks:ks,-ks:ks))
@@ -97,18 +98,18 @@ program main
             call random_number(y)
 
             ! Find the closest grid cell center
-            ie = base_grid%closest_grid_node([x, y, 0.0_dp], 0)
+            ie = comp_grid%closest_grid_node([x, y, 0.0_dp], 0)
 
             ! Build the support kernel for the polynomail interpolation   
             do j = -ks,ks
                 do i = -ks,ks
-                    f(i,j) = test_function([base_grid%x(ie(1)) + i*base_grid%delta, &
-                                            base_grid%y(ie(2)) + j*base_grid%delta])
+                    f(i,j) = test_function([comp_grid%x(ie(1)) + i*comp_grid%delta, &
+                                            comp_grid%y(ie(2)) + j*comp_grid%delta])
                 end do
             end do
  
             ! Evaluate the polynomial on (x, y)
-            f_reconstructed = P([x - base_grid%x(ie(1)), y - base_grid%y(ie(2))], &
+            f_reconstructed = P([x - comp_grid%x(ie(1)), y - comp_grid%y(ie(2))], &
                                 get_coefficients(f))
  
             ! Evaluate error
@@ -119,7 +120,7 @@ program main
         write(out4th_id,*) Nx, e_Linf, sqrt(e_L2)
         call destroy()
         deallocate(f)
-        call base_grid%destroy()
+        call comp_grid%destroy()
 
     end do resolution_loop
 

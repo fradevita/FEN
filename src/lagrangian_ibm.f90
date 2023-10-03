@@ -7,7 +7,7 @@ module lagrangian_ibm_mod
     use precision_mod       , only : dp
     use grid_mod
     use vector_mod
-    use lagrangian_solid_mod, only : solid
+    use lagrangian_solid_mod, only : lagrangian_solid, edge
 
     implicit none
 
@@ -43,12 +43,12 @@ contains
         use mpi
         use global_mod          , only : Ndim
         use mls_mod             , only : Ne, interpolate, phi
-        use lagrangian_solid_mod, only : edge, solid_pointer
+        use lagrangian_solid_mod, only : edge, lagrangian_solid_pointer
 
         ! In/Out variables
-        real(dp)           , intent(in   ) :: dt
-        type(vector)       , intent(inout) :: v
-        type(solid_pointer), intent(in   ) :: solid_array(:)
+        real(dp)                      , intent(in   ) :: dt
+        type(vector)                  , intent(inout) :: v
+        type(lagrangian_solid_pointer), intent(in   ) :: solid_array(:)
 
         ! Local variables
         integer    :: b, fstep, l, q, sj, si, ii, jj, ie(3)
@@ -156,13 +156,12 @@ contains
 
         use global_mod          , only : Ndim, tdof
         use scalar_mod
-        use lagrangian_solid_mod, only : solid, edge
-
+        
         ! In/Out variables
         real(dp)    , intent(in   )         :: g(2)
         type(scalar), intent(in   )         :: p, mu, rho
         type(vector), intent(in   )         :: v
-        type(solid ), intent(inout), target :: obj
+        type(lagrangian_solid), intent(inout), target :: obj
 
         ! Local variables
         integer                             :: l, n
@@ -256,7 +255,7 @@ contains
         use mls_mod             , only : interpolate
 
         ! In/Out variables
-        type(solid) , intent(in   ) :: obj        
+        type(lagrangian_solid) , intent(in   ) :: obj        
         real(dp)    , intent(in   ) :: g(2)
         type(scalar), intent(in   ) :: p, mu, rho
         type(vector), intent(in   ) :: v
@@ -317,12 +316,12 @@ contains
                 ! Normal pressure gradient on the lagrangian marker
                 dpdn_m = -rho%f(ie(1),ie(2),1)*((l_edge%C%A(1) - g(1))*l_edge%n(1)  + &
                                                 (l_edge%C%A(2) - g(2))*l_edge%n(2))*probe_sign
-                !pl(l) = ppl(1) - h_probe*(dpdn_m)
+                pl(l) = ppl(1) - h_probe*(dpdn_m)
 
                 ! Wang et al 2019 JCP eq 20 correction 
                 ! Normal pressure gradient on the probe
-                dpdn_p = (ppl(2)*l_edge%n(1) + ppl(3)*l_edge%n(2))*probe_sign
-                pl(l) = ppl(1) - h_probe*(dpdn_m + dpdn_p)*0.5_dp
+                !dpdn_p = (ppl(2)*l_edge%n(1) + ppl(3)*l_edge%n(2))*probe_sign
+                !pl(l) = ppl(1) - h_probe*(dpdn_m + dpdn_p)*0.5_dp
                 
                 ! Viscous stresses
                 tau11(l) = 2.0_dp*mu%f(ie(1),ie(2),1)*Ul(2)
@@ -358,7 +357,7 @@ contains
         ! In/Out varialbes
         integer    , intent(in   ) :: step
         real(dp)   , intent(in   ) :: dt, g(:), density
-        type(solid), intent(inout) :: obj        
+        type(lagrangian_solid), intent(inout) :: obj        
         type(grid) , intent(in   ) :: comp_grid
 
         ! Local variables
@@ -457,7 +456,7 @@ contains
     subroutine check_periodicity(obj, comp_grid)
 
         ! In/Out variables
-        type(solid), intent(inout) :: obj
+        type(lagrangian_solid), intent(inout) :: obj
         type(grid) , intent(in   ) :: comp_grid
 
         ! Local variables

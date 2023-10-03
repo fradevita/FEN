@@ -17,7 +17,8 @@ module marker_mod
         real(dp), dimension(:), allocatable :: Fv         !< Viscous forces vector
         real(dp), dimension(:), allocatable :: Fp         !< pressure forces vector
         real(dp), dimension(:), allocatable :: Fh         !< Hydrodynamic forces vector
-contains
+        real(dp), dimension(:), allocatable :: Fe         !< external forces vector
+    contains
         procedure, pass(self) :: create  !< self exp.
         procedure, pass(self) :: destroy !< self exp.
     end type marker
@@ -38,6 +39,7 @@ contains
         allocate(self%Fv(degree_of_freedom))
         allocate(self%Fp(degree_of_freedom))
         allocate(self%Fh(degree_of_freedom))
+        allocate(self%Fe(degree_of_freedom))
 
         ! Initialize to zero
         self%X = 0.0_dp
@@ -46,6 +48,7 @@ contains
         self%Fv = 0.0_dp
         self%Fp = 0.0_dp
         self%Fh = 0.0_dp
+        self%Fe = 0.0_dp
 
     end subroutine
     !==============================================================================================
@@ -56,7 +59,7 @@ contains
 
         class(marker), intent(inout) :: self !< marker object
 
-        deallocate(self%X, self%V, self%A, self%Fv, self%Fp, self%Fh)
+        deallocate(self%X, self%V, self%A, self%Fv, self%Fp, self%Fh, self%Fe)
 
     end subroutine
     !==============================================================================================

@@ -40,6 +40,51 @@ contains
     !==============================================================================================
 
     !==============================================================================================
+    function Rx(alpha)
+
+        ! Rotation matrix around x axis
+
+        real(dp), intent(in) :: alpha   !< input angle
+        real(dp)             :: Rx(3,3) !< output matrix
+
+        Rx(1,:) = [1.0_dp,     0.0_dp,      0.0_dp]
+        Rx(2,:) = [0.0_dp, cos(alpha), -sin(alpha)]
+        Rx(3,:) = [0.0_dp, sin(alpha),  cos(alpha)]
+        
+    end function Rx
+    !==============================================================================================
+    
+    !==============================================================================================
+    function Ry(beta)
+
+        ! Rotation matrix around y axis
+
+        real(dp), intent(in) :: beta    !< input angle
+        real(dp)             :: Ry(3,3) !< output matrix
+
+        Ry(1,:) = [ cos(beta), 0.0_dp, sin(beta)]
+        Ry(2,:) = [    0.0_dp, 1.0_dp,    0.0_dp]
+        Ry(3,:) = [-sin(beta), 0.0_dp, cos(beta)]
+        
+    end function Ry
+    !==============================================================================================
+    
+    !==============================================================================================
+    function Rz(gamma)
+
+        ! Rotation matrix around z axis
+
+        real(dp), intent(in) :: gamma   !< input angle
+        real(dp)             :: Rz(3,3) !< output matrix
+
+        Rz(1,:) = [cos(gamma), -sin(gamma), 0.0_dp]
+        Rz(2,:) = [sin(gamma),  cos(gamma), 0.0_dp]
+        Rz(3,:) = [    0.0_dp,      0.0_dp, 1.0_dp]
+        
+    end function Rz
+    !==============================================================================================
+
+    !==============================================================================================
     pure function linear_interpolation(x, x1, x2, y1, y2) result(y)
         !< Perform linear interpolation in (x,y) between (x1,y1) and (x2,y2)
     

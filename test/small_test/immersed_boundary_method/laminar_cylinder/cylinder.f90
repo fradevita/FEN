@@ -61,13 +61,18 @@ program laminar_cylinder
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
 
     ! Init the solid object
-    C = circle(X = [0.2_dp, 0.2_dp, 0.0_dp, 0.0_dp, 0.0_dp, 0.0_dp], R = radius, name = 'C')
+    C%R = radius
+    C%name = 'C'
     C%G => comp_grid
-    allocate(Eulerian_Solid_list(1))
-    Eulerian_solid_list(1)%pS => C
+    call C%setup()
+
+    allocate(solid_list(1))
+    solid_list(1)%pS => C
     write(sn,'(I0.3)') Nx
     mesh_file = 'mesh_'//sn//'.txt'
     call C%load_surface_points(mesh_file)
+
+    C%center_of_mass%X(1:2) = [0.2_dp, 0.2_dp]
 
     ! Set the viscoisty
     viscosity = Umean*L/Re
@@ -108,7 +113,8 @@ program laminar_cylinder
                 Cd = 2.0_dp*Fe%y%integral()/Umean**2/L/Lz
                 ! Evalute forces with probes
                 call compute_hydrodynamic_loads(C, v, p, mu, rho, g)
-                if (myrank == 0) write(out_id,*) time, Cd, Cl, 2.0_dp*C%hF(2)/Umean**2/L, 2.0_dp*C%hF(1)/Umean**2/L
+                if (myrank == 0) write(out_id,*) time, Cd, Cl, 2.0_dp*C%center_of_mass%Fh(2)/Umean**2/L, &
+                                                               2.0_dp*C%center_of_mass%Fh(1)/Umean**2/L
             endif
         end block
    
