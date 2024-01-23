@@ -29,3 +29,6 @@ then
 else
     echo "        method test completed."
 fi
+
+echo 'Field test cases completed.'
+

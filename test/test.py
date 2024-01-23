@@ -44,8 +44,12 @@ def run_volume_of_fluid_suite(s):
     os.system("cd small_test && cd volume_of_fluid && bash run.sh" + s)
 
 # Run only Immersed-Boundary test cases
-def run_immersed_boundary_suite(s):
-    os.system("cd small_test && cd immersed_boundary && bash run.sh" + s)
+def run_eulerian_solid_suite(s):
+    os.system("cd small_test && cd eulerian_solid && bash run.sh" + s)
+
+# Run only Immersed-Boundary test cases
+def run_deformable_solid_suite(s):
+    os.system("cd small_test && cd deformable_solid && bash run.sh" + s)
 
 # Run single test case
 def run_single_test_case(test_case: str, s: str):
@@ -70,15 +74,17 @@ def execute():
         run_navier_stokes_suite(s)
     elif args.test_suite == 'volume_of_fluid' or args.test_suite == 'VoF':
         run_volume_of_fluid_suite(s)
-    elif args.test_suite == 'immersed_boundary' or args.test_suite == 'IB':
-        run_immersed_boundary_suite(s)
+    elif args.test_suite == 'eulerian_solid' or args.test_suite == 'ES':
+        run_eulerian_solid_suite(s)
+    elif args.test_suite == 'deformable_solid' or args.test_suite == 'DF':
+        run_deformable_solid_suite(s)
     elif args.test_suite == 'small_test_suite' or args.test_suite == 'STS':
         run_small_test_suite(s)
     else:
         raise Exception('Wrong test case suite selected. Available are:\n\
                         navier_stokes (NS) \n\
                         volume_of_fluid (VoF) \n\
-                        immersed_boundary (IB)\n\
+                        eulerian_solid (ES)\n\
                         small_test_suite (STS).')
 
     if args.test_case == '':
