@@ -39,8 +39,10 @@ ax.plot(data_256[:,0],  data_256[:,3], 'o', color = 'red', label = 'Ny =256, pro
 ax.plot(data_128[:,0], Cdref*Cd, '--', color = 'black', label = r'reference $C_d$')
 plt.tight_layout()
 plt.legend()
-plt.savefig('drag.png')
-if (display): plt.show()
+if (display):
+    plt.show()
+else:
+    plt.savefig("drag.png")
 plt.close()
 
 # Compute error
@@ -72,11 +74,10 @@ plt.loglog(N, eCd_prb, '-s', label = r'$|e|, probes$')
 plt.loglog(N, scaling1, '--', color = 'black', label = '1/N')
 plt.loglog(N, scaling2, '-.', color = 'black', label = r'$1/N^{2}$')
 plt.legend()
-plt.savefig('error.png')
 if (display):
     plt.show()
     print('        Test completd.')
 else:
-    plt.savefig("cantilever.png")
+    plt.savefig("error.png")
     print('        Test completd, check image.')
 plt.close()

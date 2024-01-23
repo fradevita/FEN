@@ -64,8 +64,10 @@ plt.title('Lid driven cavity test case')
 plt.xlim([0, 1])
 plt.plot(Y + dy/2, uy)
 plt.plot(uref[:,0] + 0.5, uref[:,1], 'o')
-plt.savefig('u_y.png')
-if (display): plt.show()
+if (display):
+    plt.show()
+else:
+    plt.savefig('u_y.png')
 plt.close()
 
 plt.figure()
@@ -75,8 +77,10 @@ plt.title('Lid driven cavity test case')
 plt.xlim([0, 1])
 plt.plot(X + dx/2, vx)
 plt.plot(vref[:,0] + 0.5, vref[:,1], 'o')
-plt.savefig('v_x.png')
-if (display): plt.show()
+if (display):
+    plt.show()
+else:
+    plt.savefig('v_x.png')
 plt.close()
 
 fig, ax = plt.subplots()
@@ -87,6 +91,11 @@ ax.set_xlim([0, 1])
 ax.set_ylim([0, 1])
 ax.contourf(X, Y, np.transpose(vort[:,:,0]), 128, vmin = -10, vmax = 10, cmap = 'jet')
 ax.axis('equal')
-plt.savefig('vort.png')
-if (display): plt.show()
+if (display):
+    plt.show()
+    print('        Test completd.')
+else:
+    plt.savefig("vort.png")
+    print('        Test completd, check image.')
 plt.close()
+

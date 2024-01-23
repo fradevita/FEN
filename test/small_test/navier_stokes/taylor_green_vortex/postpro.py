@@ -78,5 +78,10 @@ plt.xscale("log")
 plt.yscale("log")
 #plt.xticks(N, N)
 plt.legend()
-plt.savefig("plot.png")
-if (display): plt.show()
+if (display):
+    plt.show()
+    print('        Test completd.')
+else:
+    plt.savefig("error.png")
+    print('        Test completd, check image.')
+plt.close()

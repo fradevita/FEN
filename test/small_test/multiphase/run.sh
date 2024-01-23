@@ -3,7 +3,7 @@
 echo 'Running multiphase flows test cases ...'
 
 # Run the test suite
-#for d in ./*/ ; do (cd "$d" && sh run.sh $1); done
+for d in ./*/ ; do (cd "$d" && sh run.sh $1); done
 
 # Check for failed test
 for d in ./*/
