@@ -128,7 +128,7 @@ contains
             ! Modified wave number in y
             allocate(mwn_y(ny))
             do j = 1,ny
-                mwn_y(j) = 2.0_dp*(dcos(2.0_dp*pi*(j - 1)/float(ny)) - 1.0_dp)/delta**2
+                mwn_y(j) = 2.0_dp*(dcos(2.0_dp*pi*(j - 1.0_dp)/float(ny)) - 1.0_dp)/delta**2
             end do
             
             ! Allocate memory for the complex output of the FFT in the y direction
@@ -212,7 +212,7 @@ contains
                 b(k) = -2.0_dp/delta**2
                 c(k) =  1.0_dp/delta**2
             end do
-            b(1)  = b(1) + a(1)
+            b(1) = b(1) + a(1)
             if (phi%G%boundary_conditions(5)%s == 'Inflow' .and. phi%G%boundary_conditions(6)%s == 'Outflow') then
                 b(nz) = b(nz) - c(nz)
             else
@@ -643,7 +643,7 @@ contains
         ! Local variables
         integer  :: i, j, k, lo(3), hi(3), lo_y(3), hi_y(3), lo_z(3), hi_z(3), nx, ny, nz
         real(dp) :: mean_phi
-        complex  :: frac
+        real(dp) :: factor
 
         ! To shorten notation
         lo = phi%G%lo
@@ -687,23 +687,27 @@ contains
         ! Forward step: compute c1 and d1
         do j = lo_z(2),hi_z(2)
             do i = lo_z(1),hi_z(1)
-                 c1(i,j,lo_z(3)) = c(lo_z(3))/(b(lo_z(3)) + mwn_x(i) + mwn_y(j))
-                d1c(i,j,lo_z(3)) = outc_y_z(i,j,lo_z(3))/(b(lo_z(3)) + mwn_x(i) + mwn_y(j))
+                factor = 1.0_dp/(b(lo_z(3)) + mwn_x(i) + mwn_y(j))
+                c1(i,j,lo_z(3)) = c(lo_z(3))*factor
+                d1c(i,j,lo_z(3)) = outc_y_z(i,j,lo_z(3))*factor
             end do
         end do
+        
         do k = lo_z(3)+1,hi_z(3)-1
             do j = lo_z(2),hi_z(2)
                 do i = lo_z(1),hi_z(1)
-                     c1(i,j,k) = c(k)/(b(k) - a(k)*c1(i,j,k-1) + mwn_x(i) + mwn_y(j))
-                    d1c(i,j,k) = (outc_y_z(i,j,k) - a(k)*d1c(i,j,k-1))/(b(k) + mwn_x(i) + mwn_y(j) - a(k)*c1(i,j,k-1))
+                    factor = 1.0_dp/(b(k) + mwn_x(i) + mwn_y(j) - a(k)*c1(i,j,k-1))
+                    c1(i,j,k) = c(k)*factor
+                    d1c(i,j,k) = (outc_y_z(i,j,k) - a(k)*d1c(i,j,k-1))*factor
                 end do
             end do
         end do
+
         do j = lo_z(2),hi_z(2)
             do i = lo_z(1),hi_z(1)
-                frac = (b(hi_z(3)) + mwn_x(i) + mwn_y(j) - a(hi_z(3))*c1(i,j,hi_z(3)-1))
-                if (frac /= 0.0d0) then
-                    d1c(i,j,hi_z(3)) = (outc_y_z(i,j,hi_z(3)) - a(hi_z(3))*d1c(i,j,hi_z(3)-1))/frac
+                factor = (b(hi_z(3)) + mwn_x(i) + mwn_y(j) - a(hi_z(3))*c1(i,j,hi_z(3)-1))
+                if (factor /= 0.0d0) then
+                    d1c(i,j,hi_z(3)) = (outc_y_z(i,j,hi_z(3)) - a(hi_z(3))*d1c(i,j,hi_z(3)-1))/factor
                 else
                     d1c(i,j,hi_z(3)) = 0.0_dp
                 end if
@@ -738,6 +742,7 @@ contains
         call transpose_y_to_x(outc_x_y, outc_x)
 
         ! Perform inverse fft in the x direction of the RHS of Poisson equation
+        phi%f = 0.0_dp
         do k = lo(3),hi(3)
             do j = lo(2),hi(2)
                 call dfftw_execute_dft_c2r(pb_x, outc_x(lo(1):hi(1),j,k), phi%f(lo(1):hi(1),j,k))
@@ -757,7 +762,7 @@ contains
 #ifdef MPI
         call mpi_allreduce(mpi_in_place,mean_phi,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
 #endif
-        !phi%f = phi%f - mean_phi/float(nx*ny*nz)
+        phi%f = phi%f - mean_phi/float(nx*ny*nz)
 
     end subroutine
     !========================================================================================

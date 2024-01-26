@@ -1,9 +1,10 @@
 program projection
 
-    ! Test the projection of non-divergence velocity field into a divergence one.
+    ! Test the projection of non-divergence velocity field into a 
+    ! divergence-free one.
 
     use mpi
-    use global_mod    , only : ierror, myrank
+    use global_mod    , only : ierror
     use precision_mod , only : dp
     use grid_mod
     use scalar_mod
@@ -15,7 +16,7 @@ program projection
     implicit none
 
     integer          :: Nx, Ny, Nz, s, i, j, k
-    real(dp)         :: Lx, Ly, Lz, origin(3), r
+    real(dp)         :: Lx, Ly, Lz, origin(3), r, div_max
     type(grid)       :: G
     type(scalar)     :: phi, div
     type(vector)     :: v, grad_phi
@@ -24,7 +25,6 @@ program projection
 
     ! Initialize MPI
     call mpi_init(ierror)
-    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
     
     ! The test accept as input argument the case
     ! case 1: test solver ppp
@@ -61,31 +61,27 @@ program projection
     ! projection operator scalar field and its gradient 
     ! vector field 
     call v%allocate(G, 1)
-    call div%allocate(G, 1)
+    call div%allocate(G)
     call phi%allocate(G, 1)
     call grad_phi%allocate(G, 1)
 
-    ! Adapt field BC based on the testcase
     if (test_case == '2') then
-        v%x%bc%type_front = 1
-        v%y%bc%type_front = 1
-        v%z%bc%type_front = 1
-        phi%bc%type_front = 2
+        phi%bc%type_back = 2
         v%x%bc%type_back = 1
         v%y%bc%type_back = 1
         v%z%bc%type_back = 1
-        phi%bc%type_back = 2
+        phi%bc%type_front = 2
+        v%x%bc%type_front = 1
+        v%y%bc%type_front = 1
+        v%z%bc%type_front = 1
     endif
     
     ! Initialize the Poisson Solver
     call init_poisson_solver(phi)
 
     ! Repeat the test several times
+    div_max = 0.0_dp
     do s = 1,100
-
-        ! Initialise random number generator.
-        call random_seed(size=Nx)               ! Get size of seed array.
-        call random_seed(put=urandom_seed(Nx))  ! Put seed array into PRNG.
 
         ! Random initial velocity field
         do k = G%lo(3),G%hi(3)
@@ -106,7 +102,7 @@ program projection
         call divergence(v, div)
 
         ! Set RHS of poisson equation equal to - div
-        phi%f = -div%f
+        phi%f(1:Nx,1:Ny,1:Nz) = -div%f(1:Nx,1:Ny,1:Nz)
 
         ! Solve the Poisson equation
         call solve_poisson(phi)
@@ -123,9 +119,11 @@ program projection
         call divergence(v, div)
 
         ! Evaluate maximum value
-        print *, s, div%max_value()
-
+        if (abs(div%max_value()) > div_max) div_max = abs(div%max_value())
     end do
+
+    if (div_max > 1.0e-11_dp) print *, 'WARNING: in case', test_case, &
+        'maximium value of divergence is: ', div_max
 
     ! Free the memory
     call destroy_poisson_solver(phi)

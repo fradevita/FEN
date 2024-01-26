@@ -10,7 +10,7 @@ MDIR = ./.fmod
 
 # Flags
 override BIG=#-mcmodel=large
-override DBG=#-g -Wall -fcheck=bounds -ffpe-trap=invalid,zero,overflow
+override DBG=#-g -Wall -fcheck=all -ffpe-trap=invalid,zero,overflow
 override PROF=#-pg
 override OPT=#-O3
 override CPPDEFS+=-cpp

@@ -38,6 +38,7 @@ contains
 
         ! Cycle over solid list to find number of lagrangian and eulerian solid
         nes = 0
+        nls = 0
         do n = 1,size(solid_list)
             select type(var => solid_list(n)%pS)
             class is (eulerian_solid)

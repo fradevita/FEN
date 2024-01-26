@@ -339,7 +339,7 @@ contains
             if (self%c == 'c' .or. self%c == 'x' .or. self%c == 'y') then
                 self%f(:,:,lo(3)-1) = 2.0_dp*self%bc%front(:,:) - self%f(:,:,lo(3))
             elseif (self%c == 'z') then
-                   self%f(:,:,lo(3)) = self%bc%front
+                   self%f(:,:,lo(3)-1) = self%bc%front
             else
                 call print_error_message('ERROR: wrong grid location type for scalar '//trim(self%name)) 
             endif
@@ -370,7 +370,7 @@ contains
            self%f(:,:,hi(3)+1) = self%f(:,:,hi(3))
        elseif(self%bc%type_back == -1) then ! internal
            ! do nothing
-       else 
+       else
            call print_error_message('ERROR: wrong back boundary condition type for scalar s')
        endif
 #endif

@@ -30,10 +30,12 @@ contains
         hi = G%hi
         
         ! Call decomp_2d function to update halos
-        call update_halo(f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)), fh, level = l, opt_global = .true.)
+        call update_halo(f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)), fh, &
+                            level = l, opt_global = .true.)
 
         ! Copy into f
-        f(lo(1):hi(1),lo(2)-l:hi(2)+l,lo(3)-l:hi(3)+l) = fh(:,lo(2)-l:hi(2)+l,lo(3)-l:hi(3)+l)
+        f(lo(1):hi(1),lo(2)-l:hi(2)+l,lo(3)-l:hi(3)+l) = &
+                fh(lo(1):hi(1),lo(2)-l:hi(2)+l,lo(3)-l:hi(3)+l)
 
         ! Free memroy
         deallocate(fh)
