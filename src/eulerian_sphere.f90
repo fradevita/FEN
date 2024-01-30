@@ -31,7 +31,9 @@ contains
         ! Local variables
         real(dp) :: dd(3)
 
-        d = sqrt((X(1) - self%X(1))**2 + (X(2) - self%X(2))**2 + (X(3) - self%X(3))**2 ) - self%R
+        d = sqrt((X(1) - self%center_of_mass%X(1))**2 + &
+                 (X(2) - self%center_of_mass%X(2))**2 + &
+                 (X(3) - self%center_of_mass%X(3))**2 ) - self%R
         ! if (self%G%periodic_bc(1)) then
         !     dd(1) = d
         !     dd(2) = sqrt((X(1) - self%X(1) + self%G%Lx)**2 + (X(2) - self%X(2))**2) - self%R
@@ -88,9 +90,9 @@ contains
         !  else
         !     ny = X(2) - self%X(2)
         !  endif
-        nx = X(1) - self%X(1)
-        ny = X(2) - self%X(2)
-        nz = X(3) - self%X(3)
+        nx = X(1) - self%center_of_mass%X(1)
+        ny = X(2) - self%center_of_mass%X(2)
+        nz = X(3) - self%center_of_mass%X(3)
         modnorm = sqrt(nx**2 + ny**2 + nz**2) + small
         n(1) = nx/modnorm
         n(2) = ny/modnorm
