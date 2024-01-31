@@ -1,8 +1,9 @@
 module lagrangian_ibm_mod
 
-    ! This module contains all procedures for the Lagrangian Immersed Boundary Method
-    ! using the Mooving-Least-Square method. The main procedures for the IBM are
-    ! the forcing of the velocity field and the computation of the hydrodynamic loads.
+    ! This module contains all procedures for the Lagrangian Immersed Boundary 
+    ! Method using the Mooving-Least-Square method. The main procedures for the 
+    ! IBM are the forcing of the velocity field and the computation of the 
+    ! hydrodynamic loads.
 
     use precision_mod       , only : dp
     use grid_mod
@@ -22,7 +23,7 @@ module lagrangian_ibm_mod
 
 contains
 
-    !==============================================================================================
+    !===========================================================================
     subroutine init_ibm(comp_grid)
 
         ! This subroutine initialize the variables of the module
@@ -35,9 +36,9 @@ contains
         h_probe = 1.2_dp*comp_grid%delta
 
     end subroutine init_ibm
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     subroutine forcing_velocity(v, solid_array, dt)
 
         use mpi
@@ -58,15 +59,14 @@ contains
         ! Cycle over the number of solid bodies
         solid_body_cycle: do b = 1,size(solid_array)
 
+          ! Set to zero the force on the eulerian grid
+            F%x%f = 0.0_dp
+            F%y%f = 0.0_dp
+#if DIM==3
+            F%z%f = 0.0_dp
+#endif
             ! The forcing is applyied iteratively Nfstep times
             forcing_cycle: do fstep = 1,Nfstep
-
-                ! Set to zero the force on the eulerian grid
-                F%x%f = 0.0_dp
-                F%y%f = 0.0_dp
-#if DIM==3
-                F%z%f = 0.0_dp
-#endif
 
                 ! Cycle over all the edges of the solid body b
                 edges_cycle: do l = 1,solid_array(b)%pS%number_of_edges
@@ -91,7 +91,8 @@ contains
                     ! eq (17) of de Tullio & Pascazio JCP 2016.
                     Fl = (l_edge%C%V(1) - Vl(1))/dt
 
-                    ! Compute the scaling factor, eq. 20 of de Tullio & Pascazio JCP 2016.
+                    ! Compute the scaling factor, eq. 20 of de Tullio & Pascazio 
+                    ! JCP 2016.
                     c = l_edge%l/v%G%delta
 
                     ! Transfer the Lagrangian force to Eulerian force,
@@ -146,21 +147,22 @@ contains
         end do solid_body_cycle
 
     end subroutine forcing_velocity
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     subroutine compute_hydrodynamic_loads(obj, v, p, mu, rho, g)
 
-        ! Compute hydrodynamic loads on solid obj given by the velocity field v, pressure
-        ! field p, of the flow with viscosity mu, density rho and body force g.
+        ! Compute hydrodynamic loads on solid obj given by the velocity field v, 
+        ! pressure field p, of the flow with viscosity mu, density rho and 
+        ! body force g.
 
-        use global_mod          , only : Ndim, tdof
+        use global_mod , only : Ndim, tdof
         use scalar_mod
         
         ! In/Out variables
-        real(dp)    , intent(in   )         :: g(2)
-        type(scalar), intent(in   )         :: p, mu, rho
-        type(vector), intent(in   )         :: v
+        real(dp)    , intent(in   )                   :: g(2)
+        type(scalar), intent(in   )                   :: p, mu, rho
+        type(vector), intent(in   )                   :: v
         type(lagrangian_solid), intent(inout), target :: obj
 
         ! Local variables
@@ -240,9 +242,9 @@ contains
         if (obj%is_open) deallocate(tau11m, tau12m, tau22m, plm)
 
     end subroutine compute_hydrodynamic_loads
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     subroutine compute_stresses(obj, v, p, mu, rho, g, tau11, tau12, tau22, pl, probe_sign)
 
         ! Evaluate stresses on probe location. This additional function is defined to avoid
@@ -346,9 +348,9 @@ contains
         call mpi_allreduce(mpi_in_place,   pl,obj%number_of_edges,mpi_real8,mpi_sum,mpi_comm_world,ierror)
 
     end subroutine
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     subroutine advance_structure(obj, step, dt, g, density, comp_grid)
 
         ! This subroutine perform one timestep of the structural solver
@@ -427,9 +429,9 @@ contains
         call check_periodicity(obj, comp_grid)
 
     end subroutine advance_structure
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     function traslate(X, comp_grid) result(X1)
 
         use global_mod , only : Ndim
@@ -450,9 +452,9 @@ contains
         endif
 
     end function traslate
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     subroutine check_periodicity(obj, comp_grid)
 
         ! In/Out variables
@@ -494,15 +496,15 @@ contains
         end if
 
     end subroutine check_periodicity
-    !==============================================================================================
+    !===========================================================================
 
-    !==============================================================================================
+    !===========================================================================
     subroutine destroy_ibm
 
         ! Free the allocated memory
         call F%destroy()
 
     end subroutine destroy_ibm
-    !==============================================================================================
+    !===========================================================================
 
 end module
