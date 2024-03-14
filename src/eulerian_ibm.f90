@@ -41,7 +41,7 @@ module eulerian_ibm_mod
 
 contains
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine init_eulerian_ibm(solid_list, G)
 
         ! This subroutine initialize all eulerian fields.
@@ -69,9 +69,9 @@ contains
 #endif
 
     end subroutine init_eulerian_ibm
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine tag_cells(solid_list)
 
         ! This subroutine compute the eulerian fields phi, ibm_index, norm and cbl
@@ -188,99 +188,9 @@ contains
         end do dir_cycle
 
     end subroutine tag_cells
-    !==============================================================================================
+    !===============================================================================================
 
-!     !========================================================================================
-!     subroutine compute_ibm_forcing(v, RHS, solid_list, dt, F)
-
-!         !> Compute the force field due to all eulerian solid.
-
-!         use mpi
-!         use vector_mod        , only : vector
-
-!         ! In/Out variables
-!         type(vector)                , intent(in   ) :: v
-!         type(vector)                , intent(in   ) :: RHS
-!         type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
-!         real(dp)                    , intent(in   ) :: dt
-!         type(vector)                , intent(inout) :: F
-
-!         ! Local variables
-!         integer  :: i, j, k, b
-!         real(dp) :: delta, x, y, z, vs
-
-!         delta = v%G%delta
-!         F%x%f = 0.0_dp
-!         F%y%f = 0.0_dp
-!         do k = v%G%lo(3),v%G%hi(3)
-!             do j = v%G%lo(2),v%G%hi(2)
-!                 do i = v%G%lo(1),v%G%hi(1)
-
-!                 ! X component of the forcing
-!                 if (ibm_index(i,j,k,1) == 2) then
-!                     ! Fluid point do nothing
-!                     F%x%f(i,j,k) = 0.0_dp
-!                 elseif (ibm_index(i,j,k,1) == 1) then
-!                     ! Interface point
-!                     b = closest(i,j,k,1)
-!                     vs = interpolate_velocity(i, j, k, v%x, solid_list(b)%pS, 1)
-!                     F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
-!                 else
-!                     ! Solid point
-!                     x = (i - 0.0_dp)*delta
-!                     y = (j - 0.5_dp)*delta
-!                     z = (k - 0.5_dp)*delta
-!                     b = closest(i,j,k,1)
-!                     vs = solid_list(b)%pS%velocity([x, y, z], 1)
-!                     F%x%f(i,j,k) = (vs - v%x%f(i,j,k))/dt - RHS%x%f(i,j,k)
-!                 endif
-
-!                 ! Y component of the forcing
-!                 if (ibm_index(i,j,k,2) == 2) then
-!                     ! Fluid point, do nothing
-!                     F%y%f(i,j,k) = 0.0_dp
-!                 elseif (ibm_index(i,j,k,2) == 1) then
-!                     ! Interface point
-!                     b = closest(i,j,k,2)
-!                     vs = interpolate_velocity(i, j, k, v%y, solid_list(b)%pS, 2)
-!                     F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
-!                 else
-!                     ! Solid point
-!                     x = (i - 0.5_dp)*delta
-!                     y = (j - 0.0_dp)*delta
-!                     z = (k - 0.5_dp)*delta
-!                     b = closest(i,j,k,2)
-!                     vs = solid_list(b)%pS%velocity([x, y, z], 2)
-!                     F%y%f(i,j,k) = (vs - v%y%f(i,j,k))/dt - RHS%y%f(i,j,k)
-!                 endif
-
-! #if DIM==3
-!                 ! Force z component of velocity
-!                 if (ibm_index(i,j,k,3) == 2) then
-!                     ! Fluid point, do nothing
-!                 elseif (ibm_index(i,j,k,3) == 1) then
-!                     ! Interface point
-!                     b = closest(i,j,k,3)
-!                     vs = interpolate_velocity(i, j, k, v%z, solid_list(b)%pS, 3)
-!                     F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
-!                 else
-!                     ! Solid point
-!                     x = (i - 0.5_dp)*delta
-!                     y = (j - 0.5_dp)*delta
-!                     z = (k - 0.0_dp)*delta
-!                     b = closest(i,j,k,3)
-!                     vs = solid_list(b)%pS%velocity([x, y, z], 3)
-!                     F%z%f(i,j,k) = (vs - v%z%f(i,j,k))/dt - RHS%z%f(i,j,k)
-!                 endif
-! #endif
-!                 end do
-!             end do
-!         end do
-
-!     end subroutine compute_ibm_forcing
-!     !======================================================================================
-
-    !==============================================================================================
+    !===============================================================================================
     subroutine forcing_velocity(v, solid_list, Fe, dt)
 
         ! Force the velocity field v based on the location of the solid body.
@@ -295,13 +205,14 @@ contains
         type(vector), target        , intent(inout) :: v
         type(vector), target        , intent(inout) :: Fe
         type(Eulerian_Solid_pointer), intent(in   ) :: solid_list(:)
-    
+
         ! Local variables
         integer                :: i, j, k, b, dir
         real(dp)               :: delta, x, y, z, vs
         type(scalar) , pointer :: vi, Fi
         
         delta = v%G%delta
+        call Fe%setToValue(0.0_dp)
 
         do k = v%G%lo(3),v%G%hi(3)
             do j = v%G%lo(2),v%G%hi(2)
@@ -355,9 +266,9 @@ contains
         call v%update_ghost_nodes
         
     end subroutine forcing_velocity
-    !==============================================================================================
+    !===============================================================================================
     
-    !==============================================================================================
+    !===============================================================================================
     function velocity_interpolation_2D(i, j, k, v, solid, dir) result(fl)
 
         ! This function compute the interpolated velocity component (f) on the forcing point
@@ -463,10 +374,10 @@ contains
         endif
 
     end function velocity_interpolation_2D
-    !==============================================================================================
+    !===============================================================================================
 
 #if DIM==3
-    !==============================================================================================
+    !===============================================================================================
     function velocity_interpolation_3D(i, j, k, v, solid, dir) result(fl)
 
         ! This function compute the interpolated velocity component (f) on the forcing point
@@ -668,11 +579,82 @@ contains
         end if
 
     end function velocity_interpolation_3D
-    !==============================================================================================
+    !===============================================================================================
 #endif
 
-    !==============================================================================================
-    subroutine compute_hydrodynamic_loads(solid, v, p, mu, rho, g)
+    !===============================================================================================
+    subroutine compute_hydrodynamic_loads(solid, v, p, mu, rho, g, Fe, density)
+
+        use scalar_mod
+        use vector_mod
+        use euclidean_mod
+        use fields_mod
+
+        ! In/Out variables
+        real(dp)             , intent(in   ) :: g(:), density
+        class(eulerian_solid), intent(inout) :: solid
+        type(vector)         , intent(in   ) :: v, Fe
+        type(scalar)         , intent(in   ) :: p, mu, rho
+
+        ! Local variables
+        integer      :: i, j, k
+        real(dp)     :: T(3), r(3)
+        type(scalar) :: Mx, My, Mz 
+
+        if (solid%use_probes) then
+            call loads_from_probes(solid, v, p, mu, rho, g)
+        else
+            ! TODO: for now single phase only, use density
+            solid%center_of_mass%Fh(1) = -Fe%x%integral()*density + &
+                                            solid%volume()*solid%center_of_mass%A(1)*density
+            solid%center_of_mass%Fh(2) = -Fe%y%integral()*density + &
+                                            solid%volume()*solid%center_of_mass%A(2)*density
+#if DIM==3
+            solid%center_of_mass%Fh(3) = -Fe%z%integral()*density + &
+                                            solid%volume()*solid%center_of_mass%A(3)*density
+#else
+            solid%center_of_mass%Fh(3) = 0.0_dp
+#endif
+            ! For the torque must evaluate integral of local IBM force torque
+            call Mx%allocate(solid%G)
+            call My%allocate(solid%G)
+            call Mz%allocate(solid%G)
+            do k = solid%G%lo(3),solid%G%hi(3)
+                do j = solid%G%lo(2),solid%G%hi(2)
+                    do i = solid%G%lo(1),solid%G%hi(1)
+#if DIM==3
+                        r = [ solid%G%x(i) - solid%center_of_mass%X(1), &
+                              solid%G%y(j) - solid%center_of_mass%X(2), &
+                              solid%G%z(k) - solid%center_of_mass%X(3)]
+                        T = crossProduct(r, [Fe%x%f(i,j,k), Fe%y%f(i,j,k), Fe%z%f(i,j,k)])
+#else
+                        r = [ solid%G%x(i) - solid%center_of_mass%X(1), &
+                              solid%G%y(j) - solid%center_of_mass%X(2), &
+                              0.0_dp]
+                        T = crossProduct(r, [Fe%x%f(i,j,k), Fe%y%f(i,j,k), 0.0_dp])
+#endif
+                        Mx%f(i,j,k) = T(1)
+                        My%f(i,j,k) = T(2)
+                        Mz%f(i,j,k) = T(3)
+                    end do
+                end do
+            end do
+            solid%center_of_mass%Fh(4) = density*(-Mx%integral() + &
+                                            solid%IM(4)*solid%center_of_mass%A(4)/solid%density)
+            solid%center_of_mass%Fh(5) = density*(-My%integral() + &
+                                            solid%IM(5)*solid%center_of_mass%A(5)/solid%density)
+            solid%center_of_mass%Fh(6) = density*(-Mz%integral() + &
+                                            solid%IM(6)*solid%center_of_mass%A(6)/solid%density)
+            call Mx%destroy()
+            call My%destroy()
+            call Mz%destroy()
+        endif
+
+    end subroutine
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine loads_from_probes(solid, v, p, mu, rho, g)
 
         ! This subroutine compute hydrodynamic forces for each solid body using the probes 
         ! method.
@@ -729,7 +711,7 @@ contains
         call D%update_ghost_nodes()
 
         ! Set the number of auxiliary points
-        nr = size(solid%surface_points(:))
+        nr = size(solid%surface_points(1,:))
 
         ! Allocate array for local stress
         allocate(Fvxl(nr))
@@ -743,11 +725,11 @@ contains
         cycle_nr: do n = 1,nr
 
             ! Local norm
-            loc_norm = solid%norm(solid%surface_points(n)%X)
+            loc_norm = solid%norm(solid%surface_points(:,n))
 
             ! Initial position of the probe: 1.25 times grid spacing from the solid surface
             ds = 1.25_dp*delta
-            X_probe = solid%surface_points(n)%X + ds*loc_norm
+            X_probe = solid%surface_points(:,n) + ds*loc_norm
 
             ! Check if the probe is out of the domain and in case traslate it.
             X_probe = traslate(X_probe, v%G)
@@ -794,7 +776,7 @@ contains
                         ibm_index(I1(1),I2(2),1,0) < 2 .or. ibm_index(I2(1),I2(2),1,0) < 2) then
                         ! Move the probe
                         ds = ds*1.25_dp
-                        X_probe = solid%surface_points(n)%X + ds*loc_norm
+                        X_probe = solid%surface_points(:,n) + ds*loc_norm
                         ! Check if the probes is outside of the domain
                         X_probe = traslate(X_probe, v%G)
                         build_matrix = 1
@@ -826,8 +808,8 @@ contains
                                                             D%y%y%f(I1(1),I2(2),1), D%y%y%f(I2(1),I2(2),1))
 
                 ! The pressure on the solid body boundary depends on the acceleartion
-                accl_tot(1) = solid%acceleration(solid%surface_points(n)%X, 1)
-                accl_tot(2) = solid%acceleration(solid%surface_points(n)%X, 2)
+                accl_tot(1) = solid%acceleration(solid%surface_points(:,n), 1)
+                accl_tot(2) = solid%acceleration(solid%surface_points(:,n), 2)
                 pl = pl + rho%f(Ic(1),Ic(2),1)*ds*((accl_tot(1) - g(1))*loc_norm(1) + &
                                                    (accl_tot(2) - g(2))*loc_norm(2))
 
@@ -871,8 +853,8 @@ contains
         allocate(s(nr))
         s = 0.0_dp
         do n = 2,nr
-            s(n) = s(n-1) + sqrt((solid%surface_points(n)%X(1) - solid%surface_points(n-1)%X(1))**2 + &
-                                 (solid%surface_points(n)%X(2) - solid%surface_points(n-1)%X(2))**2)
+            s(n) = s(n-1) + sqrt((solid%surface_points(1,n) - solid%surface_points(1,n-1))**2 + &
+                                 (solid%surface_points(2,n) - solid%surface_points(2,n-1))**2)
         end do
 
         ! [rx,ry] is the position vector of the force with respect to the rotation center
@@ -882,11 +864,11 @@ contains
         rx = 0.0_dp
         ry = 0.0_dp
         do n = 1,nr
-            rr = [solid%surface_points(n)%X(1) - solid%rot_center(1),                &
-                  solid%surface_points(n)%X(1) - solid%rot_center(1) + v%G%Lx, &
-                  solid%surface_points(n)%X(1) - solid%rot_center(1) - v%G%Lx]
+            rr = [solid%surface_points(1,n) - solid%rotation_center(1),           &
+                  solid%surface_points(1,n) - solid%rotation_center(1) + v%G%Lx,  &
+                  solid%surface_points(1,n) - solid%rotation_center(1) - v%G%Lx]
             rx(n) = rr(minloc(abs(rr),1))
-            ry(n) = solid%surface_points(n)%X(2) - solid%rot_center(2)
+            ry(n) = solid%surface_points(2,n) - solid%rotation_center(2)
         end do
 
         ! Integrate forces
@@ -906,116 +888,10 @@ contains
         call pB%destroy()
         call D%destroy()
 
-    end subroutine compute_hydrodynamic_loads
-    !==============================================================================================
+    end subroutine 
+    !===============================================================================================
 
-    ! !========================================================================================
-    ! subroutine pressure_extrapolation(p, rho, g, solid_list)
-
-    !     ! TODO: mpi implementation
-
-    !     use precision           , only : dp
-    !     use class_Grid          , only : base_grid
-    !     use class_eulerian_solid, only : eulerian_solid_pointer
-    !     use utils               , only : linear, bilinear
-    !     use class_Scalar
-
-    !     ! In/Out variables
-    !     type(scalar)                , intent(inout) :: p
-    !     type(scalar)                , intent(in   ) :: rho
-    !     real(dp)                    , intent(in   ) :: g(3)
-    !     type(eulerian_solid_pointer), intent(in   ) :: solid_list(:)
-
-    !     ! Local variables
-    !     integer  :: i, j, k, b, ie(3), i2, j2, i1, j1
-    !     real(dp) :: x, y, d, nn(3), xb, yb, xp, yp, x1, y1, x2, y2, xl, yl, h_probe
-    !     real(dp) :: a(2), p_probe, p_s
-    !     logical  :: setting_probe
-
-    !     do k = base_grid%lo(3),base_grid%hi(3)
-    !         do j = base_grid%lo(2),base_grid%hi(2)
-    !             do i = base_grid%lo(1),base_grid%hi(1)
-
-    !                 ! Check if the point is an extrapolation point
-    !                 if (ibm_index(i,j,k,0) == -1) then
-
-    !                     ! Local coordinates
-    !                     x = base_grid%x(i)
-    !                     y = base_grid%y(j)
-
-    !                     ! Select the closest solid object
-    !                     b = closest(i,j,k,0)
-
-    !                     ! Compute the distance between the local point and the solid surface
-    !                     d = -solid_list(b)%pS%distance([x, y, 0.0_dp])
-
-    !                     ! Evaluate normal vector
-    !                     nn = solid_list(b)%pS%norm([x, y, 0.0_dp])
-
-    !                     ! Location on the solid surface along normal direction
-    !                     xb = x + d*nn(1)
-    !                     yb = y + d*nn(2)
-
-    !                     ! Start a loop to find the optimal location of the probe. Place
-    !                     ! the probe at an initial distance equal to delta
-    !                     h_probe = base_grid%delta
-    !                     setting_probe = .true.
-    !                     do while (setting_probe)
-    !                         ! Locate a probe in a point at a distance delta from the solid surface
-    !                         xp = xb + h_probe*nn(1)
-    !                         yp = yb + h_probe*nn(2)
-
-    !                         ! Select the closest eulerian grid node to the probe
-    !                         ie = base_grid%closest_grid_node([xp, yp, 0.0_dp], 0)
-    !                         i1 = ie(1)
-    !                         j1 = ie(2)
-    !                         x1 = (i1 - 0.5_dp)*base_grid%delta
-    !                         y1 = (j1 - 0.5_dp)*base_grid%delta
-
-    !                         ! Select the support domain for the interpolation based on the local normal vector
-    !                         i2 = i1 + int(sign(1.0_dp,nn(1)))
-    !                         j2 = j1 + int(sign(1.0_dp,nn(2)))
-    !                         x2 = (i2 - 0.5_dp)*base_grid%delta
-    !                         y2 = (j2 - 0.5_dp)*base_grid%delta
-
-    !                         ! Check if one node is solid
-    !                         if (ibm_index(i1,j1,k,0) < 1 .or. ibm_index(i2,j1,k,0) < 1 .or. &
-    !                             ibm_index(i1,j2,k,0) < 1 .or. ibm_index(i2,j2,k,0) < 1) then
-    !                             ! The support domain contains one solid point, must moove away the probe
-    !                             h_probe = h_probe*1.25_dp
-    !                         else
-    !                             ! Perform bilinear interpolation of the pressure on the probe
-    !                             xl = (xp - min(x1,x2))/base_grid%delta
-    !                             yl = (yp - min(y1,y2))/base_grid%delta
-    !                             p_probe = bilinear(xl, yl, p%f(min(i1,i2),min(j1,j2),k), p%f(max(i1,i2),min(j1,j2),k), &
-    !                                                        p%f(min(i1,i2),max(j1,j2),k), p%f(max(i1,i2),max(j1,j2),k))
-
-    !                             setting_probe = .false.
-    !                         endif
-    !                     end do
-
-    !                     ! Evaluate local acceleration of the solid object
-    !                     a(1) = solid_list(b)%pS%acceleration([xb, yb, 0.0_dp], 1)
-    !                     a(2) = solid_list(b)%pS%acceleration([xb, yb, 0.0_dp], 2)
-
-    !                     ! Find pressure on the solid surface from boundary condition
-    !                     p_s = p_probe - rho%f(i,j,k)*h_probe*(a(1)*nn(1) + a(2)*nn(2) - g(1)*nn(1) - g(2)*nn(2))
-
-    !                     ! Extrapolate pressure on the extrapolation point
-    !                     p%f(i,j,k) = p_probe + (p_s - p_probe)*(d + h_probe)/h_probe
-
-    !                 endif
-    !             end do
-    !         end do
-    !     end do
-
-    !     ! Update ghost nodes
-    !     call p%apply_bc()
-
-    ! end subroutine pressure_extrapolation
-    ! !========================================================================================
-
-    !==============================================================================================
+    !===============================================================================================
     function traslate(X, G) result(X1)
    
         ! In/out variables
@@ -1034,9 +910,9 @@ contains
         endif
     
     end function traslate
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine update_halo_bc_ibm_index(ff, base_grid)
 
         use decomp_2d
@@ -1093,15 +969,15 @@ contains
         ff = int(f)
 
     end subroutine update_halo_bc_ibm_index
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine destroy_ibm
 
             ! Free the allocated memory
             deallocate(closest, ibm_index)
 
     end subroutine destroy_ibm
-    !==============================================================================================
+    !===============================================================================================
 
 end module

@@ -2,9 +2,9 @@ program energy
 
     ! Test for the structural spring-mass solver
 
-    use precision_mod        , only : dp
-    use global_mod           , only : pi
-    use lagrangian_solid_mod , only : lagrangian_solid
+    use precision_mod           , only : dp
+    use global_mod              , only : pi
+    use lagrangian_solid_1D_mod , only : lagrangian_solid_1D
 
     implicit none
 
@@ -14,83 +14,85 @@ program energy
     real(dp), parameter :: thickness = 1.0e-3_dp          ! Thickness of the plate [m]
     real(dp), parameter :: E = 210.1e+10_dp               ! Young's Modulus [Pa]
     real(dp), parameter :: IM = width*thickness**3/12.0d0 ! Second moment of area [m^4] 
-    real(dp), parameter :: rhos = 7850                    ! Density of the plate [kg/m^3]
+    real(dp), parameter :: rhos = 7850.0_dp               ! Density of the plate [kg/m^3]
     real(dp), parameter :: F = 22.5_dp                    ! Point load on the free edge [N]
     real(dp), parameter :: nu = 0.3_dp                    ! Poisson modulus
     real(dp), parameter :: ymax = -0.338_dp               ! Maximum displacment in preload
 
     ! Variables
-    integer                :: step, substep, eid
-    real(dp)               :: time, dt, Work, Ep, Ek
-    type(lagrangian_solid) :: test_solid
+    integer                   :: step, eid
+    real(dp)                  :: time, dt, Work, Ep, Ek
+    type(lagrangian_solid_1D) :: S
 
     ! Set the mass of the solid body: rho*Volume
-    test_solid%M = rhos*length*width*thickness
+    S%vol = length*width*thickness
+    S%density = rhos
+    S%mass = S%Vol*S%density
 
     ! Turn on the deformable flag
-    test_solid%is_deformable = .true.
+    S%is_deformable = .true.
 
     ! Turn on the open flag
-    test_solid%is_open = .true.
+    S%is_open = .true.
 
     ! Create the lagrangian solid from the mesh file
-    call test_solid%create('mesh.txt')
+    call S%create('mesh.txt')
 
     ! Half the last mass point mass
-    test_solid%mass_points(test_solid%number_of_mass_points)%M = &
-        test_solid%mass_points(test_solid%number_of_mass_points)%M*0.5_dp
+    S%mass_points(S%number_of_mass_points)%m = S%mass_points(S%number_of_mass_points)%m*0.5_dp
 
     ! Set the elastic in-plane constant of the springs
     ! Eq. 25 of de Tullio and Pascazio JCP 2016.
     ! ke = E*h*SumAi/l**2
     ! l is equal to length / number of mass points
     ! A = l*width
-    test_solid%edges%ke = E*thickness*width*real(test_solid%number_of_edges, dp)/length
-    test_solid%ke = E*thickness*width*real(test_solid%number_of_edges, dp)/length
+    S%edges%ks = E*thickness*width*real(S%number_of_edges, dp)/length
 
     ! Set the bending constant
-    test_solid%kb = E*IM*real(test_solid%number_of_edges, dp)
+    S%kb = E*IM*real(S%number_of_edges, dp)
     
     ! Set the constraints procedure
-    test_solid%apply_constraints => test_constraints
+    S%apply_constraints => test_constraints
     
     ! Set timestep
     step = 0
     time = 0.0_dp
-    dt = 1.0e-4_dp
+    dt = 5.0e-7_dp
 
     ! In the first run apply the load on the free tip
-    test_solid%mass_points(test_solid%number_of_mass_points)%Fe(2) = -F
+    S%mass_points(S%number_of_mass_points)%Fs(2) = -F
 
     open(eid, file = 'energy.dat')
 
-    !==== Start Time loop ===================================================================
+    !**** Start Time loop
     time_loop: do while(time < 1.0_dp)
 
         step = step + 1
         time = time + dt
         write(*,*) 'setp: ', step, 'time: ', time, 'dt: ', dt
         
-        ! Solve deformation due to internal foces nsubstep times per timestep
-        do substep = 1,test_solid%nsubsteps
-            ! Velocity Verlet
-            call test_solid%velocity_verlet(dt/real(test_solid%nsubsteps, dp))
-        end do
+        ! Solve deformation due to internal foces
+        call S%advance(dt, [0.0_dp, 0.0_dp, 0.0_dp])
 
-        ! Evaluate work and mechanical energy
-        Work = F*abs(test_solid%mass_points(test_solid%number_of_mass_points)%X(2))
-        Ep = test_solid%get_potential_energy()
-        Ek = test_solid%get_kinetic_energy()
-        write(eid,*) time, Work, Ep, Ek
+        if (mod(step,100) == 0) then
+            ! Evaluate work and mechanical energy
+            Work = F*abs(S%mass_points(S%number_of_mass_points)%X(2))
+            Ep = S%get_potential_energy()
+            Ek = S%get_kinetic_energy()
+            write(eid,*) time, Work, Ep, Ek
+            flush(eid)
+        endif
 
     end do time_loop
 
 contains
 
-    !========================================================================================
+    !===============================================================================================
     subroutine test_constraints(self)
         
-        class(lagrangian_solid), intent(inout) :: self
+        use lagrangian_solid_mod
+
+        class(lagrangian_solid), intent(inout), target :: self
 
         self%mass_points(1)%X = 0.0_dp
         self%mass_points(1)%V = 0.0_dp
@@ -99,6 +101,6 @@ contains
         self%mass_points(2)%A(2) = 0.0_dp
             
     end subroutine test_constraints
-    !========================================================================================
+    !===============================================================================================
     
 end program

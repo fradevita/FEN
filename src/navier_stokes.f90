@@ -648,7 +648,7 @@ contains
 #endif
 
 #if DIM==3
-        dt_visc = 0.01_dp*comp_grid%delta*comp_grid%delta*comp_grid%delta*density/viscosity
+        dt_visc = (1.0_dp/6.0_dp)*comp_grid%delta*comp_grid%delta*density/viscosity
 #endif
 
 #ifdef MF
@@ -958,7 +958,6 @@ contains
         endif
 
 #if DIM==3
-        ! FOR NOW 3D Simultaions supports only periodic BC in z
         ! Front boundary
         if (comp_grid%boundary_conditions(5)%s == 'Periodic') then
             p%bc%type_front = 0
@@ -968,15 +967,15 @@ contains
             v%x%bc%type_front = 0
             v%y%bc%type_front = 0
             v%z%bc%type_front = 0
-        elseif  (comp_grid%boundary_conditions(5)%s == 'Wall') then
+        elseif (comp_grid%boundary_conditions(5)%s == 'Wall') then
             p%bc%type_front = 2
             phi%bc%type_front = 2
             rho%bc%type_front = 2
             mu%bc%type_front = 2
             v%x%bc%type_front = 1
             v%y%bc%type_front = 1
-            v%z%bc%type_front = 1    
-        elseif  (comp_grid%boundary_conditions(5)%s == 'Inflow') then
+            v%z%bc%type_front = 1
+        elseif (comp_grid%boundary_conditions(5)%s == 'Inflow') then
             p%bc%type_front = 2
             phi%bc%type_front = 2
             rho%bc%type_front = 2
@@ -1006,8 +1005,8 @@ contains
             v%y%bc%type_back = 1
             v%z%bc%type_back = 1
         elseif (comp_grid%boundary_conditions(6)%s == 'Outflow') then
-            p%bc%type_back = 1
-            phi%bc%type_back = 1
+            p%bc%type_back = 2
+            phi%bc%type_back = 2
             rho%bc%type_back = 2
             mu%bc%type_back = 2
             v%x%bc%type_back = 2
@@ -1027,6 +1026,9 @@ contains
                 mu%bc%type_bottom = -1
                 v%x%bc%type_bottom = -1
                 v%y%bc%type_bottom = -1
+#if DIM==3
+                v%z%bc%type_bottom = -1
+#endif
             endif
             if (comp_grid%hi(2) /= comp_grid%Ny) then
                 p%bc%type_top = -1
@@ -1035,6 +1037,9 @@ contains
                 mu%bc%type_top = -1
                 v%x%bc%type_top = -1
                 v%y%bc%type_top = -1
+#if DIM==3
+                v%z%bc%type_top = -1
+#endif
             endif 
         endif
 #if DIM==3

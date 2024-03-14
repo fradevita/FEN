@@ -17,7 +17,7 @@ dx = Lx/Nx
 dy = Ly/Ny
 dz = Lz/Nz
 assert(dx == dy)
-assert(dx == dz)
+assert(abs(dx-dz) < 1.0e-10) 
 
 # Output XDMF file
 filename = '3Dfields.xmf'
@@ -53,11 +53,11 @@ for n in range(nf):
       </DataItem>
     </Geometry>
     <Time Value="%d" />
-    '''%(n, Nz, Ny, Nx, dz, dx, dy, n))
+    '''%(n, Nz+1, Ny+1, Nx+1, dz, dx, dy, n))
 
     # First velocity component
     f.write('''\n
-    <Attribute Name="U" AttributeType="Scalar" Center="Node">
+    <Attribute Name="U" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>
@@ -66,7 +66,7 @@ for n in range(nf):
 
     # Second velocity component
     f.write('''\n
-    <Attribute Name="V" AttributeType="Scalar" Center="Node">
+    <Attribute Name="V" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>
@@ -75,7 +75,7 @@ for n in range(nf):
    
     # Third velocity component
     f.write('''\n
-    <Attribute Name="W" AttributeType="Scalar" Center="Node">
+    <Attribute Name="W" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>
@@ -84,7 +84,7 @@ for n in range(nf):
 
     # Pressure
     f.write('''\n
-    <Attribute Name="P" AttributeType="Scalar" Center="Node">
+    <Attribute Name="P" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>

@@ -19,7 +19,8 @@ module vector_mod
         type(scalar)          :: z              !< z scalar component
         character(len=99)     :: name = 'unset' !< vector name
     contains
-        procedure, pass(self) :: allocate         
+        procedure, pass(self) :: allocate
+        procedure, pass(self) :: setToValue
         procedure, pass(self) :: update_ghost_nodes !<
         procedure, pass(self) :: destroy
     end type vector
@@ -63,6 +64,21 @@ contains
 #endif
     end subroutine allocate
     !==============================================================================================
+
+    !===============================================================================================
+    subroutine setToValue(self, val)
+
+        class(vector), intent(inout) :: self
+        real(dp)     , intent(in   ) :: val
+
+        self%x%f = val
+        self%y%f = val
+#if DIM==3
+        self%z%f = val
+#endif
+
+    end subroutine
+    !=============================================================================================== 
 
     !==============================================================================================
      subroutine update_ghost_nodes(self)

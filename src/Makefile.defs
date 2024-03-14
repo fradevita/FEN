@@ -65,35 +65,51 @@ ibm.o: $(SRC)/ibm.f90 precision.o lagrangian_solid.o lagrangian_ibm.o eulerian_i
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian ibm
-eulerian_ibm.o: $(SRC)/eulerian_ibm.f90 precision.o grid.o global.o eulerian_solid.o scalar.o vector.o tensor.o utils.o
+eulerian_ibm.o: $(SRC)/eulerian_ibm.f90 precision.o grid.o global.o eulerian_solid.o scalar.o vector.o tensor.o utils.o fields.o euclidean.o
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian_sphere module
-eulerian_sphere.o: $(SRC)/eulerian_sphere.f90 precision.o global.o eulerian_solid.o
+eulerian_sphere.o: $(SRC)/solid/eulerian_sphere.f90 precision.o global.o eulerian_solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian_solid module
-eulerian_circle.o: $(SRC)/eulerian_circle.f90 precision.o global.o eulerian_solid.o
+eulerian_circle.o: $(SRC)/solid/eulerian_circle.f90 precision.o global.o eulerian_solid.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for eulerian_solid module
-eulerian_solid.o: $(SRC)/solid/eulerian_solid.f90 precision.o utils.o solid.o
+eulerian_solid.o: $(SRC)/solid/eulerian_solid.f90 precision.o utils.o solid.o grid.o euclidean.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for lagrangian_ibm module
-lagrangian_ibm.o: $(SRC)/lagrangian_ibm.f90 precision.o grid.o global.o mls.o scalar.o vector.o lagrangian_solid.o
+lagrangian_ibm.o: $(SRC)/lagrangian_ibm.f90 precision.o grid.o global.o mls.o scalar.o vector.o lagrangian_solid.o lagrangian_solid_1D.o lagrangian_solid_2D.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # RUle for the mls module
 mls.o: $(SRC)/mls.f90 precision.o grid.o global.o scalar.o
 	$(FC) $(FLAGS) -c $< -o$(ODIR)/$@
 
+# Rule for solid module
+lagrangian_solid_2D.o: $(SRC)/solid/lagrangian_solid_2D.f90 precision.o marker.o edge.o triangle.o solid.o utils.o lagrangian_solid.o
+	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for solid module
+triangle.o: $(SRC)/solid/triangle.f90 precision.o marker.o edge.o
+	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for solid module
+edge.o: $(SRC)/solid/edge.f90 precision.o marker.o euclidean.o
+	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
+
 # Rule for lagrangian solid module
-lagrangian_solid.o: $(SRC)/solid/lagrangian_solid.f90 precision.o global.o marker.o IO.o utils.o solid.o
+lagrangian_solid_1D.o: $(SRC)/solid/lagrangian_solid_1D.f90 precision.o global.o marker.o IO.o utils.o lagrangian_solid.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
+# Rule for lagrangian solid module
+lagrangian_solid.o: $(SRC)/solid/lagrangian_solid.f90 precision.o solid.o global.o euclidean.o edge.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for solid module
-solid.o: $(SRC)/solid/solid.f90 precision.o marker.o
+solid.o: $(SRC)/solid/solid.f90 precision.o marker.o IO.o global.o
 	$(FC)$(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for marker module
@@ -144,6 +160,10 @@ function.o: $(SRC)/function.f90 precision.o
 IO.o: $(SRC)/IO.f90
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
+# Rule for precision module
+euclidean.o: $(SRC)/euclidean.f90 precision.o
+	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+
 # Rule for global module
 global.o: $(SRC)/global.f90 precision.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
@@ -151,9 +171,6 @@ global.o: $(SRC)/global.f90 precision.o
 # Rule for precision module
 precision.o: $(SRC)/precision.f90
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
-
-# polynomial_reconstruction.o: $(FEN_DIR)/src/polynomial_reconstruction.f90 precision.o class_Grid.o functions.o
-# 	$(FC) $(FLAGS) -c $< -llapack
 
 # non_newtonian.o: $(FEN_DIR)/src/non_newtonian.f90 precision.o class_Grid.o class_Scalar.o class_Tensor.o
 # 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $<

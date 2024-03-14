@@ -28,7 +28,7 @@ ax[0].plot(t, Ek, label = 'Ek')
 ax[0].legend()
 ax[1].set_xlabel('t')
 ax[1].set_ylabel('|W - Em|')
-ax[1].plot(t, W - (Ek + Ep))
+ax[1].plot(t, abs(W - (Ek + Ep)))
 
 plt.tight_layout()
 if (display):

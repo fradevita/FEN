@@ -14,6 +14,7 @@ module poisson_mod
         end subroutine poisson_Solver
     end interface
 
+    ! Pointer to specific solver, based on BCs.
     procedure(poisson_Solver), pointer :: solve_poisson => Null()
 
     ! Modified wavenumber
@@ -32,6 +33,7 @@ module poisson_mod
     complex(dp), dimension(:,:,:), allocatable :: outc_x, outc_y, outc_x_y, d1c
 #if DIM==3
     integer(8)                                 :: pf_z, pb_z
+    real(dp)   , dimension(:,:,:), allocatable :: outr_y, outr_y_z
     complex(dp), dimension(:,:,:), allocatable :: outc_y_z, outc_z
 #endif
 
@@ -40,7 +42,7 @@ module poisson_mod
 
 contains
 
-    !========================================================================================
+    !===============================================================================================
     subroutine init_poisson_solver(phi)
 
         ! This subroutine setup the Poisson Solver
@@ -141,7 +143,24 @@ contains
                     outc_y(lo_y(1),lo_y(2):hi_y(2),lo_y(3)), FFTW_BACKWARD, FFTW_ESTIMATE)
 
         elseif (periodic_bc(2) .eqv. .false.) then
+#if DIM==3
+            ! DCT in the y direction
 
+            ! Modified wave number in y
+            allocate(mwn_y(ny))
+            do j = 1,ny
+                mwn_y(j) = 2.0_dp*(dcos(1.0_dp*pi*(j - 1.0_dp)/float(ny)) - 1.0_dp)/delta**2
+            end do
+
+            ! Allocate memory for the real output of the DCT in the y direction
+            allocate(outr_y(lo_y(1):hi_y(1),lo_y(2):hi_y(2),lo_y(3):hi_y(3)))
+
+            ! Define FFT plans
+            call dfftw_plan_r2r_1d(pf_y, ny, outr_x_y(lo_y(1),lo_y(2):hi_y(2),lo_y(3)), &
+                    outr_y(lo_y(1),lo_y(2):hi_y(2),lo_y(3)), FFTW_REDFT10, FFTW_ESTIMATE)
+            call dfftw_plan_r2r_1d(pb_y, ny, outr_y(lo_y(1),lo_y(2):hi_y(2),lo_y(3)), &
+                    outr_x_y(lo_y(1),lo_y(2):hi_y(2),lo_y(3)), FFTW_REDFT01, FFTW_ESTIMATE)
+#else
             ! Tridiagonal solver in y direction
             allocate(a(ny))
             allocate(b(ny))
@@ -152,7 +171,8 @@ contains
                 c(j) =  1.0_dp/delta**2
             end do
             b(1)  = b(1) + a(1)
-            if (phi%G%boundary_conditions(3)%s == 'Inflow' .and. phi%G%boundary_conditions(4)%s == 'Outflow') then
+            if (phi%G%boundary_conditions(3)%s == 'Inflow' .and. &
+                phi%G%boundary_conditions(4)%s == 'Outflow') then
                 b(ny) = b(ny) - c(ny)
             else
                 b(ny) = b(ny) + c(ny)
@@ -168,6 +188,7 @@ contains
                 allocate(c1(lo_y(1):hi_y(1),lo_y(2):hi_y(2),lo_y(3):hi_y(3)))
                 allocate(d1r(lo_y(1):hi_y(1),lo_y(2):hi_y(2),lo_y(3):hi_y(3)))
             endif
+#endif
         else
             call print_error_message('WARNING: wrong bc in y direction')
         endif
@@ -182,9 +203,13 @@ contains
         endif
 
 #if DIM==3
-
-        ! Allocate memory for the transoposition in z of the complex output in y
-        allocate(outc_y_z(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))       
+        if (periodic_bc(2)) then
+            ! Allocate memory for the transoposition in z of the complex output in y
+            allocate(outc_y_z(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+        else
+            ! Allocate memory for the transoposition in z of the real output in y
+            allocate(outr_y_z(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+        endif
 
         if (periodic_bc(3)) then
             ! Modified wave number in z
@@ -213,7 +238,8 @@ contains
                 c(k) =  1.0_dp/delta**2
             end do
             b(1) = b(1) + a(1)
-            if (phi%G%boundary_conditions(5)%s == 'Inflow' .and. phi%G%boundary_conditions(6)%s == 'Outflow') then
+            if (phi%G%boundary_conditions(5)%s == 'Inflow' .and. &
+                phi%G%boundary_conditions(6)%s == 'Outflow') then
                 b(nz) = b(nz) - c(nz)
             else
                 b(nz) = b(nz) + c(nz)
@@ -221,22 +247,36 @@ contains
             a(1)  = 0.0_dp
             c(nz) = 0.0_dp
 
-            ! arrays are always complex in 3D
-            allocate( c1(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
-            allocate(d1c(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+            if (periodic_bc(2)) then
+                ! Allocate memory for the transoposition in z of the complex output in y
+                allocate( c1(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+                allocate(d1c(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+            else
+                ! Allocate memory for the transoposition in z of the real output in y
+                allocate( c1(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+                allocate(d1r(lo_z(1):hi_z(1),lo_z(2):hi_z(2),lo_z(3):hi_z(3)))
+            endif
         endif
       
-        if (periodic_bc(3)) then
+        if ((periodic_bc(1) .eqv. .true.) .and. &
+            (periodic_bc(2) .eqv. .true.) .and. &   
+            (periodic_bc(3) .eqv. .true.)) then
             solve_poisson => poisson_solver_ppp
-        else
+        elseif ((periodic_bc(1) .eqv. .true.) .and. &
+                (periodic_bc(2) .eqv. .true.) .and. &   
+                (periodic_bc(3) .eqv. .false.)) then
             solve_poisson => poisson_solver_ppn
+        elseif ((periodic_bc(1) .eqv. .false.) .and. &
+                (periodic_bc(2) .eqv. .false.) .and. &   
+                (periodic_bc(3) .eqv. .false.)) then
+            solve_poisson => poisson_solver_nnn
         endif
 #endif
 
     end subroutine init_Poisson_Solver
-    !========================================================================================
+    !===============================================================================================
 
-    !========================================================================================
+    !===============================================================================================
     subroutine poisson_solver_pn(phi)
         ! Poisson solver with periodic bc in x and neumann in y
 
@@ -344,9 +384,9 @@ contains
             - mean_phi/float(nx*ny*nz)
 
     end subroutine poisson_solver_pn
-    !========================================================================================
+    !===============================================================================================
 
-    !========================================================================================
+    !===============================================================================================
     subroutine poisson_solver_pp(phi)
 
         ! Poisson solver with periodic bc in x and y
@@ -437,9 +477,9 @@ contains
         phi%f = phi%f - mean_phi/float(nx*ny*nz)
 
     end subroutine poisson_solver_pp
-    !========================================================================================
+    !===============================================================================================
 
-    !========================================================================================
+    !===============================================================================================
     subroutine poisson_solver_nn(phi)
 
         ! Poisson solver with neumann bc in x and tridiagonal solver in y.
@@ -528,10 +568,10 @@ contains
         phi%f = phi%f / float(nx*2)
 
     end subroutine Poisson_Solver_NN
-    !========================================================================================
+    !===============================================================================================
 
 #if DIM==3
-    !========================================================================================
+    !===============================================================================================
     subroutine poisson_solver_ppp(phi)
 
         ! 3D Poisson solver with periodic bc in x, y and z
@@ -626,9 +666,9 @@ contains
         end do
 
     end subroutine
-    !========================================================================================
+    !===============================================================================================
 
-    !========================================================================================
+    !===============================================================================================
     subroutine poisson_solver_ppn(phi)
 
         ! 3D Poisson solver with periodic bc in x, y and z
@@ -765,33 +805,192 @@ contains
         phi%f = phi%f - mean_phi/float(nx*ny*nz)
 
     end subroutine
-    !========================================================================================
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine poisson_solver_nnn(phi)
+
+        ! 3D Poisson solver with periodic bc in x, y and z
+        use mpi
+        use global_mod , only : ierror
+        use decomp_2d  , only : transpose_x_to_y, transpose_y_to_x
+        use decomp_2d  , only : transpose_y_to_z, transpose_z_to_y
+
+        ! In/Out variable
+        type(scalar), intent(inout) :: phi
+
+        ! Local variables
+        integer  :: i, j, k, lo(3), hi(3), lo_y(3), hi_y(3), lo_z(3), hi_z(3), nx, ny, nz
+        real(dp) :: mean_phi
+        real(dp) :: factor
+
+        ! To shorten notation
+        lo = phi%G%lo
+        hi = phi%G%hi
+        lo_y = phi%G%lo_y
+        hi_y = phi%G%hi_y
+        lo_z = phi%G%lo_z
+        hi_z = phi%G%hi_z
+        nx = phi%G%nx
+        ny = phi%G%ny
+        nz = phi%G%nz
+
+        ! Perform DCT in the x direction of the RHS of Poisson equation
+        outr_x = 0.0_dp
+        do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+                call dfftw_execute_r2r(pf_x, phi%f(lo(1):hi(1),j,k), outr_x(lo(1):hi(1),j,k))
+            end do
+        end do
+
+        ! Normalize output
+        outr_x = outr_x / real(nx*2, dp)
+
+        ! Transpose x -> y pencil
+        call transpose_x_to_y(outr_x, outr_x_y)
+
+        ! Perform DCT in the y direction of the RHS of Poisson equation
+        do k = lo_y(3),hi_y(3)
+            do i = lo_y(1),hi_y(1)
+                call dfftw_execute_r2r(pf_y, outr_x_y(i,lo_y(2):hi_y(2),k), outr_y(i,lo_y(2):hi_y(2),k))
+            end do
+        end do
+
+        ! Normalize output
+        outr_y = outr_y / real(ny*2, dp)
+
+        ! Transpose y -> z pencil
+        call transpose_y_to_z(outr_y, outr_y_z)
+
+        ! Solve Tridiagonal system
+        ! Forward step: compute c1 and d1
+        do j = lo_z(2),hi_z(2)
+            do i = lo_z(1),hi_z(1)
+                factor = 1.0_dp/(b(lo_z(3)) + mwn_x(i) + mwn_y(j))
+                c1(i,j,lo_z(3)) = c(lo_z(3))*factor
+                d1r(i,j,lo_z(3)) = outr_y_z(i,j,lo_z(3))*factor
+            end do
+        end do
+        
+        do k = lo_z(3)+1,hi_z(3)-1
+            do j = lo_z(2),hi_z(2)
+                do i = lo_z(1),hi_z(1)
+                    factor = 1.0_dp/(b(k) + mwn_x(i) + mwn_y(j) - a(k)*c1(i,j,k-1))
+                    c1(i,j,k) = c(k)*factor
+                    d1r(i,j,k) = (outr_y_z(i,j,k) - a(k)*d1r(i,j,k-1))*factor
+                end do
+            end do
+        end do
+
+        do j = lo_z(2),hi_z(2)
+            do i = lo_z(1),hi_z(1)
+                factor = (b(hi_z(3)) + mwn_x(i) + mwn_y(j) - a(hi_z(3))*c1(i,j,hi_z(3)-1))
+                if (factor /= 0.0d0) then
+                    d1r(i,j,hi_z(3)) = (outr_y_z(i,j,hi_z(3)) - a(hi_z(3))*d1r(i,j,hi_z(3)-1))/factor
+                else
+                    d1r(i,j,hi_z(3)) = 0.0_dp
+                end if
+            end do
+        end do
+
+        ! Backward step: solve for x
+        do j = lo_z(2),hi_z(2)
+            do i = lo_z(1),hi_z(1)
+                outr_y_z(i,j,hi_z(3)) = d1r(i,j,hi_z(3))
+            end do
+        end do
+        do k = hi_z(3)-1,lo_z(3),-1
+            do j = lo_z(2),hi_z(2)
+                do i = lo_z(1),hi_z(1)
+                    outr_y_z(i,j,k) = d1r(i,j,k) - c1(i,j,k)*outr_y_z(i,j,k+1)
+                end do
+            end do
+        end do
+
+        ! Transpose z -> y pencil
+        call transpose_z_to_y(outr_y_z, outr_y)
+
+        ! Perform inverse DCT in the y direction of the RHS of Poisson equation
+        do k = lo_y(3),hi_y(3)
+            do i = lo_y(1),hi_y(1)
+                call dfftw_execute_r2r(pb_y, outr_y(i,lo_y(2):hi_y(2),k), outr_x_y(i,lo_y(2):hi_y(2),k))
+            end do
+        end do
+
+        ! Transpose y -> x pencil
+        call transpose_y_to_x(outr_x_y, outr_x)
+
+        ! Perform inverse DCT in the x direction of the RHS of Poisson equation
+        phi%f = 0.0_dp
+        do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+                call dfftw_execute_r2r(pb_x, outr_x(lo(1):hi(1),j,k), phi%f(lo(1):hi(1),j,k))
+            end do
+        end do
+
+        ! Normalize to zero mean value
+        mean_phi = 0.0_dp
+        do k = lo(3),hi(3)
+            do j = lo(2),hi(2)
+                do i = lo(1),hi(1)
+                    mean_phi = mean_phi + phi%f(i,j,k)
+                end do
+            end do
+        end do
+
+#ifdef MPI
+        call mpi_allreduce(mpi_in_place,mean_phi,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
+#endif
+        phi%f = phi%f - mean_phi/real(nx*ny*nz, dp)
+
+    end subroutine
+    !===============================================================================================
 
 #endif  
-    !========================================================================================
+    !===============================================================================================
     subroutine destroy_Poisson_solver(phi)
 
         type(scalar), intent(in) :: phi
 
-        deallocate(mwn_x)
-        if (phi%G%periodic_bc(1) .eqv. .true. ) deallocate(outc_x, outc_x_y)
-        if (phi%G%periodic_bc(1) .eqv. .false.) deallocate(outr_x, outr_x_y)
-        if (phi%G%periodic_bc(2) .eqv. .true. ) deallocate(outc_y, mwn_y)
+        ! x dir
+        if (phi%G%periodic_bc(1) .eqv. .true. ) deallocate(mwn_x, outc_x, outc_x_y)
+        if (phi%G%periodic_bc(1) .eqv. .false.) deallocate(mwn_x, outr_x, outr_x_y)
+        
+        ! y dir
+        if (phi%G%periodic_bc(2) .eqv. .true. ) deallocate(mwn_y, outc_y)
         if (phi%G%periodic_bc(2) .eqv. .false.) then
-        deallocate(a,b,c,c1)
-        if (phi%G%periodic_bc(1) .eqv. .true. ) deallocate(d1c)
-        if (phi%G%periodic_bc(1) .eqv. .false.) deallocate(d1r)
-        endif
 #if DIM==3
-        deallocate(outc_y_z)
+            deallocate(mwn_y, outr_y)
+#else
+            deallocate(a, b, c, c1)
+            if (phi%G%periodic_bc(1)) then 
+                deallocate(d1c)
+            else
+                deallocate(d1r)
+            endif
+#endif
+        endif
+
+        ! z dir
+#if DIM==3
+        if (phi%G%periodic_bc(2)) then
+            deallocate(outc_y_z)
+        else
+            deallocate(outr_y_z)
+        endif
         if (phi%G%periodic_bc(3)) then
             deallocate(mwn_z, outc_z)
         else
-            deallocate(a,b,c,c1,d1c)
+            deallocate(a, b, c)
+            if (phi%G%periodic_bc(2)) then
+                deallocate(c1, d1c)
+            else
+                deallocate(c1, d1r)                
+            endif
         endif
 #endif
 
     end subroutine destroy_Poisson_solver
-    !========================================================================================
+    !===============================================================================================
 
 end module

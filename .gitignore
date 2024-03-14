@@ -4,3 +4,7 @@ commit.txt
 **/.fmod
 **/.fobj
 **/.objects
+test/small_test/moving_least_squares/forces
+test/large_test/cylinder
+test/large_test/tenCate
+test/large_test/Flag

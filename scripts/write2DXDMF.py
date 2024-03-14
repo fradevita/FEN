@@ -51,11 +51,11 @@ for n in range(nf):
       </DataItem>
     </Geometry>
     <Time Value="%d" />
-    '''%(n, Ny, Nx, dx, dy, n))
+    '''%(n, Ny+1, Nx+1, dx, dy, n))
 
     # First velocity component
     f.write('''\n
-    <Attribute Name="U" AttributeType="Scalar" Center="Node">
+    <Attribute Name="U" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>
@@ -64,16 +64,16 @@ for n in range(nf):
 
     # Second velocity component
     f.write('''\n
-    <Attribute Name="V" AttributeType="Scalar" Center="Node">
+    <Attribute Name="V" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>
     </Attribute>
     '''%(Ny, Nx, 'data/vy_'+str(step).zfill(7)+'.raw'))
-   
+
     # Pressure
     f.write('''\n
-    <Attribute Name="P" AttributeType="Scalar" Center="Node">
+    <Attribute Name="P" AttributeType="Scalar" Center="Cell">
       <DataItem Dimensions="%d %d" NumberType="Float" Precision="8" Endian="Little" Format="Binary">
         %s
       </DataItem>

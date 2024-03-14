@@ -34,7 +34,7 @@ module volume_of_fluid_mod
     real(dp), parameter :: rm = 0.5_dp*(1.0_dp - 1.0_dp/sqrt(3.0_dp))
 
     ! Cut parameter for the reconstruction
-    real(dp) :: cut = 1.0d-8
+    real(dp) :: cut = 1.0e-8_dp
 
     ! Coefficients for the reconstruction
     real(dp) :: cx, cy, a10, a01, a20, a02

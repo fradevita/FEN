@@ -20,15 +20,17 @@ module global_mod
     ! location = 0 -> cell center, 1 -> x-face, 2 -> y-face, 3 -> z-face
     ! starting from cell center adding stagger(ind,location) gives the 
     ! physical coordinates of the point.
-    real(dp), dimension(3,0:3), parameter :: stagger = reshape([0.0_dp, 0.0_dp, 0.0_dp, &
-                                                                0.5_dp, 0.0_dp, 0.0_dp, &
-                                                                0.0_dp, 0.5_dp, 0.0_dp, &
-                                                                0.0_dp, 0.0_dp, 0.5_dp], shape(stagger))
+    real(dp), dimension(3,0:3), parameter :: stagger = reshape([0.0_dp, 0.0_dp, 0.0_dp,  &
+                                                                0.5_dp, 0.0_dp, 0.0_dp,  &
+                                                                0.0_dp, 0.5_dp, 0.0_dp,  &
+                                                                0.0_dp, 0.0_dp, 0.5_dp], &
+                                                                shape(stagger))
     ! This is the staggering to be used in addition to grid index
-    real(dp), dimension(3,0:3), parameter :: istagger = reshape([0.5_dp, 0.5_dp, 0.5_dp, &
-                                                                 0.0_dp, 0.5_dp, 0.5_dp, &
-                                                                 0.5_dp, 0.0_dp, 0.5_dp, &
-                                                                 0.5_dp, 0.5_dp, 0.0_dp], shape(istagger))
+    real(dp), dimension(3,0:3), parameter :: istagger = reshape([0.5_dp, 0.5_dp, 0.5_dp,  &
+                                                                 0.0_dp, 0.5_dp, 0.5_dp,  &
+                                                                 0.5_dp, 0.0_dp, 0.5_dp,  &
+                                                                 0.5_dp, 0.5_dp, 0.0_dp], &
+                                                                 shape(istagger))
 
 
     integer :: myrank = 0

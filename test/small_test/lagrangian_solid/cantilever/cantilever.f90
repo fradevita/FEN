@@ -2,9 +2,9 @@ program cantilever
 
     ! Test for the structural spring-mass solver
 
-    use precision_mod        , only : dp
-    use global_mod           , only : pi
-    use lagrangian_solid_mod , only : lagrangian_solid
+    use precision_mod           , only : dp
+    use global_mod              , only : pi
+    use lagrangian_solid_1D_mod , only : lagrangian_solid_1D
 
     implicit none
 
@@ -20,47 +20,48 @@ program cantilever
     real(dp), parameter :: ymax = -0.338_dp               ! Maximum displacment in preload
 
     ! Variables
-    integer                :: step, n, out_id, substep
-    real(dp)               :: time, dt
-    type(lagrangian_solid) :: test_solid
+    integer                   :: step, n, out_id
+    real(dp)                  :: time, dt
+    type(lagrangian_solid_1D) :: S
 
     ! Set the mass of the solid body: rho*Volume
-    test_solid%M = rhos*length*width*thickness
+    S%density = rhos
+    S%vol = length*width*thickness
+    S%mass = S%vol*S%density
 
     ! Turn on the deformable flag
-    test_solid%is_deformable = .true.
+    S%is_deformable = .true.
 
     ! Turn on the open flag
-    test_solid%is_open = .true.
+    S%is_open = .true.
 
     ! Create the lagrangian solid from the mesh file
-    call test_solid%create('mesh.txt')
+    call S%create('mesh.txt')
 
     ! Half the last mass point mass
-    test_solid%mass_points(test_solid%number_of_mass_points)%M = &
-        test_solid%mass_points(test_solid%number_of_mass_points)%M*0.5_dp
+    S%mass_points(S%number_of_mass_points)%M = S%mass_points(S%number_of_mass_points)%M*0.5_dp
 
     ! Set the elastic in-plane constant of the springs
     ! Eq. 25 of de Tullio and Pascazio JCP 2016.
     ! ke = E*h*SumAi/l**2
     ! l is equal to length / number of mass points
     ! A = l*width
-    test_solid%edges%ke = E*thickness*width*real(test_solid%number_of_edges, dp)/length
-    test_solid%ke = E*thickness*width*real(test_solid%number_of_edges, dp)/length
+    S%edges%ks = E*thickness*width*real(S%number_of_edges, dp)/length
+    !S%ke = E*thickness*width*real(S%number_of_edges, dp)/length
 
     ! Set the bending constant
-    test_solid%kb = E*IM*real(test_solid%number_of_edges, dp)
+    S%kb = E*IM*real(S%number_of_edges, dp)
     
     ! Set the constraints procedure
-    test_solid%apply_constraints => test_constraints
+    S%apply_constraints => test_constraints
     
     ! Set timestep
     step = 0
     time = 0.0_dp
-    dt = 1.0e-4_dp
+    dt = 5.0e-7_dp
 
     ! In the first run apply the load on the free tip
-    test_solid%mass_points(test_solid%number_of_mass_points)%Fe(2) = -F
+    S%mass_points(S%number_of_mass_points)%Fs(2) = -F
 
     !==== Start Time loop ===================================================================
     preload_time_loop: do while(time < 3.0_dp)
@@ -69,29 +70,28 @@ program cantilever
         time = time + dt
         write(*,*) 'setp: ', step, 'time: ', time, 'dt: ', dt
         
-        ! Solve deformation due to internal foces nsubstep times per timestep
-        do substep = 1,test_solid%nsubsteps
-            ! Velocity Verlet
-            call test_solid%velocity_verlet(dt/real(test_solid%nsubsteps, dp))
-        end do
+        ! Solve deformation due to internal foces
+        call S%advance(dt, [0.0_dp, 0.0_dp, 0.0_dp])
 
         ! Check for maximum deflection
-        if (test_solid%mass_points(test_solid%number_of_mass_points)%X(2) <= ymax) exit preload_time_loop
+        if (S%mass_points(S%number_of_mass_points)%X(2) <= ymax) exit preload_time_loop
     end do preload_time_loop
     
+    call S%print_configuration(1)
+
     ! Update the structure
-    call test_solid%update_lagrangian_markers
+    call S%update()
 
     ! Open output file
     open(newunit = out_id, file = 'out.txt')
 
     ! Set external forces to zero
-    test_solid%mass_points(test_solid%number_of_mass_points)%Fe(2) = 0.0_dp
+    S%mass_points(S%number_of_mass_points)%Fs(2) = 0.0_dp
 
     ! Set to zero velocity and accelerations
-    do n = 1,test_solid%number_of_mass_points
-        test_solid%mass_points(n)%V = 0.0_dp
-        test_solid%mass_points(n)%A = 0.0_dp
+    do n = 1,S%number_of_mass_points
+        S%mass_points(n)%V = 0.0_dp
+        S%mass_points(n)%A = 0.0_dp
     end do
 
     step = 0
@@ -104,13 +104,12 @@ program cantilever
         write(*,*) 'setp: ', step, 'time: ', time, 'dt: ', dt
         
         ! Solve deformation due to internal foces nsubstep times per timestep
-        do substep = 1,test_solid%nsubsteps
-            ! Velocity Verlet
-            call test_solid%velocity_verlet(dt/real(test_solid%nsubsteps, dp))
-        end do
-        
-        write(out_id,*) step*dt, test_solid%mass_points(test_solid%number_of_mass_points)%X(2)
-        flush(out_id)
+        call S%advance(dt, [0.0_dp, 0.0_dp, 0.0_dp])
+       
+        if (mod(step,100) == 0) then 
+            write(out_id,*) step*dt, S%mass_points(S%number_of_mass_points)%X(2)
+            flush(out_id)
+        endif
 
     end do time_loop
 
@@ -119,7 +118,9 @@ contains
     !========================================================================================
     subroutine test_constraints(self)
 
-        class(lagrangian_solid), intent(inout) :: self
+        use lagrangian_solid_mod
+
+        class(lagrangian_solid), intent(inout), target :: self
 
         self%mass_points(1)%X = 0.0_dp
         self%mass_points(1)%V = 0.0_dp

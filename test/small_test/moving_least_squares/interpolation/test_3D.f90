@@ -34,12 +34,12 @@ program test_mls_interpolation_3D
     write(1,'(A28)') 'N,f1,f2,f3,f4,dfdx,dfdy,dfdz'
     ! Cycle over the resolution
     resolution_cycle: do r = 4,8
-     
+
         Nx = 2**r
         Ny = 2**r
         Nz = 2**r
         origin = [0.0_dp, 0.0_dp, 0.0_dp]
-        call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1)
+        call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 2, 2)
 
         ! Eulerian grid spacing
         delta = comp_grid%delta
@@ -130,6 +130,8 @@ program test_mls_interpolation_3D
         call dfdz%destroy()
         call comp_grid%destroy()
 
+        call mpi_allreduce(mpi_in_place, e, 7, mpi_real8, mpi_max, mpi_comm_world, ierror)
+
         ! Print errors
         if (comp_grid%rank == 0) write(1,'(*(G0.7,:,","))') Nx, &
                             e/float((np+1)*(np+1)*(np+1))
@@ -141,7 +143,7 @@ program test_mls_interpolation_3D
 
 contains
 
-    !===========================================================================
+    !===============================================================================================
     function test_function(x, y, z) result(f)
 
         real(dp), intent(in) :: x, y, z
@@ -150,9 +152,9 @@ contains
         f = 1.5_dp + sin(omega*x)*cos(omega*z) + cos(omega*y)*cos(omega*z) 
 
     end function test_function
-    !===========================================================================
+    !===============================================================================================
 
-    !===========================================================================
+    !===============================================================================================
     function test_function_dx(x, y, z) result(f)
 
         real(dp), intent(in) :: x, y, z
@@ -161,9 +163,9 @@ contains
         f = omega*cos(omega*x)*cos(omega*z)
 
     end function test_function_dx
-    !===========================================================================
+    !===============================================================================================
 
-    !===========================================================================
+    !===============================================================================================
     function test_function_dy(x, y, z) result(f)
         
         real(dp), intent(in) :: x, y, z
@@ -172,9 +174,9 @@ contains
         f = -omega*sin(omega*y)*cos(omega*z)
         
     end function test_function_dy
-    !===========================================================================
+    !===============================================================================================
 
-    !===========================================================================
+    !===============================================================================================
     function test_function_dz(x, y, z) result(f)
         
         real(dp), intent(in) :: x, y, z        
@@ -183,6 +185,6 @@ contains
         f = -omega*sin(omega*x)*sin(omega*z) - omega*cos(omega*y)*sin(omega*z)
         
     end function test_function_dz
-    !===========================================================================
+    !===============================================================================================
 
 end program test_mls_interpolation_3D

@@ -13,7 +13,7 @@ parser.add_argument("-tc", "--test-case", type=str,
 parser.add_argument("-s", "--silent", default=False, action="store_true",
     help="Do not pop up figures.")
 parser.add_argument("-cp", "--check-plot", default=False, action="store_true",
-    help="Clean the test case directories.")
+    help="Check all plots produced y tests.")
 parser.add_argument("-c", "--clean", default=False, action="store_true",
     help="Clean the test case directories.")
 

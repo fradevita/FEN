@@ -51,7 +51,6 @@ contains
         use ibm_mod
 #endif
 #ifdef FSI
-        use navier_stokes_mod, only : g
         use fsi_mod
 #endif
         ! In/out variables
@@ -98,32 +97,48 @@ contains
 #endif
 
     end subroutine init_solver
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine save_fields(step)
+
+        use scalar_mod
+        use fields_mod , only : face_to_center
 
         ! This subroutine save the fields of the simulation at timestep step
         use navier_stokes_mod, only : v, p
 #ifdef MF
         use volume_of_fluid_mod, only : vof
 #endif
+#ifdef FSI
+        use ibm_mod, only : print_solid
+#endif
 
         ! In/Out variables
         integer, intent(in) :: step
 
         ! Local variables
+        type(scalar)      :: temp
         character(len=7 ) :: sn
         character(len=20) :: filename
 
+        ! Allocate temporary scalar field
+        call temp%allocate(v%G, v%x%gl)
+
         write(sn,'(I0.7)') step
+        
         filename = 'data/vx_'//sn//'.raw'
-        call v%x%write(filename)
+        call face_to_center(v%x, temp, 'x')
+        call temp%write(filename)
+
         filename = 'data/vy_'//sn//'.raw'
-        call v%y%write(filename)
+        call face_to_center(v%y, temp, 'y')
+        call temp%write(filename)
+
 #if DIM==3
         filename = 'data/vz_'//sn//'.raw'
-        call v%z%write(filename)
+        call face_to_center(v%z, temp, 'z')
+        call temp%write(filename)
 #endif
         filename = 'data/p_'//sn//'.raw'
         call p%write(filename)
@@ -132,10 +147,16 @@ contains
         call vof%write(filename)
 #endif
 
-    end subroutine save_fields
-    !==============================================================================================
+#ifdef FSI
+        call print_solid(step)
+#endif
 
-    !==============================================================================================
+        call temp%destroy()
+
+    end subroutine save_fields
+    !===============================================================================================
+
+    !===============================================================================================
     subroutine destroy_solver
 
         use poisson_mod      , only : destroy_poisson_solver

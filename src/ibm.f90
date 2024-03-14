@@ -21,10 +21,11 @@ contains
 
         !use eulerian_ibm
         use grid_mod
-        use eulerian_solid_mod  , only : eulerian_solid
-        use eulerian_ibm_mod    , only : init_eulerian_ibm
-        use lagrangian_solid_mod, only : lagrangian_solid
-        use lagrangian_ibm_mod  , only : init_lagrangian_ibm => init_ibm
+        use eulerian_solid_mod     , only : eulerian_solid
+        use eulerian_ibm_mod       , only : init_eulerian_ibm
+        use lagrangian_solid_mod   , only : lagrangian_solid
+        use lagrangian_solid_2D_mod, only : lagrangian_solid_2D
+        use lagrangian_ibm_mod     , only : init_lagrangian_ibm => init_ibm
         
         ! In/Out variables
         type(grid), intent(in) :: comp_grid
@@ -56,7 +57,7 @@ contains
                 nes = nes + 1
             end select
         end do
-        if (nls > 0) allocate(lagrangian_solid_list(nes))
+        if (nls > 0) allocate(lagrangian_solid_list(nls))
         nls = 1
         do n = 1,size(solid_list)
             select type(var => solid_list(n)%pS)
@@ -96,6 +97,58 @@ contains
 
     end subroutine apply_ibm_forcing
     !==============================================================================================
+
+    !===============================================================================================
+    subroutine print_solid(step)
+
+        use grid_mod
+        use scalar_mod
+        use global_mod
+
+        ! In/Out variables
+        integer, intent(in) :: step        
+
+        ! Local variables
+        integer               :: i, j, k, b, nb
+        real(dp)              :: x, y, z
+        real(dp), allocatable :: distance(:)
+        type(grid), pointer   :: G
+        type(scalar)          :: temp
+        character(len=7 )     :: sn
+        character(len=18)     :: filename
+
+        if (allocated(eulerian_solid_list)) then
+            nb = size(eulerian_solid_list)
+            allocate(distance(nb))
+            G => eulerian_solid_list(1)%pS%G
+            call temp%allocate(G)
+
+            do k = G%lo(3),G%hi(3)
+                do j = G%lo(2),G%hi(2)
+                    do i = G%lo(1),G%hi(1)
+
+                        x = G%x(i) + stagger(1, 0)*G%delta
+                        y = G%y(j) + stagger(2, 0)*G%delta
+                        z = G%z(k) + stagger(3, 0)*G%delta
+
+                        ! Compute distance from every solid body
+                        do b = 1,nb
+                            distance(b) = eulerian_solid_list(b)%pS%distance([x,y,z])
+                        end do
+                        temp%f(i,j,k) = minval(distance)
+                        
+                    end do
+                end do
+            end do
+            write(sn,'(I0.7)') step
+            filename = 'data/S_'//sn//'.raw'
+            call temp%write(filename)
+            deallocate(distance)
+            call temp%destroy()
+        endif
+
+    end subroutine
+    !===============================================================================================
 
     !==============================================================================================
     subroutine destroy_ibm

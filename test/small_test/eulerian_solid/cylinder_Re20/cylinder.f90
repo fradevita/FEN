@@ -112,7 +112,7 @@ program laminar_cylinder
                 Cl = 2.0_dp*Fe%x%integral()/Umean**2/L/Lz
                 Cd = 2.0_dp*Fe%y%integral()/Umean**2/L/Lz
                 ! Evalute forces with probes
-                call compute_hydrodynamic_loads(C, v, p, mu, rho, g)
+                call loads_from_probes(C, v, p, mu, rho, g)
                 if (myrank == 0) write(out_id,*) time, Cd, Cl, 2.0_dp*C%center_of_mass%Fh(2)/Umean**2/L, &
                                                                2.0_dp*C%center_of_mass%Fh(1)/Umean**2/L
             endif

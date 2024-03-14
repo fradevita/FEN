@@ -5,7 +5,7 @@ program isotropic
 
     use mpi
     use precision_mod    , only : dp
-    use global_mod       , only : ierror, pi
+    use global_mod       , only : ierror, pi, myrank
     use grid_mod
     use solver_mod
     use navier_stokes_mod , only : viscosity, set_timestep, v, constant_CFL, CFL, S
@@ -21,6 +21,7 @@ program isotropic
     
     ! Initialize MPI
     call mpi_init(ierror)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! The domain is a squared box of size 2 pi
     Lx = 2.0_dp*pi
@@ -64,7 +65,7 @@ program isotropic
     ! Open output file
     open(newunit = oid, file = 'output.txt')
 
-    !==== Start Time loop ===================================================================
+    !==== Start Time loop ==========================================================================
     time_loop: do while (time <= 300.0_dp)
 
         step = step + 1
@@ -87,7 +88,7 @@ program isotropic
 
 contains
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine init_fields
 
         integer :: i, j, k
@@ -107,9 +108,9 @@ contains
         call v%update_ghost_nodes()
 
     end subroutine init_fields
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine forcing
 
         integer  :: i, j, k
@@ -149,9 +150,9 @@ contains
         end do
 
     end subroutine forcing
-    !==============================================================================================
+    !===============================================================================================
         
-    !==============================================================================================
+    !===============================================================================================
     subroutine output
 
         ! Local variables
@@ -199,6 +200,6 @@ contains
         endif
         
     end subroutine output
-    !==============================================================================================
+    !===============================================================================================
   
 end program isotropic

@@ -2,7 +2,7 @@
 module grid_mod
 
     ! The class grid represent a computational grid over which solving governing equations.
-    ! The grid class must contains information about: nodes location (logical and physical),
+    ! The class grid class must contains information about: nodes location (logical and physical),
     ! boundary conditions (logical and physical) and parallel distribution.
 
     use precision_mod, only : dp
@@ -69,7 +69,8 @@ contains
         ! This subroutine setup all grid variables.
         use global_mod, only : myrank
 #ifdef MPI
-        use decomp_2d , only : decomp_2d_init, nrank, nproc, xstart, xend, ystart, yend, zstart, zend
+        use decomp_2d , only : decomp_2d_init, nrank, nproc 
+        use decomp_2d , only : xstart, xend, ystart, yend, zstart,zend
 #endif
         use IO_mod    , only : print_error_message
 
@@ -197,9 +198,9 @@ contains
         call self%print_json
 
     end subroutine setup
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     function closest_grid_node(self, xl, ind) result(ie)
 
         ! This function returns indexes ie of the closest grid point to the point xl.
@@ -214,7 +215,7 @@ contains
         ! In/Out variables
         class(grid), intent(in) :: self  !< Grid object
         integer    , intent(in) :: ind   !< location on the cell
-        real(dp)   , intent(in) :: xl(3) !< given points in the grid.
+        real(dp)   , intent(in) :: xl(3) !< given point
         integer                 :: ie(3) !< Output indexes
 
         ie(1) = minloc(abs(self%x(1:self%Nx) + stagger(1, ind)*self%delta - xl(1)),1)
@@ -225,9 +226,9 @@ contains
 #endif
 
     end function closest_grid_node
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine print_json(self)
 #ifdef MPI
         use global_mod, only : myrank
@@ -241,29 +242,29 @@ contains
 #ifdef MPI
         if (myrank == 0) then
 #endif
-        open(newunit = out_id, file = filename)
-        write(out_id,'(A1)') '{'
-        write(out_id,'(4x,A9)') '"Grid": {'
-        write(out_id,'(8x,A6,1x,I7,A1)') '"Nx": ', self%Nx, ','
-        write(out_id,'(8x,A6,1x,I7,A1)') '"Ny": ', self%Ny, ','
-        write(out_id,'(8x,A6,1x,I7,A1)') '"Nz": ', self%Nz, ','
-        write(out_id,'(8x,A11,1x,E16.8,A1,E16.8,A1,E16.8,A2)') '"origin": [', &
-           self%origin(1), ',', self%origin(2), ',', self%origin(3), '],'
-        write(out_id,'(8x,A6,1x,E16.8,A1)') '"Lx": ', self%Lx, ','
-        write(out_id,'(8x,A6,1x,E16.8,A1)') '"Ly": ', self%Ly, ','
-        write(out_id,'(8x,A6,1x,E16.8)'   ) '"Lz": ', self%Lz
-        write(out_id,'(4x,A3)') '}'
-        write(out_id,'(A1)') '}'
+                open(newunit = out_id, file = filename)
+                write(out_id,'(A1)') '{'
+                write(out_id,'(4x,A9)') '"Grid": {'
+                write(out_id,'(8x,A6,1x,I7,A1)') '"Nx": ', self%Nx, ','
+                write(out_id,'(8x,A6,1x,I7,A1)') '"Ny": ', self%Ny, ','
+                write(out_id,'(8x,A6,1x,I7,A1)') '"Nz": ', self%Nz, ','
+                write(out_id,'(8x,A11,1x,E16.8,A1,E16.8,A1,E16.8,A2)') '"origin": [', &
+                self%origin(1), ',', self%origin(2), ',', self%origin(3), '],'
+                write(out_id,'(8x,A6,1x,E16.8,A1)') '"Lx": ', self%Lx, ','
+                write(out_id,'(8x,A6,1x,E16.8,A1)') '"Ly": ', self%Ly, ','
+                write(out_id,'(8x,A6,1x,E16.8)'   ) '"Lz": ', self%Lz
+                write(out_id,'(4x,A3)') '}'
+                write(out_id,'(A1)') '}'
 
-        call flush(out_id)
+                call flush(out_id)
 #ifdef MPI
         end if
 #endif
 
     end subroutine
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine destroy(self)
 
         ! Free the memory allocated by the grid obj.
@@ -288,6 +289,6 @@ contains
         call decomp_2d_finalize
 #endif
     end subroutine destroy
-    !==============================================================================================
+    !===============================================================================================
 
 end module

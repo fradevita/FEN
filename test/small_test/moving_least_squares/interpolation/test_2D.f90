@@ -6,7 +6,7 @@ program test_mls_interpolation_2D
 
     use mpi
     use precision_mod , only : dp
-    use global_mod    , only : ierror, pi, stagger, Ndim, small
+    use global_mod    , only : ierror, pi, stagger, Ndim, small, myrank
     use grid_mod 
     use scalar_mod
     use mls_mod       , only : interpolate
@@ -21,6 +21,7 @@ program test_mls_interpolation_2D
 
     ! Initialize MPI
     call mpi_init(ierror)
+    call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! Domain size is [0, 10][0, 10]
     Lx = 10.0_dp
@@ -40,7 +41,7 @@ program test_mls_interpolation_2D
         Nz = 1
         Lz = Lx*float(Nz)/float(Nx)
         origin = [0.0_dp, 0.0_dp, 0.0_dp]
-        call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 1, 1)
+        call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 2, 1)
 
         ! Eulerian grid spacing
         delta = comp_grid%delta
@@ -78,7 +79,7 @@ program test_mls_interpolation_2D
                 xl(1) = 0.4_dp + (i - 1.0_dp)*deltal
                 ! Find closest grid point
                 ie = comp_grid%closest_grid_node([xl(1), xl(2), 0.0_dp], 0)
-           
+            
                 ! Interpolate in xl
                 fl = interpolate(f, xl, ie, 0)
 
@@ -103,18 +104,19 @@ program test_mls_interpolation_2D
                 fl = interpolate(dfdy, xl, ie, 0)
                 solution = test_function_dy(xl(1), xl(2))
                 e(5) = e(5) + abs(fl(1) - solution)/abs(solution + small)
+            
             end do
         end do
+
+        ! Print errors
+        if (comp_grid%rank == 0) write(1,'(*(G0.7,:,","))') Nx, &
+                            e/float((np+1)*(np+1))
 
         ! Free the memory
         call f%destroy()
         call dfdx%destroy()
         call dfdy%destroy()
         call comp_grid%destroy()
-
-        ! Print errors
-        if (comp_grid%rank == 0) write(1,'(*(G0.7,:,","))') Nx, &
-                            e/float((np+1)*(np+1))
      
     end do resolution_cycle
 

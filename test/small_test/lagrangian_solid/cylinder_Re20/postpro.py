@@ -13,10 +13,7 @@ else:
     display = 1
 
 # Load data
-#data_064 = pandas.read_csv('data_64/out.txt')
-#data_128 = pandas.read_csv('data_128/out.txt')
-#data_256 = pandas.read_csv('data_256/out.txt')
-data_064 = pandas.read_csv('data/C_64')
+data_064 = pandas.read_csv('data/C_064')
 data_128 = pandas.read_csv('data/C_128')
 data_256 = pandas.read_csv('data/C_256')
 
@@ -36,14 +33,14 @@ ax.set_xlim([0, 3])
 ax.set_xlabel(r'$t$')
 ax.set_ylim([3, 6])
 ax.set_ylabel(r'$C_d$')
-ax.plot(data_064["t"][::10], data_064["Fy"][::10]*2/Umean**2/L, color = 'red')
-ax.plot(data_064["t"][::10], data_064["Fy"][::10]*2/Umean**2/L, 'o', color = 'red', label = 'N = 64, probes')
+ax.plot(data_064["t"][::10], data_064["Fd"][::10]*2/Umean**2/L, color = 'red')
+ax.plot(data_064["t"][::10], data_064["Fd"][::10]*2/Umean**2/L, 'o', color = 'red', label = 'N = 64, probes')
 
-ax.plot(data_128["t"][::50], data_128["Fy"][::50]*2/Umean**2/L, color = 'blue')
-ax.plot(data_128["t"][::50], data_128["Fy"][::50]*2/Umean**2/L, '^', color = 'blue', label = 'N = 128, probes')
+ax.plot(data_128["t"][::50], data_128["Fd"][::50]*2/Umean**2/L, color = 'blue')
+ax.plot(data_128["t"][::50], data_128["Fd"][::50]*2/Umean**2/L, '^', color = 'blue', label = 'N = 128, probes')
 
-ax.plot(data_256["t"][::50], data_256["Fy"][::50]*2/Umean**2/L, 's', color = 'green', label = 'N = 256, probes')
-ax.plot(data_256["t"][::50], data_256["Fy"][::50]*2/Umean**2/L, color = 'green')
+ax.plot(data_256["t"][::50], data_256["Fd"][::50]*2/Umean**2/L, 's', color = 'green', label = 'N = 256, probes')
+ax.plot(data_256["t"][::50], data_256["Fd"][::50]*2/Umean**2/L, color = 'green')
 
 ax.plot(data_256["t"], Cdref*Cd, '--', color = 'black', label = r'reference $C_d$')
 
@@ -57,9 +54,9 @@ plt.close()
 e_P = np.zeros(3)
 e_F = np.zeros(3)
 
-e_P[0] = abs(data_064["Fy"].to_numpy()[-1]*2/Umean**2/L - Cd)/Cd
-e_P[1] = abs(data_128["Fy"].to_numpy()[-1]*2/Umean**2/L - Cd)/Cd
-e_P[2] = abs(data_256["Fy"].to_numpy()[-1]*2/Umean**2/L - Cd)/Cd
+e_P[0] = abs(data_064["Fd"].to_numpy()[-1]*2/Umean**2/L - Cd)/Cd
+e_P[1] = abs(data_128["Fd"].to_numpy()[-1]*2/Umean**2/L - Cd)/Cd
+e_P[2] = abs(data_256["Fd"].to_numpy()[-1]*2/Umean**2/L - Cd)/Cd
 
 # Resolution
 N = [64, 128, 256]

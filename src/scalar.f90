@@ -48,6 +48,7 @@ module scalar_mod
     contains
         procedure, pass(self) :: allocate           !< allocate memory
         procedure, pass(self) :: set_from_function  !< set scalar from given function
+        procedure, pass(self) :: setToValue         !< set f to a given constant value
         procedure, pass(self) :: update_ghost_nodes !< fill ghost nodes
         procedure, pass(self) :: max_value          !< compute maximum scalar value
         procedure, pass(self) :: integral           !< compute scalar integral
@@ -129,9 +130,9 @@ contains
         endif
 
     end subroutine allocate
-    !==============================================================================================
+    !===============================================================================================
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine set_from_function(self, f)
 
         use function_mod, only : function_type
@@ -161,6 +162,17 @@ contains
 
     end subroutine set_from_function
     !==============================================================================================
+
+    !===============================================================================================
+    subroutine setToValue(self, val)
+
+        class(scalar), intent(inout) :: self
+        real(dp)     , intent(in   ) :: val
+
+        self%f = val
+
+    end subroutine
+    !=============================================================================================== 
 
     !==============================================================================================
     real(dp) function max_value(self)

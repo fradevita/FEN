@@ -4,7 +4,6 @@ mkdir -p ./.fmod ./.fobj
 
 echo "    runinng memory test ..."
 make SOURCE=memory.f90 > compilation_log 2> compilation_warnings
-python3 mesh.py
 valgrind --leak-check=full --show-leak-kinds=all -s ./run.e 2> log
 NML=$(grep 'in use at exit' log | awk '{print $6}')
 NME=$(grep 'ERROR' log | awk '{print $4}')

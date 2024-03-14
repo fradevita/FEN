@@ -4,7 +4,7 @@ program main
     use precision_mod       , only : dp
     use global_mod          , only : ierror
     use grid_mod
-    use volume_of_fluid_mod , only : distance, vof
+    use volume_of_fluid_mod , only : distance, vof, beta
     use multiphase_mod      , only : rho_0, rho_1, mu_0, mu_1, sigma
     use navier_stokes_mod   , only : g, set_timestep, v
     use solver_mod
@@ -37,8 +37,10 @@ program main
     Nz = 1
     Lz = Lx*float(Nz)/float(Nx)
     origin = [0.0_dp, 0.0_dp, 0.0_dp]
-    bc(1)%s = 'Periodic'
-    bc(2)%s = 'Periodic'
+    !bc(1)%s = 'Periodic'
+    !bc(2)%s = 'Periodic'
+    bc(1)%s = 'Wall'
+    bc(2)%s = 'Wall'
     bc(3)%s = 'Wall'
     bc(4)%s = 'Wall'
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, origin, 4, 1, bc)
@@ -72,10 +74,15 @@ program main
     time = 0.0_dp
     Tmax = 3.0_dp
     call set_timestep(comp_grid, dt, 0.25_dp)
+    beta = 2.0_dp
+
+    ! Set free slip on left and right walls
+    v%y%bc%type_left  = 2
+    v%y%bc%type_right = 2
 
     ! Open output file
     open(newunit = out_id, file = 'output.txt') 
-
+    call save_fields(step)
     !==== Start Time loop ===================================================================
     do while(time <= Tmax)
 
@@ -90,6 +97,7 @@ program main
         
         ! Compute Center of Mass quantites
         call point_quantities()
+        call save_fields(step)
     end do
 
     ! Print final vof

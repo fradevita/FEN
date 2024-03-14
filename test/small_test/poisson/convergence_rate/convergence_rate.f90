@@ -32,11 +32,14 @@ program test_Poisson_FDS_2D
     call get_command_argument(1, test_case)
 
     ! The test accept as input argument the case
+    ! 2D
     ! case 1: test solver nn
     ! case 2: test solver pp
     ! case 3: test solver pn
-    ! case 1: test solver ppp (3D only)
-    ! case 2: test solver ppn (3D only)
+    ! 3D
+    ! case 1: test solver ppp
+    ! case 2: test solver ppn
+    ! case 3: test solver nnn
 #if DIM==3
     bc(1)%s = 'Periodic'
     bc(2)%s = 'Periodic'
@@ -46,13 +49,22 @@ program test_Poisson_FDS_2D
     case('1')
         bc(5)%s = 'Periodic'
         bc(6)%s = 'Periodic'
-        ! Open the output for the second test
+        ! Open the output for the test
         open(1, file = 'error_ppp')
     case('2')
         bc(5)%s = 'Wall'
         bc(6)%s = 'Wall'
-        ! Open the output for the second test
+        ! Open the output for the test
         open(1, file = 'error_ppn')
+    case('3')
+        bc(1)%s = 'Wall'
+        bc(2)%s = 'Wall'
+        bc(3)%s = 'Wall'
+        bc(4)%s = 'Wall'
+        bc(5)%s = 'Wall'
+        bc(6)%s = 'Wall'
+        ! Open the output for the test
+        open(1, file = 'error_nnn')
     end select
 #else
     select case(test_case)
@@ -74,7 +86,7 @@ program test_Poisson_FDS_2D
         bc(3)%s = 'wall'
         bc(4)%s = 'wall'
         open(1, file = 'error_nn')
-    end select  
+    end select
 #endif
 
     ! Solve Poisson equation for 5 levels of refinement
@@ -119,7 +131,7 @@ program test_Poisson_FDS_2D
         do k = G%lo(3),G%hi(3)
             do j = G%lo(2),G%hi(2)
                 do i = G%lo(1),G%hi(1)
-                    e = abs(phi%f(i,j,k) - solution(G%x(i), G%y(j), G%z(k)))         
+                    e = abs(phi%f(i,j,k) - solution(G%x(i), G%y(j), G%z(k)))
                     if (e > emax) emax = e
                 end do
             end do
@@ -154,6 +166,8 @@ contains
                                  sin(2.0_dp*pi*z)
         case('2')
             RHS = -4.0_dp*pi*pi*(sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z))
+        case('3')
+            RHS = -12.0_dp*pi*pi*cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*cos(2.0_dp*pi*z)
         end select
 #else
         select case(test_case)
@@ -178,10 +192,11 @@ contains
         case('1')
             solution = sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*sin(2.0_dp*pi*z)
         case('2')
-            solution = sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z)            
+            solution = sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z)
+        case('3')
+            solution = cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*cos(2.0_dp*pi*z)
         end select
 #else
-
         select case(test_case)
         case('1')
             solution = sin(2.0_dp*pi*x)*cos(2.0_dp*pi*y)

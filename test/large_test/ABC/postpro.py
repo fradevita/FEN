@@ -48,8 +48,8 @@ else:
 scaling1 = np.zeros(len(N))
 scaling2 = np.zeros(len(N))
 for i in range(0,np.size(N)):
-  scaling1[i] = 1.0/N[i]
-  scaling2[i] = 1.0/N[i]**2
+  scaling1[i] = 10.0/N[i]
+  scaling2[i] = 10.0/N[i]**2
 
 plt.plot(N, Linf_u, 'o', label = r'$L_{\inf}(u)$')
 plt.plot(N, Linf_v, '^', label = r'$L_{\inf}(v)$')

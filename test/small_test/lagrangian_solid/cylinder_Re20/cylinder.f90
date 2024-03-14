@@ -6,10 +6,10 @@ program main
     use precision_mod        , only : dp
     use global_mod           , only : ierror, myrank, pi
     use grid_mod
-    use ibm_mod !             , only : Lagrangian_Solid_list
-    !use lagrangian_solid_mod , only : solid
+    use ibm_mod
     use solver_mod        
     use navier_stokes_mod    , only : v, p, set_timestep, g, viscosity, mu, rho
+    use lagrangian_solid_1D_mod
     use lagrangian_ibm_mod   , only : compute_hydrodynamic_loads
     use IO_mod               , only : stdout
     
@@ -20,12 +20,14 @@ program main
     real(dp), parameter :: U = 0.3_dp       !< Maximum inflow velocity
 
     ! Variables
-    integer             :: Nx, Ny, Nz, step, i
-    real(dp)            :: Lx, Ly, Lz, time, dt, origin(3)
-    character(len=3)    :: arg
-    type(grid)          :: comp_grid
-    type(bc_type)       :: bc(4)
-    type(lagrangian_solid), target :: C 
+    integer                           :: Nx, Ny, Nz, step, i, out_id
+    real(dp)                          :: Lx, Ly, Lz, time, dt, origin(3)
+    character(len=3)                  :: arg
+    type(grid)                        :: comp_grid
+    type(bc_type)                     :: bc(4)
+    type(lagrangian_solid_1D), target :: C 
+    character(len= 3)                 :: sn
+    character(len=10)                 :: outfile
 
     ! Initialize MPI
     call mpi_init(ierror)
@@ -75,9 +77,12 @@ program main
         v%y%bc%bottom(i,:) = 4.0_dp*U*comp_grid%x(i)*(Lx - comp_grid%x(i))/Lx**2
     end do
 
+    write(sn,'(I0.3)') Nx
+    outfile = 'data/C_'//sn
+    open(newunit = out_id, file = outfile)
+
     ! Output
-    if (comp_grid%rank == 0) call C%write_csv(time)
-    call save_fields(step)
+    if (comp_grid%rank == 0) write(out_id,'(A7)') 't,Fl,Fd'
 
     !==== Start Time loop ===================================================================
     time_loop: do while (time < 3.0_dp)
@@ -96,9 +101,11 @@ program main
         call lagrangian_solid_list(1)%pS%integrate_hydrodynamic_forces()
 
         ! Output forces
-        if (comp_grid%rank == 0) call C%write_csv(time)
+        if (comp_grid%rank == 0) write(out_id,'(*(E16.8,:,","))') time, C%center_of_mass%Fh(1:2)
         
     end do time_loop
+
+    call save_fields(0)
 
     ! free memory
     call destroy_solver
