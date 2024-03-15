@@ -28,7 +28,11 @@ INCLUDE_2DECOMP = -I$(_2DECOMP_DIR)/include
 INCLUDE_FFTW3 = -I$(FFTW3_DIR)/include
 LIB_2DECOMP = -L$(_2DECOMP_DIR)/lib -l2decomp_fft
 LIB_FFTW3 = -L$(FFTW3_DIR)/lib -lfftw3
-LIBS = $(LIB_2DECOMP) $(LIB_FFTW3) -llapack
+
+INCLUDE_HYPRE = -I$(HYPRE_DIR)/include
+LIB_HYPRE = -L$(HYPRE_DIR)/lib -lHYPRE -lm -lstdc++
+
+LIBS = $(LIB_2DECOMP) $(LIB_FFTW3) -llapack $(LIB_HYPRE)
 
 # The executable file is called run.e
 target: run.e
@@ -38,6 +42,10 @@ target: run.e
 # Rule for the executable run.e
 run.e: $(SOURCE) $(SOBJ)
 	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -o $@ $(SOURCE) $(ODIR)/* $(LIBS)
+
+# Rule for multiphase module
+hypre_solver.o: $(SRC)/hypre_solver.f90 precision.o scalar.o grid.o
+	$(FC) $(INCLUDE_HYPRE) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for solver module
 solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o volume_of_fluid.o multiphase.o ibm.o fsi.o
