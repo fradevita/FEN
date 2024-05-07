@@ -72,6 +72,7 @@ module lagrangian_solid_2D_mod
         !procedure, pass(self) :: rigid_body_motion
         procedure, pass(self) :: internalForcesIntegral
         procedure, pass(self) :: writeSTL
+        procedure, pass(self) :: writeVTP
         procedure, pass(self) :: writeGNU
         procedure, pass(Self) :: printInfo
         
@@ -1348,6 +1349,48 @@ contains
         close(file_id)
 
     end subroutine writeSTl
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine writeVTK(self, filename)
+
+        ! In/out varibales
+        class(lagrangian_solid_2D)    , intent(in), target :: self
+        character(len=*), intent(in)         :: filename
+
+        ! Local variables
+        integer                 :: i, file_id
+        type(triangle), pointer :: t
+
+        open(newunit = file_id, file = filename)
+        write(file_id,'(A26)'     ) '# vtk DataFile Version 2.0'
+        write(file_id,'( A5)'     ) 'Solid'
+        write(file_id,'( A5)'     ) 'ASCII'
+        write(file_id,'(A16)'     ) 'DATASET POLYDATA'
+        write(file_id,'(A7,I7,A6)') 'POINTS ', self%number_of_mass_points, ' float'
+        do i = 1,self%number_of_mass_points
+            write(file_id, '(E16.8,1x,E16.8,1x,E16.8)') self%mass_points(i)%X(1:3)
+        end do
+        write(file_id,'(A9,I8,1x,I8)') 'POLYGONS ', self%numberOfTriangles, &
+                                                    self%numberOfTriangles*4
+        do i = 1,self%numberOfTriangles
+            write(file_id,'(I1,1x,I7,1x,I7,1x,I7)') 3, self%triangles(i)%e1%m1%index-1, &
+                                                       self%triangles(i)%e1%m2%index-1, &
+                                                       self%triangles(i)%e2%m2%index-1 
+        end do                          
+        write(file_id,'(A10,I7)') 'CELL_DATA ', self%numberOfTriangles
+        write(file_id,'(A26)') 'NORMALS cell_normals float'
+        do i = 1,self%numberOfTriangles
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%triangles(i)%n(1:3) 
+        end do
+        write(file_id,'(A15)') 'VECTORS V float'
+        do i = 1,self%numberOfTriangles
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%triangles(i)%C%V(1:3)
+        end do
+        
+        close(file_id)
+
+    end subroutine writeVTK
     !===============================================================================================
 
     !===============================================================================================
