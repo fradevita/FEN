@@ -195,4 +195,34 @@ contains
     end function urandom_seed
     !========================================================================================
 
+    !========================================================================================
+    subroutine print_progress_bar(title, i, N)
+
+        ! In/Out variables
+        character(len=*), intent(in) :: title
+        integer         , intent(in) :: i, N
+        
+        ! Local variables
+        integer           :: bar_size = 50
+        character(len=50) :: full_bar   = "=================================================="
+        character(len=50) :: actual_bar = "                                                  "
+        integer           :: lpad
+        real              :: percentage
+
+        percentage = real(i)/real(N)
+        lpad = int(percentage*(bar_size + 1))
+        actual_bar = full_bar(1:lpad)
+        
+        write(*,'(a, a, a2)', advance = "no") char(13), title, ':  '
+        write(*, "(A)", advance="no") "["
+        write(*, "(A)", advance="no")  actual_bar
+        write(*, "(A)", advance="no") "]"
+        write(*,'(a, f5.1, a2)', advance = "no") ' ', percentage*100, ' %'
+        if (i == N) write(*,*) ''
+        flush(6)
+
+
+    end subroutine print_progress_bar
+    !========================================================================================
+
 end module
