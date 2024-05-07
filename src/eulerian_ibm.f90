@@ -599,7 +599,7 @@ contains
         ! Local variables
         integer      :: i, j, k
         real(dp)     :: T(3), r(3)
-        type(scalar) :: Mx, My, Mz 
+        type(scalar) :: Mx, My, Mz
 
         if (solid%use_probes) then
             call loads_from_probes(solid, v, p, mu, rho, g)

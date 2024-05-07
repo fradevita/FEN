@@ -115,7 +115,7 @@ contains
 
         ! Acceleration
         self%center_of_mass%A = (self%center_of_mass%Fh + self%center_of_mass%Fe)/self%IM
-        
+
         ! New velocity and position
         Vnp1 = self%center_of_mass%V + dt*self%center_of_mass%A
         Xnp1 = self%center_of_mass%X + dt*0.5_dp*(Vnp1 + self%center_of_mass%V)
@@ -130,7 +130,7 @@ contains
 
         ! ! Update rotation center
         ! self%rotation_center = self%center_of_mass%X(1:3)
-        
+
         ! Update surface points position
         if (self%use_probes) call self%update_surface_points()
 

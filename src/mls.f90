@@ -17,6 +17,22 @@ module mls_mod
     ! MLS Shape function
     real(dp) :: phi(m,Ne)
 
+    ! Procedure for weight computation. Available functions are:
+    ! - Weight_W1: cubic spline (default)
+    ! - Weight_W2: quartic spline
+    ! - Weight_W3: exponential
+    procedure(weight_function), pointer :: compute_weight => Weight_W1
+
+    interface
+        subroutine weight_function(dif, ds, w)
+            use precision_mod, only : dp
+            use global_mod   , only : Ndim
+            import Ne, m
+            real(dp), intent(in ) :: dif(Ndim, Ne), ds(Ndim, Ne)
+            real(dp), intent(out) :: w(Ne,m)
+        end subroutine weight_function
+    end interface
+
 contains
 
     !===============================================================================================
@@ -70,7 +86,7 @@ contains
                 kk = ie(3) + sk
 #endif
                 do sj = -1,1
-                    jj = ie(2) + sj          
+                    jj = ie(2) + sj
                     do si = -1,1
                         ii = ie(1) + si
                         xs(1,q) = xe + si*f%G%delta
@@ -90,11 +106,11 @@ contains
 #endif      
 
             ! Size of the support domain
-            ds = 1.50_dp*f%G%delta
+            ds = 1.60_dp*f%G%delta
             
             ! Compute shape function phi
             call compute_phi(xl, xs, ds)
-            
+
             ! Compute interpolated value in xl
             fl = 0.0_dp
             do q = 1, Ne
@@ -289,7 +305,7 @@ contains
         enddo
 
         ! Compute the weight function the support domain
-        call Weight_W1(dif, ds, W)
+        call compute_weight(dif, ds, W)
 
         ! ************* Compute B and its derivatives
         do i = 1,m
@@ -401,7 +417,166 @@ contains
         
     end subroutine Weight_W1
     !===============================================================================================
-    
+
+    !===============================================================================================
+    subroutine Weight_W2(dif, ds, w)
+
+        ! Quartic spline weight function. 
+        ! Routine adapted from "An introduction to meshfree methods and their 
+        ! programming" by Liu and Gu, chapter 3.
+
+        ! In/Out variables
+        real(dp), intent(in ) :: dif(Ndim, Ne), ds(Ndim, Ne)
+        real(dp), intent(out) :: w(Ne,m)
+
+        ! Local variables
+        integer  :: i
+        real(dp) :: ep, difx, dify, drdx, drdy, rx, ry, wx, wy, dwxdx, dwydy
+#if DIM==3
+        real(dp) :: difz, drdz, rz, wz, dwzdz
+#endif
+        
+        ep = 1.0e-20_dp
+
+        do i = 1,Ne
+            difx = dif(1,i)
+            dify = dif(2,i)
+            if (dabs(difx) .le. ep) then
+                drdx = 0.0_dp
+            else
+                drdx = (difx/dabs(difx))/ds(1,i)
+            end if
+            if (dabs(dify).le.ep) then
+                drdy = 0.0_dp
+            else
+                drdy = (dify/dabs(dify))/ds(2,i)
+            end if
+            
+            rx = dabs(dif(1,i))/ds(1,i)
+            ry = dabs(dif(2,i))/ds(2,i)
+
+            if (rx <= 1.0_dp) then
+                wx = 1.0_dp - 6.0_dp*rx**2 + 8.0_dp*rx**3 - 3.0_dp*rx**4
+                dwxdx = (-12.0_dp*rx + 24.0_dp*rx**2 - 12.0_dp*rx**3)*drdx
+            else
+                wx = 0.0_dp
+                dwxdx = 0.0_dp
+            end if
+
+            if (ry <= 1.0_dp) then
+                wy = 1.0_dp - 6.0_dp*ry**2 + 8.0_dp*ry**3 - 3.0_dp*ry**4
+                dwydy = (-12.0_dp*ry + 24.0_dp*ry**2 - 12.0_dp*ry**3)*drdy
+            else
+                wy = 0.0_dp
+                dwydy = 0.0_dp
+            end if
+
+            w(i,1) = wx*wy
+            w(i,2) = wy*dwxdx
+            w(i,3) = wx*dwydy
+#if DIM==3
+            difz = dif(3,i)
+            if (dabs(difz) .le. ep) then
+                drdz = 0.0_dp
+            else
+                drdz = (difz/dabs(difz))/ds(3,i)
+            end if
+            rz = dabs(dif(3,i))/ds(3,i)
+            if (rz <= 1.0_dp) then
+                wz = 1.0_dp - 6.0_dp*rz**2 + 8.0_dp*rz**3 - 3.0_dp*rz**4
+                dwzdz = (-12.0_dp*rz + 24.0_dp*rz**2 - 12.0_dp*rz**3)*drdz
+            else
+                wz = 0.0_dp
+                dwzdz = 0.0_dp
+            end if
+            w(i,1) = wx*wy*wz
+            w(i,4) = wz*dwzdz
+#endif
+        end do
+        
+    end subroutine Weight_W2
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine Weight_W3(dif, ds, w)
+
+        ! Exponential weight function. 
+        ! Routine adapted from "An introduction to meshfree methods and their 
+        ! programming" by Liu and Gu, chapter 3.
+
+        ! In/Out variables
+        real(dp), intent(in ) :: dif(Ndim, Ne), ds(Ndim, Ne)
+        real(dp), intent(out) :: w(Ne,m)
+
+        ! Local variables
+        integer  :: i
+        real(dp) :: ep, difx, dify, drdx, drdy, rx, ry, wx, wy, dwxdx, dwydy, alpha
+#if DIM==3
+        real(dp) :: difz, drdz, rz, wz, dwzdz
+#endif
+        
+        ep = 1.0e-20_dp
+        alpha = 0.3_dp
+
+        do i = 1,Ne
+            difx = dif(1,i)
+            dify = dif(2,i)
+            if (dabs(difx) .le. ep) then
+                drdx = 0.0_dp
+            else
+                drdx = (difx/dabs(difx))/ds(1,i)
+            end if
+            if (dabs(dify).le.ep) then
+                drdy = 0.0_dp
+            else
+                drdy = (dify/dabs(dify))/ds(2,i)
+            end if
+
+            rx = dabs(dif(1,i))/ds(1,i)
+            ry = dabs(dif(2,i))/ds(2,i)
+
+            if (rx <= 1.0_dp) then
+                wx = exp(-rx/alpha)**2
+                dwxdx = -2.0_dp*rx*wx*drdx/alpha**2
+            else
+                wx = 0.0_dp
+                dwxdx = 0.0_dp
+            end if
+
+            if (ry <= 1.0_dp) then
+                wy = exp(-ry/alpha)**2
+                dwydy = -2.0_dp*ry*wy*drdy/alpha**2
+            else
+                wy = 0.0_dp
+                dwydy = 0.0_dp
+            end if
+
+            w(i,1) = wx*wy
+            w(i,2) = wy*dwxdx
+            w(i,3) = wx*dwydy
+#if DIM==3
+            difz = dif(3,i)
+            if (dabs(difz) .le. ep) then
+                drdz = 0.0_dp
+            else
+                drdz = (difz/dabs(difz))/ds(3,i)
+            end if
+            rz = dabs(dif(3,i))/ds(3,i)
+            if (rz <= 1.0_dp) then
+                wz = exp(-rz/alpha)**2
+                dwzdz = -2.0_dp*rz*wz*drdz/alpha**2
+            else
+                wz = 0.0_dp
+                dwzdz = 0.0_dp
+            end if
+            w(i,1) = wx*wy*wz
+            w(i,4) = wz*dwzdz
+#endif
+        end do
+        
+    end subroutine Weight_W3
+    !===============================================================================================
+
     !===============================================================================================
     function solve_wbs(u) result(x) ! solve with backward substitution
 

@@ -63,6 +63,7 @@ contains
 #if DIM==3
         integer                       :: sk
 #endif
+
         ! Cycle over the number of solid bodies
         solid_body_cycle: do b = 1,size(solid_array)
 
@@ -206,7 +207,6 @@ contains
 #if DIM==3
                 v%z%f = v%z%f + F%z%f*dt
 #endif
-
                 call v%update_ghost_nodes()
 
             end do forcing_cycle
@@ -296,7 +296,7 @@ contains
         do l = 1,Nfe
             forcElem => obj%forcing_elements(l)
             
-            ! Shear stress force
+            ! Shear stress forces
             forcElem%C%Fv(1) = (tau11(l)*forcElem%n(1) + tau12(l)*forcElem%n(2))*forcElem%A
             forcElem%C%Fv(2) = (tau12(l)*forcElem%n(1) + tau22(l)*forcElem%n(2))*forcElem%A
 

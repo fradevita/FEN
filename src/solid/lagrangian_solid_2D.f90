@@ -104,9 +104,9 @@ contains
     !===============================================================================================
     subroutine loadFromFile(self, filename)
 
-        use global_mod   , only : Ndim
+        use global_mod   , only : Ndim, myrank
         use euclidean_mod, only : dotProduct, ZEROV
-        use utils_mod    , only : clamp
+        use utils_mod    , only : clamp, print_progress_bar
 
         ! In/Out variables
         class(lagrangian_solid_2D)    , intent(inout), target :: self
@@ -199,30 +199,34 @@ contains
 
             ! Set the three edges of the triangle
             do l = 1,3
-                !write(mn,'(I0.5)') l
-                e(l) = edge(M(l), M(merge(l+1,1,l<=2)))!, 'etry_'//trim(mn))
+                ! create the edge
+                e(l) = edge(M(l), M(merge(l+1,1,l<=2)))
+                
                 ! NOTE: for now add all edges to the list self%edges
                 ! and save if the new added one is duplicated
                 ! Increase the counter of edges
                 self%number_of_edges = self%number_of_edges + 1
+                
                 ! Add to the list of edges
                 i1 = find_marker(e(l)%m1, self%mass_points)
                 i2 = find_marker(e(l)%m2, self%mass_points)
                 self%edges(self%number_of_edges) = &
                         edge(self%mass_points(i1), self%mass_points(i2))
-                !write(mn,'(I0.5)') self%number_of_edges
-                !self%edges(self%number_of_edges)%name = 'e_'//mn
+
                 self%edgeMassPointsIndex(self%number_of_edges,:) = [i1, i2]
                 self%triangleEdgesIndex(t,l) = self%number_of_edges
                 self%duplicateEdges(self%number_of_edges) = &
                         edgeIsPresent(self%edges(self%number_of_edges), &
                         self%edges, self%number_of_edges-1)
+                
                 if (self%duplicateEdges(self%number_of_edges)) & 
                     self%edgeDuplicate(self%number_of_edges) = &
                         searchEdge(self%edges(self%number_of_edges), &
                         self%edges, self%number_of_edges)
             end do
 
+            if (myrank == 0) call print_progress_bar('Performing triangle loop', t, self%numberOfTriangles)
+        
         end do triangle_loop
 
         ! Set proper size of mass point array
@@ -237,20 +241,17 @@ contains
         deallocate(self%edges)
         allocate(self%edges(self%number_of_edges))
         do l = 1,self%number_of_edges
-            !write(mn,'(I0.5)') l
             i1 = self%edgeMassPointsIndex(l, 1)
             i2 = self%edgeMassPointsIndex(l, 2)
-            self%edges(l) = edge(self%mass_points(i1), self%mass_points(i2))!, &
-                !'e_'//mn)
+            self%edges(l) = edge(self%mass_points(i1), self%mass_points(i2))
         end do
 
         ! Finalize the triangles array
         do t = 1,self%numberOfTriangles
-            !write(mn,'(I0.5)') t
             i1 = self%triangleEdgesIndex(t,1)
             i2 = self%triangleEdgesIndex(t,2)
             i3 = self%triangleEdgesIndex(t,3)
-            self%triangles(t) = triangle(self%edges(i1), self%edges(i2), self%edges(i3), 6)!, 't_'//mn)
+            self%triangles(t) = triangle(self%edges(i1), self%edges(i2), self%edges(i3), 6)
         end do
 
         ! Create the edge - triangles index array
