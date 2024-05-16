@@ -72,7 +72,7 @@ module lagrangian_solid_2D_mod
         !procedure, pass(self) :: rigid_body_motion
         procedure, pass(self) :: internalForcesIntegral
         procedure, pass(self) :: writeSTL
-        procedure, pass(self) :: writeVTP
+        procedure, pass(self) :: writeVTK
         procedure, pass(self) :: writeGNU
         procedure, pass(Self) :: printInfo
         
