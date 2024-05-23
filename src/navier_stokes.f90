@@ -1005,8 +1005,8 @@ contains
             v%y%bc%type_back = 1
             v%z%bc%type_back = 1
         elseif (comp_grid%boundary_conditions(6)%s == 'Outflow') then
-            p%bc%type_back = 2
-            phi%bc%type_back = 2
+            p%bc%type_back = 1
+            phi%bc%type_back = 1
             rho%bc%type_back = 2
             mu%bc%type_back = 2
             v%x%bc%type_back = 2

@@ -1148,13 +1148,13 @@ contains
             w3 = distance(t%v3%X, t%c%X)
             wtot = w1 + w2 + w2
 
-            t%v1%Fe = t%v1%Fe + t%c%Fe*w1/wtot
-            t%v2%Fe = t%v2%Fe + t%c%Fe*w2/wtot
-            t%v3%Fe = t%v3%Fe + t%c%Fe*w3/wtot
+            t%v1%Fe(1:3) = t%v1%Fe(1:3) + t%c%Fe(1:3)*w1/wtot
+            t%v2%Fe(1:3) = t%v2%Fe(1:3) + t%c%Fe(1:3)*w2/wtot
+            t%v3%Fe(1:3) = t%v3%Fe(1:3) + t%c%Fe(1:3)*w3/wtot
 
-            t%v1%Fh = t%v1%Fh + t%c%Fh*w1/wtot
-            t%v2%Fh = t%v2%Fh + t%c%Fh*w2/wtot
-            t%v3%Fh = t%v3%Fh + t%c%Fh*w3/wtot
+            t%v1%Fh(1:3) = t%v1%Fh(1:3) + t%c%Fh(1:3)*w1/wtot
+            t%v2%Fh(1:3) = t%v2%Fh(1:3) + t%c%Fh(1:3)*w2/wtot
+            t%v3%Fh(1:3) = t%v3%Fh(1:3) + t%c%Fh(1:3)*w3/wtot
         end do
 
     end subroutine

@@ -204,8 +204,8 @@ contains
         
         ! Local variables
         integer           :: bar_size = 50
-        character(len=50) :: full_bar   = "=================================================="
-        character(len=50) :: actual_bar = "                                                  "
+        character(len=51) :: full_bar   = "==================================================="
+        character(len=51) :: actual_bar = "                                                   "
         integer           :: lpad
         real              :: percentage
 
