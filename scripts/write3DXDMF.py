@@ -13,6 +13,7 @@ Nz = grid["Grid"]["Nz"]
 Lx = grid["Grid"]["Lx"]
 Ly = grid["Grid"]["Ly"]
 Lz = grid["Grid"]["Lz"]
+x0 = grid["Grid"]["origin"]
 dx = Lx/Nx
 dy = Ly/Ny
 dz = Lz/Nz
@@ -46,14 +47,14 @@ for n in range(nf):
     <Topology TopologyType="3DCORECTMesh" Dimensions="%d %d %d"/>
     <Geometry GeometryType="ORIGIN_DXDYDZ">
       <DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">
-        0 0 0
+        %f %f %f
       </DataItem>
       <DataItem Name="Spacing" Dimensions="2" NumberType="Float" Precision="4" Format="XML">
 	%f %f %f
       </DataItem>
     </Geometry>
     <Time Value="%d" />
-    '''%(n, Nz+1, Ny+1, Nx+1, dz, dx, dy, n))
+    '''%(n, Nz+1, Ny+1, Nx+1, x0[2], x0[1], x0[0], dz, dx, dy, n))
 
     # First velocity component
     f.write('''\n
