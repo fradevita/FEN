@@ -39,7 +39,8 @@ program test_Poisson_FDS_2D
     ! 3D
     ! case 1: test solver ppp
     ! case 2: test solver ppn
-    ! case 3: test solver nnn
+    ! case 3: test solver npn
+    ! case 4: test solver nnn
 #if DIM==3
     bc(1)%s = 'Periodic'
     bc(2)%s = 'Periodic'
@@ -57,6 +58,15 @@ program test_Poisson_FDS_2D
         ! Open the output for the test
         open(1, file = 'error_ppn')
     case('3')
+        bc(1)%s = 'Wall'
+        bc(2)%s = 'Wall'
+        bc(3)%s = 'Periodic'
+        bc(4)%s = 'Periodic'
+        bc(5)%s = 'Wall'
+        bc(6)%s = 'Wall'
+        ! Open the output for the test
+        open(1, file = 'error_npn')
+    case('4')
         bc(1)%s = 'Wall'
         bc(2)%s = 'Wall'
         bc(3)%s = 'Wall'
@@ -168,6 +178,8 @@ contains
             RHS = -4.0_dp*pi*pi*(sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z))
         case('3')
             RHS = -12.0_dp*pi*pi*cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*cos(2.0_dp*pi*z)
+        case('4')
+            RHS = -12.0_dp*pi*pi*cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*cos(2.0_dp*pi*z)
         end select
 #else
         select case(test_case)
@@ -194,6 +206,8 @@ contains
         case('2')
             solution = sin(2.0_dp*pi*x) + sin(2.0_dp*pi*y) + cos(2.0_dp*pi*z)
         case('3')
+            solution = cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*cos(2.0_dp*pi*z)
+        case('4')
             solution = cos(2.0_dp*pi*x)*cos(2.0_dp*pi*y)*cos(2.0_dp*pi*z)
         end select
 #else

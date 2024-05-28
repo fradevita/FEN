@@ -1,4 +1,3 @@
 include $(FEN_DIR)/src/Makefile.defs
 override CPPDEFS += -DMPI
-#override DBG+=-Wall -g -fcheck=all
-
+override DBG+=-Wall -g -fcheck=all --fpe-trap=invalid,zero,overflow

@@ -19,5 +19,7 @@ echo "        3D case 2 ..."
 mpirun -n 1 ./run.e 2
 echo "        3D case 3 ..."
 mpirun -n 1 ./run.e 3
+echo "        3D case 4 ..."
+mpirun -n 1 ./run.e 4
 python3 postpro.py $1
 
