@@ -51,6 +51,7 @@ module lagrangian_solid_mod
             procedure(self_subroutine_interafce), deferred :: compute_internal_forces
             procedure(self_subroutine_interafce), deferred :: interpolate_from_forcing_element_to_mass_point
             procedure(self_subroutine_interafce), deferred :: update_forcing_elements
+            procedure(self_function_interface)  , deferred :: getPotentialEnergy
     end type lagrangian_solid
 
     interface
@@ -58,6 +59,12 @@ module lagrangian_solid_mod
             import lagrangian_solid
             class(lagrangian_solid), intent(inout), target :: self
         end subroutine self_subroutine_interafce
+        function self_function_interface(self) result(f)
+            use precision_mod, only : dp
+            import lagrangian_solid
+            class(lagrangian_solid), intent(in), target :: self
+            real(dp)                                    :: f
+        end function self_function_interface
         subroutine deformation_solver(self, dt)
             use precision_mod, only : dp
             import lagrangian_solid
@@ -84,7 +91,7 @@ contains
 
         ! Local variables
         integer  :: n, substep
-        real(dp) :: bf(dofs), Vnp1(dofs), Xnp1(dofs), forces(dofs)
+        real(dp) :: bf(dofs), Vnp1(dofs), Xnp1(dofs), forces(dofs), Wo, W, dt_sub, diff, tolerance
 
         ! If the solid is deformable
         if (self%is_deformable) then
@@ -107,10 +114,18 @@ contains
                 endif
             endif
 
-            ! Solve deformation due to internal forces nsubstesp per timestep
-            do substep = 1,self%nsubsteps
-                call self%advance_deformation(dt/real(self%nsubsteps, dp))
-            end do
+            ! Solve deformation due to internal forces (quasi-static process) 
+            Wo = self%getPotentialEnergy()
+            dt_sub = dt/real(self%nsubsteps, dp)
+            tolerance = 1.0e-5_dp
+            subloop: do substep = 1,self%nsubsteps
+                call self%advance_deformation(dt_sub)
+                W = self%getPotentialEnergy()
+                diff = abs((W - Wo)/(Wo + 1.0e-14_dp))
+                !if (diff < tolerance .and. substep > 1) exit subloop
+                Wo = W
+            end do subloop
+            if (myrank == 0) write(*,'(A6,I07,A40,E16.8)') 'After ', substep, ' substeps, potential energy variaion is ', diff
 
         else
 

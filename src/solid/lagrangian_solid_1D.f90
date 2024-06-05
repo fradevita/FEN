@@ -34,7 +34,7 @@ module lagrangian_solid_1D_mod
  
         procedure :: print_configuration
         procedure :: get_total_length
-        procedure :: get_potential_energy
+        procedure :: getPotentialEnergy => get_potential_energy
         procedure :: get_kinetic_energy
         procedure :: destroy
 
@@ -380,7 +380,7 @@ contains
         use utils_mod, only : clamp
 
         ! In/Out variables
-        class(lagrangian_solid_1D), intent(in) :: self
+        class(lagrangian_solid_1D), intent(in), target :: self
         real(dp) :: Ep
 
         ! Local variables

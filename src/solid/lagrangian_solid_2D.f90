@@ -38,7 +38,8 @@ module lagrangian_solid_2D_mod
         
         procedure(selfSub), pass(self), pointer :: computeAdditionalForces => Null()
         procedure(realFun), pass(self), pointer :: getAdditionalEnergy => Null()
-    
+        procedure(selfSub), pass(self), pointer :: computeBendingForces => Null()
+        procedure(realFun), pass(self), pointer :: getBendingEnergy => Null()
     contains
     
         procedure, pass(self) :: loadFromFile
@@ -55,21 +56,21 @@ module lagrangian_solid_2D_mod
         procedure, pass(self) :: compute_internal_forces
         
         procedure, pass(self) :: computeStretchingForces
-        procedure, pass(self) :: computeBendingForces
+        
         procedure, pass(self) :: computeAreaForces
         
         procedure, pass(self) :: getTotalArea
         procedure, pass(self) :: getTotalVolume
         procedure, pass(self) :: getKineticEnergy
-        procedure, pass(self) :: getBendingEnergy
         procedure, pass(self) :: getStretchingEnergy
         procedure, pass(self) :: getAreaEnergy
         procedure, pass(self) :: getPotentialEnergy
+        procedure, pass(self) :: getBendingEnergyTheta2
+        procedure, pass(self) :: getBendingEnergyCosTheta
         
         procedure, pass(Self) :: update_forcing_elements
         procedure, pass(self) :: interpolate_from_forcing_element_to_mass_point => interpolateFromCentroidToMassPoints
 
-        !procedure, pass(self) :: rigid_body_motion
         procedure, pass(self) :: internalForcesIntegral
         procedure, pass(self) :: writeSTL
         procedure, pass(self) :: writeVTK
@@ -77,9 +78,7 @@ module lagrangian_solid_2D_mod
         procedure, pass(Self) :: printInfo
         
         procedure, pass(self) :: destroy
-
-        !procedure :: integrate_hydrodynamic_forces
-        
+       
     end type lagrangian_solid_2D
 
     interface isPresent
@@ -460,14 +459,30 @@ contains
     !===============================================================================================
     subroutine setMass(self, M)
 
+        ! In/Out variables
         class(lagrangian_solid_2D), intent(inout) :: self
-        real(dp)    , intent(in   ) :: M
+        real(dp)                  , intent(in   ) :: M
 
-        integer :: n
-
+        ! Local variables
+        integer  :: n
+        real(dp) :: mt
+        
         do n = 1,self%number_of_mass_points
-            self%mass_points(n)%m = M/self%number_of_mass_points
+            self%mass_points(n)%m = 0.0_dp
         end do
+
+        if (self%is_open) then
+            mt = M/self%numberOfTriangles
+            do n = 1,self%numberOfTriangles
+                self%triangles(n)%v1%m = self%triangles(n)%v1%m + mt/3.0_dp
+                self%triangles(n)%v2%m = self%triangles(n)%v2%m + mt/3.0_dp
+                self%triangles(n)%v3%m = self%triangles(n)%v3%m + mt/3.0_dp
+            end do
+        else
+            do n = 1,self%number_of_mass_points
+                self%mass_points(n)%m = M/self%number_of_mass_points
+            end do
+        end if
 
     end subroutine setMass
     !===============================================================================================
@@ -548,15 +563,28 @@ contains
     !===============================================================================================
 
     !===============================================================================================
-    subroutine setBendingConstant(self, kb)
+    subroutine setBendingConstant(self, kb, model)
 
         ! Select the bending model and set the bending constant.
 
         ! In/Out variables
-        class(lagrangian_solid_2D), intent(inout) :: self
-        real(dp)    , intent(in   ) :: kb
+        class(lagrangian_solid_2D), intent(inout)           :: self
+        real(dp)                  , intent(in   )           :: kb
+        character(len=*)          , intent(in   ), optional :: model 
 
         ! Set the constant
+        if (present(model)) then
+            if (model == 'cos') then
+                self%computeBendingForces => computeBendingForcesCosTheta
+                self%getBendingEnergy => getBendingEnergyCosTheta
+            else
+                print *, 'WRONG BENDING MODEL. EXIT'
+                stop
+            endif
+        else
+            self%computeBendingForces => computeBendingForcesTheta2
+            self%getBendingEnergy => getBendingEnergyTheta2
+        endif
         self%kb = kb
 
         ! Activate the bending 
@@ -630,41 +658,6 @@ contains
 
     end function getTotalVolume
     !===============================================================================================
-
-    ! !===============================================================================================
-    ! subroutine rigid_body_motion(self)
-
-    !     ! Moves all markers according to center of mass traslation and rotation
-    !     ! as consequence of rigid body motion
-
-    !     use euclidean_mod, only : Rx, Ry, Rz, distanceVector
-
-    !     ! In/Out variables
-    !     class(lagrangian_solid_2D), intent(inout), target :: self
-
-    !     ! Local variables
-    !     integer  :: n
-    !     real(dp) :: R(3, 3), d(3)
-
-    !     ! Build rotation matrix
-    !     R = matmul(matmul(Rz(self%rotation(3)), &
-    !                       Ry(self%rotation(2))), &
-    !                       Rx(self%rotation(1)))
-
-    !     ! Apply traslation and rotation to each mass point
-    !     do n = 1,self%number_of_mass_points
-    !         ! Apply traslation:
-    !         self%mass_points(n)%X = self%mass_points(n)%X + self%traslation
-
-    !         ! Distance from rotation center
-    !         d = distanceVector(self%rotation_center, self%mass_points(n)%X)
-
-    !         ! Apply rotation:
-    !         self%mass_points(n)%X = self%rotation_center + matmul(R,d)
-    !     end do
-
-    ! end subroutine
-    ! !===============================================================================================
  
     !===============================================================================================
     subroutine compute_internal_forces(self)
@@ -736,7 +729,7 @@ contains
     !===============================================================================================
 
     !===============================================================================================
-    subroutine computeBendingForces(self)
+    subroutine computeBendingForcesTheta2(self)
 
         use euclidean_mod, only : distanceVector, crossProduct, distance, ZEROV
         use euclidean_mod, only : dotProduct, tilda_matrix
@@ -867,6 +860,161 @@ contains
                                     matmul(transpose(dn2dr34), n1)))
                 mp4%Fi = mp4%Fi - &
                         prefactor*(matmul(transpose(-dn2dr24 - dn2dr34), n1))
+
+            endif
+        end do
+    
+    end subroutine
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine computeBendingForcesCosTheta(self)
+
+        use euclidean_mod, only : distanceVector, crossProduct, distance, ZEROV
+        use euclidean_mod, only : dotProduct, tilda_matrix
+
+        ! The potential is defined as Wb = kb*[1. - cos(theta - theta_0)]
+
+        use utils_mod, only : clamp
+
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(inout), target :: self
+
+        ! Local variables
+        integer                  :: i, t1I, t2I
+        type(edge), pointer      :: e
+        type(triangle), pointer  :: t1, t2
+        type(marker)  , pointer  :: mp1, mp2, mp3, mp4
+        real(dp), dimension(3)   :: r31, r21, r24, r34, r23, r32
+        real(dp), dimension(3)   :: m1, n1, m2, n2, dLbdr2, dLbdr3
+        real(dp)                 :: im1norm, im2norm, n1Dotn2, theta, Lb
+        real(dp)                 :: dthetadn1Dotn2, dtheta, dWbdLb, dWbdtheta
+        real(dp), dimension(3,3) :: dn1dr21, dn1dr31, dn2dr24, dn2dr34
+        real(dp)                 :: prefactor, an1(3,1), an2(3,1), tmp(3,1)
+
+        do i = 1,self%number_of_edges
+            
+            ! Add bending forces only for duplicated edges
+            if (self%duplicateEdges(i) .eqv. .true.) then
+
+                ! Select local edge
+                e => self%edges(i)
+
+                ! Select the two triangles connected by edge e
+                t1I = self%edgeTrianglesIndex(i,1)
+                t1 => self%triangles(t1I)
+                t2I = self%edgeTrianglesIndex(i,2)
+                t2 => self%triangles(t2I)
+
+                ! Select the four points
+                mp2 => e%m2
+                mp3 => e%m1
+
+                ! Select mp1 from triangle 1
+                if (self%triangleEdgesIndex(t1I,1) == i .or. &
+                    self%triangleEdgesIndex(t1I,1) == self%edgeDuplicate(i)) then    
+                    mp1 => self%mass_points(self%oppositeVertexIndex(t1I,1))
+                else
+                    if (self%triangleEdgesIndex(t1I,2) == i .or. &
+                        self%triangleEdgesIndex(t1I,2) == self%edgeDuplicate(i)) then    
+                        mp1 => self%mass_points(self%oppositeVertexIndex(t1I,2))
+                    else
+                        mp1 => self%mass_points(self%oppositeVertexIndex(t1I,3))
+                    endif
+                endif
+
+                ! Select mp4 from triangle 2
+                if (self%triangleEdgesIndex(t2I,1) == i .or. &
+                    self%triangleEdgesIndex(t2I,1) == self%edgeDuplicate(i)) then
+                    mp4 => self%mass_points(self%oppositeVertexIndex(t2I,1))
+                else
+                    if (self%triangleEdgesIndex(t2I,2) == i .or. &
+                        self%triangleEdgesIndex(t2I,2) == self%edgeDuplicate(i)) then
+                        mp4 => self%mass_points(self%oppositeVertexIndex(t2I,2))
+                    else
+                        mp4 => self%mass_points(self%oppositeVertexIndex(t2I,3))
+                    endif
+                endif
+
+                ! Evaluate distasnce vectors and normal vectors
+                r31 = distanceVector(mp1%X, mp3%X)
+                r21 = distanceVector(mp1%X, mp2%X)
+                m1 = crossProduct(r31,r21)
+                im1norm = 1.0_dp/distance(m1, ZEROV)
+                n1 = m1*im1norm
+                an1(:,1) = n1
+
+                r24 = distanceVector(mp4%X, mp2%X)
+                r34 = distanceVector(mp4%X, mp3%X)
+                m2 = crossProduct(r24,r34)
+                im2norm = 1.0_dp/distance(m2, ZEROV)
+                n2 = m2*im2norm
+                an2(:,1) = n2 
+
+                ! Angle between two triangles
+                n1Dotn2 = clamp(dotProduct(n1,n2), -1.0_dp, 1.0_dp)
+                theta = acos(n1Dotn2)
+
+                ! Derivative of theta w.r.t n1_dot_n2
+                dthetadn1Dotn2 = -1.0_dp*sqrt(1.0_dp - n1Dotn2**2)/ &
+                                    (sqrt(1.0_dp - n1Dotn2**2)**2 + 1.0e-12)
+
+                ! lenght of the shared edge
+                Lb = e%l
+
+                ! Bending potential derivatives w.r.t Lb and theta
+                dtheta = theta - e%theta0
+                dWbdtheta = self%kb*sin(dtheta)
+                dWbdLb = 0.0_dp
+
+                block
+                    real(dp)               :: betab, b11, b12, b22, modxsi, modzed, costheta, sintheta
+                    real(dp), dimension(3) :: xsi, zed, a21, a31, a34, a24, a32, a13, a42, a23
+                    type(marker), pointer  :: temp
+
+                    mp2 => e%m1
+                    mp3 => e%m2
+    
+                    a21 = distanceVector(mp1%X, mp2%x)
+                    a31 = distanceVector(mp1%X, mp3%x)
+                    a34 = distanceVector(mp4%X, mp3%x)
+                    a24 = distanceVector(mp4%X, mp2%x)
+
+                    a32 = distanceVector(mp2%X, mp3%X)
+                    a13 = distanceVector(mp3%X, mp1%X)
+                    a42 = distanceVector(mp2%X, mp4%X)
+                    a23 = distanceVector(mp3%X, mp2%X)
+
+                    xsi = crossProduct(a21, a31)
+                    modxsi = distance(xsi, ZEROV)
+                    zed = crossProduct(a34, a24)
+                    modzed = distance(zed, ZEROV)
+
+                    costheta = clamp(dotProduct(xsi, zed)/modxsi/modzed, -1.0_dp, 1.0_dp)
+                    theta = acos(costheta)
+                    sintheta = sqrt(1.0_dp - costheta*costheta)
+                 
+                    if (dotProduct(distanceVector(zed, xsi), &
+                            distanceVector(t2%C%X,t1%C%X)) < 0.0_dp ) then
+                        sintheta = -sintheta
+                    end if
+                    sintheta = sin(theta)
+                    
+                    betab = self%kb*(sintheta*cos(e%theta0) - costheta*sin(e%theta0))* &
+                                sqrt(1. - costheta**2)/((sqrt(1. - costheta**2))**2 + 1.0e-12_dp)
+                    
+                    b11 = -betab*costheta/modxsi**2
+                    b12 =  betab/(modxsi*modzed)
+                    b22 = -betab*costheta/modzed**2
+
+                    mp1%Fi = mp1%Fi + b11*crossProduct(xsi, a32) + b12*crossProduct(zed, a32)
+                    mp2%Fi = mp2%Fi + b11*crossProduct(xsi, a13) + b12*(crossProduct(xsi, a34) + &
+                                    crossProduct(zed, a13)) + b22*crossProduct(zed, a34)
+                    mp3%Fi = mp3%Fi + b11*crossProduct(xsi, a21) + b12*(crossProduct(xsi, a42) + &
+                                    crossProduct(zed, a21)) + b22*crossProduct(zed, a42)
+                    mp4%Fi = mp4%Fi + b12*crossProduct(xsi, a23) + b22*crossProduct(zed, a23)
+                
+                end block
 
             endif
         end do
@@ -1011,7 +1159,7 @@ contains
     !===============================================================================================
 
     !===============================================================================================
-    function getBendingEnergy(self) result(Wb)
+    function getBendingEnergyTheta2(self) result(Wb)
 
         use utils_mod    , only : clamp
         use euclidean_mod, only : distanceVector, crossProduct, distance, ZEROV
@@ -1095,6 +1243,90 @@ contains
     !===============================================================================================
 
     !===============================================================================================
+    function getBendingEnergyCosTheta(self) result(Wb)
+
+        use utils_mod    , only : clamp
+        use euclidean_mod, only : distanceVector, crossProduct, distance, ZEROV
+        use euclidean_mod, only : dotProduct
+
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(in), target :: self
+        real(dp)                         :: Wb
+
+        ! Local variables
+        integer                 :: i, t1I, t2I
+        type(edge)    , pointer :: e
+        type(triangle), pointer :: t1, t2
+        type(marker)  , pointer :: mp1, mp2, mp3, mp4
+        real(dp), dimension(3)  :: r31, r21, m1, n1, r24, r34, m2, n2
+        real(dp)                :: theta
+
+        Wb = 0.0_dp
+        do i = 1,self%number_of_edges
+            
+            if (self%duplicateEdges(i) .eqv. .true.) then
+                  ! Select local edge
+                e => self%edges(i)
+
+                ! Select the two triangles connected by edge e
+                t1I = self%edgeTrianglesIndex(i,1)
+                t1 => self%triangles(t1I)
+                t2I = self%edgeTrianglesIndex(i,2)
+                t2 => self%triangles(t2I)
+
+                ! Select the four points
+                mp2 => e%m2
+                mp3 => e%m1
+
+                ! Select mp1 from triangle 1
+                if (self%triangleEdgesIndex(t1I,1) == i .or. &
+                    self%triangleEdgesIndex(t1I,1) == self%edgeDuplicate(i)) then    
+                    mp1 => self%mass_points(self%oppositeVertexIndex(t1I,1))
+                else
+                    if (self%triangleEdgesIndex(t1I,2) == i .or. &
+                        self%triangleEdgesIndex(t1I,2) == self%edgeDuplicate(i)) then    
+                        mp1 => self%mass_points(self%oppositeVertexIndex(t1I,2))
+                    else
+                        mp1 => self%mass_points(self%oppositeVertexIndex(t1I,3))
+                    endif
+                endif
+
+                ! Select mp4 from triangle 2
+                if (self%triangleEdgesIndex(t2I,1) == i .or. &
+                    self%triangleEdgesIndex(t2I,1) == self%edgeDuplicate(i)) then
+                    mp4 => self%mass_points(self%oppositeVertexIndex(t2I,1))
+                else
+                    if (self%triangleEdgesIndex(t2I,2) == i .or. &
+                        self%triangleEdgesIndex(t2I,2) == self%edgeDuplicate(i)) then
+                        mp4 => self%mass_points(self%oppositeVertexIndex(t2I,2))
+                    else
+                        mp4 => self%mass_points(self%oppositeVertexIndex(t2I,3))
+                    endif
+                endif
+
+                ! Evaluate distasnce  vectors and normal vectors
+                r31 = distanceVector(mp1%X, mp3%X)
+                r21 = distanceVector(mp1%X, mp2%X)
+                m1 = crossProduct(r31,r21)
+                n1 = m1/distance(m1, ZEROV)
+
+                r24 = distanceVector(mp4%X, mp2%X)
+                r34 = distanceVector(mp4%X, mp3%X)
+                m2 = crossProduct(r24,r34)
+                n2 = m2/distance(m2, ZEROV) 
+
+                ! Angle between two triangles
+                theta = acos(clamp(dotProduct(n1, n2), -1.0_dp, 1.0_dp))
+                
+                ! Add energy contribution of this edge
+                Wb = Wb + self%kb*(1.0_dp - cos(theta - e%theta0))
+            endif
+        end do
+
+    end function
+    !===============================================================================================
+
+    !===============================================================================================
     function getPotentialEnergy(self) result(W)
 
         ! In/Out variables
@@ -1109,7 +1341,7 @@ contains
         Wa = 0.0_dp
         Wb = 0.0_dp
 
-        ! Add elastic in-plane forces
+        ! Add each potential contribution
         if (self%evaluateStretching) Ws = self%getStretchingEnergy()
         if (self%evaluateBending) Wb = self%getBendingEnergy()
         if (self%evaluateAreaConstraint) Wa = self%getAreaEnergy()
@@ -1139,6 +1371,7 @@ contains
 
         do i = 1,self%number_of_mass_points
             self%mass_points(i)%Fh = ZEROV
+            self%mass_points(i)%Fe = ZEROV
         end do
 
         do i = 1,self%numberOfTriangles
@@ -1146,8 +1379,7 @@ contains
             w1 = distance(t%v1%X, t%c%X)
             w2 = distance(t%v2%X, t%c%X)
             w3 = distance(t%v3%X, t%c%X)
-            wtot = w1 + w2 + w2
-
+            wtot = w1 + w2 + w3
             t%v1%Fe(1:3) = t%v1%Fe(1:3) + t%c%Fe(1:3)*w1/wtot
             t%v2%Fe(1:3) = t%v2%Fe(1:3) + t%c%Fe(1:3)*w2/wtot
             t%v3%Fe(1:3) = t%v3%Fe(1:3) + t%c%Fe(1:3)*w3/wtot
@@ -1425,54 +1657,31 @@ contains
     end subroutine
     !===============================================================================================
 
-    ! !===============================================================================================
-    ! subroutine integrate_hydrodynamic_forces(self)
-
-    !     ! Get integral forces on the solid.
-
-    !     ! In/Out variables
-    !     class(lagrangian_solid_2D), intent(inout), target :: self
-
-    !     ! Local variables
-    !     integer :: l
-
-    !     ! Hydrodynamic forces
-    !     self%center_of_mass%Fh = 0.0_dp
-    !     self%center_of_mass%Fv = 0.0_dp
-    !     self%center_of_mass%Fp = 0.0_dp
-
-    !     ! Cycle over mass points
-    !     do l = 1,size(self%forcing_elements)
-    !         self%center_of_mass%Fh(1:3) = self%center_of_mass%Fh(1:3) + self%mass_points(l)%Fh
-    !         self%center_of_mass%Fv(1:3) = self%center_of_mass%Fv(1:3) + self%mass_points(l)%Fv
-    !         self%center_of_mass%Fp(1:3) = self%center_of_mass%Fp(1:3) + self%mass_points(l)%Fp
-    !     end do
-
-    ! end subroutine
-    ! !===============================================================================================
-
     !===============================================================================================
     subroutine update_forcing_elements(self)
 
-        ! Get integral forces on the solid.
+        ! Update velocity and accelecartion of the forcin element from mass poitns
+
+        use euclidean_mod, only : distance
 
         ! In/Out variables
         class(lagrangian_solid_2D), intent(inout), target :: self
 
         ! ! Local variables
-        ! integer :: l
+        integer                 :: n
+        real(dp)                :: w1, w2, w3, wtot
+        type(triangle), pointer :: t 
 
-        ! ! Hydrodynamic forces
-        ! self%center_of_mass%Fh = 0.0_dp
-        ! self%center_of_mass%Fv = 0.0_dp
-        ! self%center_of_mass%Fp = 0.0_dp
-
-        ! ! Cycle over mass points
-        ! do l = 1,size(self%forcing_elements)
-        !     self%center_of_mass%Fh = self%center_of_mass%Fh + self%mass_points(l)%Fh
-        !     self%center_of_mass%Fv = self%center_of_mass%Fv + self%mass_points(l)%Fv
-        !     self%center_of_mass%Fp = self%center_of_mass%Fp + self%mass_points(l)%Fp
-        ! end do
+        ! Cycle over forcing elements
+        do n = 1,self%numberOfTriangles
+            t => self%triangles(n)
+            w1 = distance(t%v1%X, t%c%X)
+            w2 = distance(t%v2%X, t%c%X)
+            w3 = distance(t%v3%X, t%c%X)
+            wtot = w1 + w2 + w3
+            t%C%V = (t%v1%V*w1 + t%v2%V*w2 + t%v3%V*w3)/wtot
+            t%C%A = (t%v1%A*w1 + t%v2%A*w2 + t%v3%A*w3)/wtot
+        end do
 
     end subroutine
     !===============================================================================================
