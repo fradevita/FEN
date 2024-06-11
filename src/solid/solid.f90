@@ -21,6 +21,7 @@ module solid_mod
         type(marker)          :: center_of_mass   !< center of mass of the solid
         integer               :: file_id = -1     !< index of the output file
         character(len=99)     :: name = 'unset'   !< solid name
+        logical               :: fsi = .true.     !< flag to activate fsi
     contains
         ! List of object-independent procedure
         procedure, pass(self) :: write_csv

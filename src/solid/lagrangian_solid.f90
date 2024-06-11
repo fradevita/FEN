@@ -125,7 +125,7 @@ contains
                 !if (diff < tolerance .and. substep > 1) exit subloop
                 Wo = W
             end do subloop
-            if (myrank == 0) write(*,'(A6,I07,A40,E16.8)') 'After ', substep, ' substeps, potential energy variaion is ', diff
+            !if (myrank == 0) write(*,'(A6,I07,A40,E16.8)') 'After ', substep, ' substeps, potential energy variaion is ', diff
 
         else
 

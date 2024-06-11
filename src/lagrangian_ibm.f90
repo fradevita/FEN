@@ -34,7 +34,7 @@ contains
         call F%allocate(comp_grid, 1)
 
         ! By default set the distance of the probe to 1.2 dx
-        h_probe = 1.0_dp*comp_grid%delta
+        h_probe = 1.5_dp*comp_grid%delta
 
     end subroutine init_ibm
     !===============================================================================================

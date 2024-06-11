@@ -37,15 +37,16 @@ contains
             
             ! First solve solid object motion
             do b = 1,size(eulerian_solid_list)
+                if (eulerian_solid_list(b)%pS%fsi) then
+                    ! Evalute hydrodynamic loads on solid object b
+                    call compute_hydrodynamic_loads(eulerian_solid_list(b)%pS, v, p, mu, rho, g, Fe, density)
 
-                ! Evalute hydrodynamic loads on solid object b
-                call compute_hydrodynamic_loads(eulerian_solid_list(b)%pS, v, p, mu, rho, g, Fe, density)
+                    ! Advance solid object b
+                    call eulerian_solid_list(b)%pS%advance(dt)
 
-                ! Advance solid object b
-                call eulerian_solid_list(b)%pS%advance(dt)
-
-                ! Check if the solid object is outside of the domain and in case traslate it
-                call Eulerian_Solid_list(b)%pS%check_periodicity()
+                    ! Check if the solid object is outside of the domain and in case traslate it
+                    call Eulerian_Solid_list(b)%pS%check_periodicity()
+                endif
             end do
 
             ! Update eularian ibm variables
@@ -58,33 +59,34 @@ contains
         
             ! For every solid body:
             do b = 1,size(lagrangian_solid_list)
+                if (lagrangian_solid_list(b)%pS%fsi) then
+                    ! For deformable solids, velocity and acceleration on forcing elements are 
+                    ! evaluated by interpolation from mass points. For rigid solids, velocity and 
+                    ! acceleration of forcing elements are updated withing the rigid_body subroutine.  
+                    if (lagrangian_solid_list(b)%pS%is_deformable) then
+                        call lagrangian_solid_list(b)%pS%update_forcing_elements()
+                    endif
 
-                ! For deformable solids, velocity and acceleration on forcing elements are 
-                ! evaluated by interpolation from mass points. For rigid solids, velocity and 
-                ! acceleration of forcing elements are updated withing the rigid_body subroutine.  
-                if (lagrangian_solid_list(b)%pS%is_deformable) then
-                    call lagrangian_solid_list(b)%pS%update_forcing_elements()
-                endif
+                    ! Compute hydrodynamic loads with fluid fields at step n
+                    call lagrangian_compute_hydrodynamic_loads(lagrangian_solid_list(b)%pS, v, p, mu, &
+                                                                    rho, g)
 
-                ! Compute hydrodynamic loads with fluid fields at step n
-                call lagrangian_compute_hydrodynamic_loads(lagrangian_solid_list(b)%pS, v, p, mu, &
-                                                                rho, g)
-   
-                ! Solve the structure dynamics with the computed hydrodynamic loads
+                    ! Solve the structure dynamics with the computed hydrodynamic loads
 #ifdef MF
-                ! For multiphase flows find the density of the surrounding fluid
-                ie = comp_grid%closest_grid_node(lagrangian_solid_list(b)%pS%center_of_mass%X(1:3), 0)
-                if (ie(2) >= comp_grid%lo(2) .and. ie(2) <= comp_grid%hi(2)) then
-                    rhof = rho%f(ie(1),ie(2),1)
-                else
-                    rhof = 0.0_dp
-                endif
-                call mpi_allreduce(mpi_in_place,rhof,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
-                call lagrangian_solid_list(b)%pS%advance(dt, g, rhof)
+                    ! For multiphase flows find the density of the surrounding fluid
+                    ie = comp_grid%closest_grid_node(lagrangian_solid_list(b)%pS%center_of_mass%X(1:3), 0)
+                    if (ie(2) >= comp_grid%lo(2) .and. ie(2) <= comp_grid%hi(2)) then
+                        rhof = rho%f(ie(1),ie(2),1)
+                    else
+                        rhof = 0.0_dp
+                    endif
+                    call mpi_allreduce(mpi_in_place,rhof,1,mpi_real8,mpi_sum,mpi_comm_world,ierror)
+                    call lagrangian_solid_list(b)%pS%advance(dt, g, rhof)
 #else
-                call lagrangian_solid_list(b)%pS%advance(dt, g, density)
+                    call lagrangian_solid_list(b)%pS%advance(dt, g, density)
 #endif
-                call check_periodicity(lagrangian_solid_list(b)%pS, comp_grid)            
+                    call check_periodicity(lagrangian_solid_list(b)%pS, comp_grid)            
+                endif
             end do
         endif
 

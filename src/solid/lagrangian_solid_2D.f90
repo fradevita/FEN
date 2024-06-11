@@ -545,8 +545,8 @@ contains
                 indexes = self%edgeTrianglesIndex(e,:)
                 A1 = self%triangles(indexes(1))%A
                 if (indexes(2) == -1) then
-                    A2 = 0.0_dp
-                    !A2 = A1
+                    !A2 = 0.0_dp
+                    A2 = A1
                 else
                     A2 = self%triangles(indexes(2))%A
                 endif
