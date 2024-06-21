@@ -403,9 +403,22 @@ contains
         class(scalar)   , intent(in) :: self     !< scalar field to write
         character(len=*), intent(in) :: filename !< output file
 
+        integer :: unit_id, reclen
+#ifdef MPI
         call decomp_2d_write_one(1, self%f(self%G%lo(1):self%G%hi(1), &
                                            self%G%lo(2):self%G%hi(2), &
                                            self%G%lo(3):self%G%hi(3)), filename)
+#else
+        inquire(iolength=reclen) self%f(self%G%lo(1):self%G%hi(1), &
+                                        self%G%lo(2):self%G%hi(2), &
+                                        self%G%lo(2):self%G%hi(3))
+        open(newunit = unit_id, file = filename, form='unformatted', status='unknown', &
+                access='direct', action='write', recl=reclen)
+        write (unit_id, rec=1) self%f(self%G%lo(1):self%G%hi(1), &
+                                        self%G%lo(2):self%G%hi(2), &
+                                        self%G%lo(2):self%G%hi(3))
+        close(unit_id)
+#endif
 
     end subroutine write
     !==============================================================================================
