@@ -108,7 +108,7 @@ program spring_mass
     L0 = S%get_total_length()
 
     ! Compute initial potential energy
-    Ep0 = S%get_potential_energy()
+    Ep0 = S%getPotentialEnergy()
 
     ! Set the constraints procedure
     S%apply_constraints => test_constraints

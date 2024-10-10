@@ -29,9 +29,9 @@ popt, _ = curve_fit(objective, np.log(N), np.log(emax))
 a, b = popt
 
 if (-a > 1.8):
-  print('Test completed.')
+  print('        Test completed.')
 else:
-  print('The convergence rate of the Poisson solver is less than second order')
+  print('        The convergence rate of the Poisson solver is less than second order')
  
 # Plot
 scaling = np.zeros(np.size(N))
@@ -42,7 +42,7 @@ plt.plot(N, emax, 'o', label = 'data')
 plt.plot(N, scaling, 'black', label = '$N^{%2.2f}$' % a)
 plt.xlabel("N")
 plt.ylabel("error")
-plt.title("Convergence rate of the Poisson Solver with PP BC")
+plt.title("Convergence rate of the Multigrid Poisson Solver with PP BC")
 plt.xscale("log")
 plt.yscale("log")
 plt.legend()

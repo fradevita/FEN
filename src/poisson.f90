@@ -94,13 +94,13 @@ contains
             stop
         endif
 #else
-        if ((periodic_bc(1) .eqv. .true. ) .and. periodic_bc(2) .eqv. .true.) then
+        if ((periodic_bc(1) .eqv. .true. ) .and. (periodic_bc(2) .eqv. .true.)) then
             call init_poisson_pp(phi)
             solve_poisson => poisson_solver_pp
-        elseif ((periodic_bc(1) .eqv. .true. ) .and. periodic_bc(2) .eqv. .false.) then
+        elseif ((periodic_bc(1) .eqv. .true. ) .and. (periodic_bc(2) .eqv. .false.)) then
             call init_poisson_pn(phi)
-            solve_poisson => poisson_solver_pn
-        elseif ((periodic_bc(1) .eqv. .false. ) .and. periodic_bc(2) .eqv. .false.) then
+            solve_poisson => poisson_solver_pn    
+        elseif ((periodic_bc(1) .eqv. .false. ) .and. (periodic_bc(2) .eqv. .false.)) then
                 call init_poisson_nn(phi)
                 solve_poisson => poisson_solver_nn
         else
@@ -298,7 +298,7 @@ contains
 
         allocate(c1(lo_y(1):hi_y(1),lo_y(2):hi_y(2),lo_y(3):hi_y(3)))
         allocate(d1r(lo_y(1):hi_y(1),lo_y(2):hi_y(2),lo_y(3):hi_y(3)))
-        
+
     end subroutine init_poisson_nn
     !===============================================================================================
 

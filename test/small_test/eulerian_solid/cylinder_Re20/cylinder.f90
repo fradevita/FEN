@@ -11,7 +11,7 @@ program laminar_cylinder
     use eulerian_circle_mod , only : Circle
     use ibm_mod                
     use eulerian_ibm_mod
-    use navier_stokes_mod        , only : v, set_timestep, viscosity, p, mu, rho, g
+    use navier_stokes_mod   , only : v, set_timestep, viscosity, p, mu, rho, g
     use solver_mod
 
     implicit none
