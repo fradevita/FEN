@@ -77,7 +77,7 @@ program energy
         if (mod(step,100) == 0) then
             ! Evaluate work and mechanical energy
             Work = F*abs(S%mass_points(S%number_of_mass_points)%X(2))
-            Ep = S%get_potential_energy()
+            Ep = S%getPotentialEnergy()
             Ek = S%get_kinetic_energy()
             write(eid,*) time, Work, Ep, Ek
             flush(eid)
