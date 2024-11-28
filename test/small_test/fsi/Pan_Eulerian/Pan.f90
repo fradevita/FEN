@@ -17,20 +17,33 @@ program Pan
 
     ! Parameters
     real(dp), parameter :: radius = 0.125_dp    !< cylinder radius
-    real(dp), parameter :: Deltap = 1.763e-3_dp !< external body force
-    real(dp), parameter :: mu = 3.2498036e-3_dp !< fluid viscosity
 
     ! Variables
     integer              :: Nx, Ny, Nz, step, out_id
-    real(dp)             :: Lx, Ly, Lz, time, dt, origin(3)
+    real(dp)             :: Lx, Ly, Lz, time, dt, origin(3), deltap, mu
     type(grid), target   :: comp_grid
     type(bc_type)        :: bc(4)
     type(Circle), target :: C
+    character(len=1)     :: case
 
     ! Initialize MPI
     call mpi_init(ierror)
     call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
+    ! Select case setup
+    call get_command_argument(1, case)
+    select case(case)
+    case('1')
+        Deltap = 1.763e-3_dp
+        mu = 3.2498036e-3_dp
+    case('2')
+        Deltap = 8.167e-4_dp
+        mu = 1.5e-3_dp
+    case('3')
+        Deltap = 2.337e-4_dp
+        mu = 4.2834760e-4_dp
+    end select
+    
     ! The domain is a unit square
     Lx = 1.0_dp
     Ly = 1.0_dp
@@ -83,10 +96,9 @@ program Pan
     step = 0
     time = 0.0_dp
     call set_timestep(comp_grid, dt, 1.0_dp)
-    call save_fields(0)
     dt = dt/2.0_dp
 
-    open(newunit = out_id, file = 'out.csv')
+    open(newunit = out_id, file = 'case'//case//'.csv')
     if (myrank == 0) write(out_id, '(A29)') 't,x,y,omega,Fx,Fy,Fz,Mx,My,Mz'
 
     !==== Start Time loop ===================================================================
