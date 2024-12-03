@@ -161,8 +161,13 @@ contains
 
         ! This subroutine save the fields of the simulation at timestep step for restart purpose
         use mpi
-        use decomp_2d_io, only : decomp_2d_write_var
-        use navier_stokes_mod, only : v, dv_o, p
+        use decomp_2d_io       , only : decomp_2d_write_var
+        use navier_stokes_mod  , only : v, dv_o, p
+#ifdef MF
+        use navier_stokes_mod  , only : rho, mu
+        use volume_of_fluid_mod, only : vof
+        use multiphase_mod     , only : p_o
+#endif
 
         ! In/Out variables
         integer, intent(in) :: step
@@ -193,6 +198,12 @@ contains
         call decomp_2d_write_var(fh, disp, 1,    v%z%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call decomp_2d_write_var(fh, disp, 1, dv_o%z%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
 #endif
+#ifdef MF
+        call decomp_2d_write_var(fh, disp, 1,    vof%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1,    rho%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1,     mu%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1,    p_o%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+#endif
         call MPI_FILE_CLOSE(fh,ierror)
 
     end subroutine
@@ -205,7 +216,11 @@ contains
         use mpi
         use decomp_2d_io, only : decomp_2d_read_var
         use navier_stokes_mod, only : v, dv_o, p
-        use scalar_mod
+#ifdef MF
+        use navier_stokes_mod  , only : rho, mu
+        use volume_of_fluid_mod, only : vof
+        use multiphase_mod     , only : p_o
+#endif
 
         ! In/Out variables
         integer, intent(in) :: step
@@ -215,14 +230,9 @@ contains
         integer(kind=MPI_OFFSET_KIND) :: filesize, disp
         character(len=7 )             :: sn
         character(len=22)             :: filename
-        type(scalar)                  :: tmp
-        real(dp), allocatable         :: temp(:,:,:)
         
         lo = p%G%lo
         hi = p%G%hi
-
-        call tmp%allocate(p%G, 1)
-        allocate(temp(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
 
         write(sn,'(I0.7)') step
         filename = 'data/state_'//sn//'.raw'
@@ -240,6 +250,16 @@ contains
 #endif
         call p%update_ghost_nodes()
         call v%update_ghost_nodes()
+#ifdef MF
+        call decomp_2d_read_var(fh, disp, 1,    vof%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1,    rho%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1,     mu%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1,    p_o%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call vof%update_ghost_nodes()
+        call rho%update_ghost_nodes()
+        call mu%update_ghost_nodes()
+        call p_o%update_ghost_nodes()
+#endif
         call MPI_FILE_CLOSE(fh,ierror)
 
     end subroutine load_state
