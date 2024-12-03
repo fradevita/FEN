@@ -342,7 +342,7 @@ contains
 
 #if DIM==3
         if (self%bc%type_front == 0) then ! Periodic 
-             ! When using 2decomp decomposition this ghost nodes is updated automatically
+            ! When using 2decomp decomposition this ghost nodes is updated automatically
             ! Must be overwritten only when using 1 proc
             if (self%G%pcol == 1) then
                 self%f(:,:,lo(3)-1) = self%f(:,:,hi(3))

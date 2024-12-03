@@ -49,7 +49,7 @@ hypre_solver.o: $(SRC)/hypre_solver.f90 precision.o scalar.o grid.o
 
 # Rule for solver module
 solver.o: $(SRC)/solver.f90 precision.o grid.o poisson.o navier_stokes.o volume_of_fluid.o multiphase.o ibm.o fsi.o
-	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
+	$(FC) $(INCLUDE_2DECOMP) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for multiphase module
 multiphase.o: $(SRC)/multiphase.f90 precision.o scalar.o vector.o IO.o

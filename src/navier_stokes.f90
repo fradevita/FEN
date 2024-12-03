@@ -394,7 +394,7 @@ contains
                         RHS%x%f(i,j,k) = RHS%x%f(i,j,k) + mu%f(i,j,k)*lap_v%x%f(i,j,k)/rhof%x%f(i,j,k)
                         RHS%y%f(i,j,k) = RHS%y%f(i,j,k) + mu%f(i,j,k)*lap_v%y%f(i,j,k)/rhof%y%f(i,j,k)
 #if DIM==3
-                          RHS%z%f(i,j,k) = RHS%z%f(i,j,k) + mu%f(i,j,k)*lap_v%z%f(i,j,k)/rhof%z%f(i,j,k)
+                        RHS%z%f(i,j,k) = RHS%z%f(i,j,k) + mu%f(i,j,k)*lap_v%z%f(i,j,k)/rhof%z%f(i,j,k)
 #endif
                    end do
                 end do
@@ -404,14 +404,13 @@ contains
             call lap_v%destroy
         else
 
-            ! For variable viscosity simulation viscosity can change due to multiphase or non-newtonain
-            ! simulations.
+            ! For variable viscosity simulation viscosity can change due to multiphase or 
+            ! non-newtonain simulations.
 
 #ifdef NN
             call gradient(v, D)
             call compute_viscosity(mu, D)
 #endif
-
             idelta = 1.0_dp/comp_grid%delta
 
             ! Add diffusion to RHS
@@ -500,9 +499,9 @@ contains
         end do
 
     end subroutine add_surface_tension
-    !========================================================================================
+    !===============================================================================================
 #endif
-    !========================================================================================
+    !===============================================================================================
     subroutine correct_velocity_field(comp_grid, dt)
 
         use fields_mod, only : gradient

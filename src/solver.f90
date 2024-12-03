@@ -30,7 +30,7 @@ module solver_mod
 
 contains
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine init_solver(comp_grid)
 
         ! Perform all preliminary operations before start the simulation
@@ -157,6 +157,95 @@ contains
     !===============================================================================================
 
     !===============================================================================================
+    subroutine save_state(step)
+
+        ! This subroutine save the fields of the simulation at timestep step for restart purpose
+        use mpi
+        use decomp_2d_io, only : decomp_2d_write_var
+        use navier_stokes_mod, only : v, dv_o, p
+
+        ! In/Out variables
+        integer, intent(in) :: step
+
+        ! Local variables
+        integer                       :: fh, ierror, lo(3), hi(3)
+        integer(kind=MPI_OFFSET_KIND) :: filesize, disp
+        character(len=7 )             :: sn
+        character(len=22)             :: filename
+
+        lo = p%G%lo
+        hi = p%G%hi
+
+        write(sn,'(I0.7)') step
+        filename = 'data/state_'//sn//'.raw'
+        call MPI_FILE_OPEN(MPI_COMM_WORLD, filename, MPI_MODE_CREATE+MPI_MODE_WRONLY, &
+                                MPI_INFO_NULL, fh, ierror)
+        filesize = 0_MPI_OFFSET_KIND
+        call MPI_FILE_SET_SIZE(fh, filesize, ierror)  ! guarantee overwriting
+        disp = 0_MPI_OFFSET_KIND
+        
+        call decomp_2d_write_var(fh, disp, 1,      p%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1,    v%x%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1,    v%y%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1, dv_o%x%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1, dv_o%y%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+#if DIM==3
+        call decomp_2d_write_var(fh, disp, 1,    v%z%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_write_var(fh, disp, 1, dv_o%z%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+#endif
+        call MPI_FILE_CLOSE(fh,ierror)
+
+    end subroutine
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine load_state(step)
+
+        ! This subroutine save the fields of the simulation at timestep step for restart purpose
+        use mpi
+        use decomp_2d_io, only : decomp_2d_read_var
+        use navier_stokes_mod, only : v, dv_o, p
+        use scalar_mod
+
+        ! In/Out variables
+        integer, intent(in) :: step
+
+        ! Local variables
+        integer                       :: fh, ierror, lo(3), hi(3)
+        integer(kind=MPI_OFFSET_KIND) :: filesize, disp
+        character(len=7 )             :: sn
+        character(len=22)             :: filename
+        type(scalar)                  :: tmp
+        real(dp), allocatable         :: temp(:,:,:)
+        
+        lo = p%G%lo
+        hi = p%G%hi
+
+        call tmp%allocate(p%G, 1)
+        allocate(temp(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+
+        write(sn,'(I0.7)') step
+        filename = 'data/state_'//sn//'.raw'
+        call MPI_FILE_OPEN(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierror)
+        disp = 0_MPI_OFFSET_KIND
+        
+        call decomp_2d_read_var(fh, disp, 1,      p%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1,    v%x%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1,    v%y%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1, dv_o%x%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1, dv_o%y%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+#if DIM==3
+        call decomp_2d_read_var(fh, disp, 1,    v%z%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+        call decomp_2d_read_var(fh, disp, 1, dv_o%z%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
+#endif
+        call p%update_ghost_nodes()
+        call v%update_ghost_nodes()
+        call MPI_FILE_CLOSE(fh,ierror)
+
+    end subroutine load_state
+    !===============================================================================================
+
+    !===============================================================================================
     subroutine destroy_solver
 
         use poisson_mod      , only : destroy_poisson_solver
@@ -182,6 +271,6 @@ contains
 #endif
 
     end subroutine destroy_solver
-    !==============================================================================================
+    !===============================================================================================
 
 end module
