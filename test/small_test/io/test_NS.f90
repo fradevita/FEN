@@ -14,24 +14,18 @@ program test_io_ns
     integer    :: Nx, Ny, Nz, step, i, j, k
     real(dp)   :: Lx, Ly, Lz, time, dt
     type(grid) :: comp_grid
-    type(scalar) :: usave, vsave, wsave, psave
     
     ! init MPI
     call mpi_init(ierror)
     call mpi_comm_rank(mpi_comm_world, myrank, ierror)
 
     ! Create the numerical grid
-    Nx = 4
-    Ny = 4
+    Nx = 16
+    Ny = 16
+    Nz = 16
     Lx = 2.0_dp*pi
     Ly = Lx
-#if DIM==3
-    Nz = 4
     Lz = Lx
-#else
-    Nz = 1
-    Lz = Lx*float(Nz)/float(Nx)
-#endif
     call comp_grid%setup(Nx, Ny, Nz, Lx, Ly, Lz, [0.0_dp, 0.0_dp, 0.0_dp], 1, 1)
 
     ! Initialize the solver
@@ -44,31 +38,26 @@ program test_io_ns
 
     call set_timestep(comp_grid, dt, 2.0_dp)
 
-    ! Perform 2 timestep
-    do i = 1,2
-        call advance_solution(comp_grid, step, dt)
-
-        ! Print solver status
+    ! Perform 10 timestep
+    do i = 1,10
         step = step + 1
         time = time + dt
-        !call print_solver_status(stdout, step, time, dt)
+        call advance_solution(comp_grid, step, dt)
 
         ! Save simulation state
-        call save_state(step)
-
-        if (i == 1) then
-            usave%f = v%x%f
-            vsave%f = v%y%f
-            wsave%f = v%z%f
-            psave%f = p%f
-        endif
+        if (i == 5) call save_state(step)
     end do
+    call save_state(step)
 
-    ! Now load state 1 and perform again one timestep
-    call load_state(1)
-    call advance_solution(comp_grid, step, dt)
-    !call print_solver_status(stdout, step, time, dt)
-    call save_state(3)
+    ! Now load state 5 and perform again 4 timestep
+    step = 5
+    call load_state(step)
+    do i = 6, 10
+        step = step + 1
+        time = time + dt
+        call advance_solution(comp_grid, step, dt)
+    end do
+    call save_state(step*2)
 
     ! Clean memory
     call destroy_solver()

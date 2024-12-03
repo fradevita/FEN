@@ -3,14 +3,25 @@
 echo "Running IO restart test case ..."
 mkdir -p .fmod .fobj data
 
-make SOURCE=main.f90 > compilation_log 2> compilation_warnings
+CPPDEFS+=-DDIM=3 make SOURCE=test_NS.f90 > compilation_log 2> compilation_warnings
 mpirun -n 1 ./run.e > run_log 2> run_warnings
-diff data/state_0000002.raw data/state_0000003.raw > diff_out
+diff data/state_0000010.raw data/state_0000020.raw > diff_out
 NL=$(wc diff_out | awk '{print $1}')
 if [[ $NL -gt 0 ]]
 then
-    echo "        An error occured in the IO restart test."
+    echo "        An error occured in the IO NS restart test."
 else
-    echo "        IO restart test completed."
+    echo "        IO NS restart test completed."
 fi
 
+bash clean.sh > /dev/null
+CPPDEFS+=-DMF make SOURCE=test_MF.f90 > compilation_log 2> compilation_warnings
+mpirun -n 1 ./run.e > run_log 2> run_warnings
+diff data/state_0000010.raw data/state_0000020.raw > diff_out
+NL=$(wc diff_out | awk '{print $1}')
+if [[ $NL -gt 0 ]]
+then
+    echo "        An error occured in the IO MF restart test."
+else
+    echo "        IO MF restart test completed."
+fi
