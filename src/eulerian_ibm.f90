@@ -698,9 +698,10 @@ contains
                     im = i - 1
                     pB%f(i,j,k) = p%f(i,j,k)
                     D%x%x%f(i,j,k) = (v%x%f(i,j,k) - v%x%f(im,j,k))*idelta
-                    D%x%y%f(i,j,k) = 0.5_dp*(0.25_dp*(v%x%f(i,jp,k) + v%x%f(im,jp,k) -     &
-                        v%x%f(i,jm,k) - v%x%f(im,jm,k))*idelta + 0.25_dp*(v%y%f(ip,j,k) + &
-                        v%y%f(ip,jm,k) - v%y%f(im,j,k) - v%y%f(im,jm,k))*idelta)
+                    D%x%y%f(i,j,k) = 0.5_dp*(0.25_dp*(v%x%f(i,jp,k) + v%x%f(im,jp,k) -         &
+                                                      v%x%f(i,jm,k) - v%x%f(im,jm,k))*idelta + &
+                                             0.25_dp*(v%y%f(ip,j,k) + v%y%f(ip,jm,k) -         &
+                                                      v%y%f(im,j,k) - v%y%f(im,jm,k))*idelta)
                     D%y%y%f(i,j,k) = (v%y%f(i,j,k) - v%y%f(i,jm,k))*idelta
                 end do
             end do

@@ -39,8 +39,9 @@ contains
             do b = 1,size(eulerian_solid_list)
                 if (eulerian_solid_list(b)%pS%fsi) then
                     ! Evalute hydrodynamic loads on solid object b
-                    call compute_hydrodynamic_loads(eulerian_solid_list(b)%pS, v, p, mu, rho, g, Fe, density)
-
+                    call compute_hydrodynamic_loads(eulerian_solid_list(b)%pS, v, p, mu, rho, g, &
+                                                            Fe, density)
+            
                     ! Advance solid object b
                     call eulerian_solid_list(b)%pS%advance(dt)
 

@@ -1,4 +1,4 @@
-program test_io_ns
+program test_io_mf
 
     use mpi
     use precision_mod       , only : dp
@@ -19,9 +19,10 @@ program test_io_ns
     real(dp), parameter :: wn = 2.0_dp*pi/lambda
 
     ! Variables
-    integer    :: Nx, Ny, Nz, step, i, j
-    real(dp)   :: Lx, Ly, Lz, time, dt, origin(3)
-    type(grid) :: comp_grid
+    integer          :: Nx, Ny, Nz, step, i, j
+    real(dp)         :: Lx, Ly, Lz, time, dt, origin(3)
+    type(grid)       :: comp_grid
+    character(len=1) :: case
 
     ! Init MPI
     call mpi_init(ierror)
@@ -51,37 +52,40 @@ program test_io_ns
     call init_solver(comp_grid)
     step = 0
     time = 0.0_dp
-
     call set_timestep(comp_grid, dt, 1.0_dp)
 
-    ! Perform 10 timestep
-    do i = 1,10
-        step = step + 1
-        time = time + dt
-        call advance_solution(comp_grid, step, dt)
+    call get_command_argument(1, case)
+    select case(case)
+    case('1')
+        ! Perform 10 timestep
+        do i = 1,10
+            step = step + 1
+            time = time + dt
+            call advance_solution(comp_grid, step, dt)
 
-        ! Save simulation state
-        if (i == 5) call save_state(step)
-    end do
-    call save_state(step)
+            ! Save simulation state
+            if (i == 5) call save_state(step)
+        end do
+        call save_state(step)
+    case('2')
+        ! Now load state 5 and perform again 4 timestep
+        step = 5
+        call load_state(step)
 
-    ! Now load state 5 and perform again 4 timestep
-    step = 5
-    call load_state(step)
+        ! Set appropriate vof advection order to make comparison
+        if (x_first .eqv. .false.) then
+            x_first = .true.
+        else
+            x_first = .false.
+        endif
 
-    ! Set appropriate vof advection order to make comparison
-    if (x_first .eqv. .false.) then
-        x_first = .true.
-    else
-        x_first = .false.
-    endif
-
-    do i = 6, 10
-        step = step + 1
-        time = time + dt
-        call advance_solution(comp_grid, step, dt)
-    end do
-    call save_state(step*2)
+        do i = 6, 10
+            step = step + 1
+            time = time + dt
+            call advance_solution(comp_grid, step, dt)
+        end do
+        call save_state(step*2)
+    end select
 
     ! Clean memory
     call destroy_solver()
@@ -110,4 +114,4 @@ contains
     end function
     !===============================================================================================
 
-end program test_io_ns
+end program test_io_mf

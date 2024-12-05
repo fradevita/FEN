@@ -161,12 +161,15 @@ contains
 
         ! This subroutine save the fields of the simulation at timestep step for restart purpose
         use mpi
-        use decomp_2d_io       , only : decomp_2d_write_var
+        use decomp_2d_io       , only : decomp_2d_write_var, decomp_2d_write_scalar
         use navier_stokes_mod  , only : v, dv_o, p
 #ifdef MF
         use navier_stokes_mod  , only : rho, mu
         use volume_of_fluid_mod, only : vof
         use multiphase_mod     , only : p_o
+#endif
+#ifdef FSI
+        use ibm_mod            , only : eulerian_solid_list
 #endif
 
         ! In/Out variables
@@ -183,12 +186,12 @@ contains
 
         write(sn,'(I0.7)') step
         filename = 'data/state_'//sn//'.raw'
-        call MPI_FILE_OPEN(MPI_COMM_WORLD, filename, MPI_MODE_CREATE+MPI_MODE_WRONLY, &
+        call mpi_file_open(MPI_COMM_WORLD, filename, MPI_MODE_CREATE+MPI_MODE_WRONLY, &
                                 MPI_INFO_NULL, fh, ierror)
         filesize = 0_MPI_OFFSET_KIND
-        call MPI_FILE_SET_SIZE(fh, filesize, ierror)  ! guarantee overwriting
+        call mpi_file_set_size(fh, filesize, ierror)  ! guarantee overwriting
         disp = 0_MPI_OFFSET_KIND
-        
+
         call decomp_2d_write_var(fh, disp, 1,      p%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call decomp_2d_write_var(fh, disp, 1,    v%x%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call decomp_2d_write_var(fh, disp, 1,    v%y%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
@@ -204,9 +207,37 @@ contains
         call decomp_2d_write_var(fh, disp, 1,     mu%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call decomp_2d_write_var(fh, disp, 1,    p_o%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
 #endif
-        call MPI_FILE_CLOSE(fh,ierror)
 
-    end subroutine
+#ifdef FSI
+        block
+            integer :: b, j, dof, nl
+            if (allocated(eulerian_solid_list)) then
+                dof = size(eulerian_solid_list(1)%pS%center_of_mass%x)
+                do b = 1,size(eulerian_solid_list)
+                    call decomp_2d_write_scalar(fh, disp, dof, & 
+                                                    eulerian_solid_list(b)%pS%center_of_mass%x)
+                    call decomp_2d_write_scalar(fh, disp, dof, &
+                                                    eulerian_solid_list(b)%pS%center_of_mass%v)
+                    call decomp_2d_write_scalar(fh, disp, dof, &
+                                                    eulerian_solid_list(b)%pS%center_of_mass%a)
+                    if (eulerian_solid_list(b)%pS%use_probes) then
+                        nl = size(eulerian_solid_list(b)%pS%surface_points(1,:))
+                        call decomp_2d_write_scalar(fh, disp, 1, [nl*1.0_dp])
+                        call decomp_2d_write_scalar(fh, disp, nl, & 
+                                                    eulerian_solid_list(b)%pS%surface_points(1,:))
+                        call decomp_2d_write_scalar(fh, disp, nl, &
+                                                    eulerian_solid_list(b)%pS%surface_points(2,:))
+                        call decomp_2d_write_scalar(fh, disp, nl, &
+                                                    eulerian_solid_list(b)%pS%surface_points(3,:))
+                    endif
+                end do
+            endif
+        end block
+#endif
+
+        call mpi_file_close(fh,ierror)
+
+    end subroutine save_state
     !===============================================================================================
 
     !===============================================================================================
@@ -214,12 +245,16 @@ contains
 
         ! This subroutine save the fields of the simulation at timestep step for restart purpose
         use mpi
-        use decomp_2d_io, only : decomp_2d_read_var
-        use navier_stokes_mod, only : v, dv_o, p
+        use decomp_2d_io       , only : decomp_2d_read_var, decomp_2d_read_scalar
+        use navier_stokes_mod  , only : v, dv_o, p
 #ifdef MF
         use navier_stokes_mod  , only : rho, mu
         use volume_of_fluid_mod, only : vof
         use multiphase_mod     , only : p_o
+#endif
+#ifdef FSI
+        use eulerian_ibm_mod   , only : tag_cells
+        use ibm_mod            , only : eulerian_solid_list
 #endif
 
         ! In/Out variables
@@ -230,15 +265,15 @@ contains
         integer(kind=MPI_OFFSET_KIND) :: filesize, disp
         character(len=7 )             :: sn
         character(len=22)             :: filename
-        
+
         lo = p%G%lo
         hi = p%G%hi
 
         write(sn,'(I0.7)') step
         filename = 'data/state_'//sn//'.raw'
-        call MPI_FILE_OPEN(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierror)
+        call mpi_file_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, MPI_INFO_NULL, fh, ierror)
         disp = 0_MPI_OFFSET_KIND
-        
+
         call decomp_2d_read_var(fh, disp, 1,      p%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call decomp_2d_read_var(fh, disp, 1,    v%x%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call decomp_2d_read_var(fh, disp, 1,    v%y%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
@@ -257,10 +292,39 @@ contains
         call decomp_2d_read_var(fh, disp, 1,    p_o%f(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3)))
         call vof%update_ghost_nodes()
         call rho%update_ghost_nodes()
-        call mu%update_ghost_nodes()
+        call  mu%update_ghost_nodes()
         call p_o%update_ghost_nodes()
 #endif
-        call MPI_FILE_CLOSE(fh,ierror)
+#ifdef FSI
+        block
+            integer  :: b, j, dof, nl
+            real(dp) :: nlr(1)
+            if (allocated(eulerian_solid_list)) then
+                dof = size(eulerian_solid_list(1)%pS%center_of_mass%x)
+                do b = 1,size(eulerian_solid_list)
+                    call decomp_2d_read_scalar(fh, disp, dof, & 
+                                                    eulerian_solid_list(b)%pS%center_of_mass%x)
+                    call decomp_2d_read_scalar(fh, disp, dof, &
+                                                    eulerian_solid_list(b)%pS%center_of_mass%v)
+                    call decomp_2d_read_scalar(fh, disp, dof, &
+                                                    eulerian_solid_list(b)%pS%center_of_mass%a)
+                    if (eulerian_solid_list(b)%pS%use_probes) then
+                        call decomp_2d_read_scalar(fh, disp, 1, nlr)
+                        nl = int(nlr(1))
+                        allocate(eulerian_solid_list(b)%pS%surface_points(3,nl))
+                        call decomp_2d_read_scalar(fh, disp, nl, & 
+                                                    eulerian_solid_list(b)%pS%surface_points(1,:))
+                        call decomp_2d_read_scalar(fh, disp, nl, &
+                                                    eulerian_solid_list(b)%pS%surface_points(2,:))
+                        call decomp_2d_read_scalar(fh, disp, nl, &
+                                                    eulerian_solid_list(b)%pS%surface_points(3,:))
+                    endif
+                end do
+            endif
+        end block
+        call tag_cells(eulerian_Solid_list)
+#endif
+        call mpi_file_close(fh,ierror)
 
     end subroutine load_state
     !===============================================================================================

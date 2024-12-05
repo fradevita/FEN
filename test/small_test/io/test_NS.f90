@@ -11,9 +11,10 @@ program test_io_ns
 
     implicit none
 
-    integer    :: Nx, Ny, Nz, step, i, j, k
-    real(dp)   :: Lx, Ly, Lz, time, dt
-    type(grid) :: comp_grid
+    integer          :: Nx, Ny, Nz, step, i, j, k
+    real(dp)         :: Lx, Ly, Lz, time, dt
+    type(grid)       :: comp_grid
+    character(len=1) :: case
     
     ! init MPI
     call mpi_init(ierror)
@@ -31,33 +32,36 @@ program test_io_ns
     ! Initialize the solver
     call init_solver(comp_grid)
     step = 0
-    time = 0.0_dp
-
+ 
     ! Set initial fields
     call init_fields
-
     call set_timestep(comp_grid, dt, 2.0_dp)
 
-    ! Perform 10 timestep
-    do i = 1,10
-        step = step + 1
-        time = time + dt
-        call advance_solution(comp_grid, step, dt)
+    ! Read command line argument
+    call get_command_argument(1, case)
 
-        ! Save simulation state
-        if (i == 5) call save_state(step)
-    end do
-    call save_state(step)
-
-    ! Now load state 5 and perform again 4 timestep
-    step = 5
-    call load_state(step)
-    do i = 6, 10
-        step = step + 1
-        time = time + dt
-        call advance_solution(comp_grid, step, dt)
-    end do
-    call save_state(step*2)
+    select case(case)
+    case('1')        
+        ! Perform 10 timestep
+        do i = 1,10
+            step = step + 1
+            call advance_solution(comp_grid, step, dt)
+            
+            ! Save simulation state after 5 steps
+            if (i == 5) call save_state(step)
+        end do
+        call save_state(step)
+    case('2')
+        ! Load state 5 and perform again 5 timestep
+        step = 5
+        call load_state(step)
+        do i = 6, 10
+            step = step + 1
+            time = time + dt
+            call advance_solution(comp_grid, step, dt)
+        end do
+        call save_state(step*2)
+    end select
 
     ! Clean memory
     call destroy_solver()
