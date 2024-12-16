@@ -12,7 +12,7 @@ module fields_mod
     ! Define wrappers for procedures
     interface gradient
         module procedure gradient_of_scalar
-        !module procedure gradient_of_vector
+        module procedure gradient_of_vector
     end interface gradient
     
     interface divergence
@@ -95,15 +95,16 @@ contains
                 do i = v%G%lo(1),v%G%hi(1)
                     ip = i + 1
                     im = i - 1
-                    grad_v%x%x%f(i,j,k) = (v%x%f(i,j,k) - v%x%f(im,j,k))*idelta
-                    grad_v%x%y%f(i,j,k) = 0.125_dp*(v%x%f(i ,jp,k) - v%x%f(i ,jm,k) + &
-                                                    v%x%f(im,jp,k) - v%x%f(im,jm,k) + &
-                                                    v%y%f(ip,j ,k) - v%y%f(im,j ,k) + &
-                                                    v%y%f(ip,jm,k) - v%y%f(im,jm,k))*idelta
-                    grad_v%y%x%f(i,j,k) = grad_v%x%y%f(i,j,k)
-                    grad_v%y%y%f(i,j,k) = (v%y%f(i,j,k) - v%y%f(i,jm,k))*idelta             
+                    grad_v%x%x%f(i,j,k) = (v%x%f( i, j, k) - v%x%f(im, j, k))*idelta
+                    grad_v%x%y%f(i,j,k) = (v%x%f( i,jp, k) - v%x%f( i, j, k))*idelta
+                    grad_v%y%x%f(i,j,k) = (v%y%f(ip, j, k) - v%y%f( i, j, k))*idelta
+                    grad_v%y%y%f(i,j,k) = (v%y%f( i, j, k) - v%y%f( i,jm, k))*idelta             
 #if DIM == 3
-
+                    grad_v%x%z%f(i,j,k) = (v%x%f( i, j,kp) - v%x%f( i, j, k))*idelta
+                    grad_v%y%z%f(i,j,k) = (v%y%f(i , j,kp) - v%y%f( i, j, k))*idelta
+                    grad_v%z%x%f(i,j,k) = (v%z%f(ip, j, k) - v%z%f( i, j, k))*idelta
+                    grad_v%z%y%f(i,j,k) = (v%z%f( i,jp, k) - v%z%f( i, j, k))*idelta
+                    grad_v%z%z%f(i,j,k) = (v%z%f( i, j, k) - v%z%f( i, j,km))*idelta
 #endif
                 end do
             end do
@@ -111,7 +112,7 @@ contains
 
         ! Update boundary conditions
         if(grad_v%gl > 0) call grad_v%update_ghost_nodes()
-        
+
     end subroutine gradient_of_vector
     !===============================================================================================
 
@@ -283,7 +284,8 @@ contains
                     lap_s%f(i,j,k) = ((s%f(ip,j,k) - 2.0_dp*s%f(i,j,k) + s%f(im,j,k)) + &
                                       (s%f(i,jp,k) - 2.0_dp*s%f(i,j,k) + s%f(i,jm,k)))*idelta2
 #if DIM==3
-                    lap_s%f(i,j,k) = lap_s%f(i,j,k) + (s%f(i,j,kp) - 2.0_dp*s%f(i,j,k) + s%f(i,j,km))*idelta2
+                    lap_s%f(i,j,k) = lap_s%f(i,j,k) + &
+                                            (s%f(i,j,kp) - 2.0_dp*s%f(i,j,k) + s%f(i,j,km))*idelta2
 #endif
                 end do
             end do

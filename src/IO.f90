@@ -8,16 +8,26 @@ module IO_mod
 
 contains
 
-    !==============================================================================================
+    !===============================================================================================
     subroutine print_error_message(message)
         !< Subroutine to print an errore message on stderr
-        
-        ! In/Out variables
-        character(len=*), intent(in)           :: message !< Input message
 
+#ifdef MPI
+        use global_mod, only : myrank
+#endif
+
+        ! In/Out variables
+        character(len=*), intent(in) :: message !< Input message
+
+#ifdef MPI
+        if (myrank == 0) then
+#endif
         write(stderr, '(A)') message
+#ifdef MPI
+        endif
+#endif
 
     end subroutine print_error_message
-    !==============================================================================================
+    !===============================================================================================
 
 end module

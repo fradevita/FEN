@@ -1,7 +1,7 @@
 module tensor_mod
 
     ! This module contains the tensor type definition and procedures.
-    ! Thetensor type is a type with three vectors.
+    ! The tensor type is a type with three vectors.
 
     use precision_mod, only : dp
     use vector_mod
@@ -14,7 +14,7 @@ module tensor_mod
         type(vector)          :: x              !< x vector component
         type(vector)          :: y              !< y vector component
         type(vector)          :: z              !< z vector component
-        integer               :: gl             !< ghost node levels
+        integer               :: gl = 0         !< ghost level
         character(len=99)     :: name = 'unset' !< tensor name
     contains
         procedure, pass(self) :: allocate
@@ -25,7 +25,7 @@ module tensor_mod
 
 contains
 
-    !========================================================================================
+    !===============================================================================================
     subroutine allocate(self, G, l)
 
         ! In/Out variables
@@ -36,7 +36,7 @@ contains
         ! By default the field has zero ghost nodes, if l is present set the number of
         ! ghost nodes per side equal to l
         if (present(l)) then
-            self%gl = l
+                self%gl = l
             self%x%x%gl = l
             self%x%y%gl = l
             self%x%z%gl = l
@@ -50,16 +50,24 @@ contains
 
         self%G => G
 
-        call self%x%allocate(G, self%gl)
-        call self%y%allocate(G, self%gl)
-#if DIM == 3
-        call self%z%allocate(G, self%gl)
+        if (present(l)) then
+            call self%x%allocate(G, l)
+            call self%y%allocate(G, l)
+#if DIM==3
+            call self%z%allocate(G, l)
 #endif
-
+        else
+            call self%x%allocate(G)
+            call self%y%allocate(G)
+#if DIM == 3
+            call self%z%allocate(G)
+#endif
+        endif
+       
     end subroutine allocate
-    !========================================================================================
+    !===============================================================================================
 
-    !========================================================================================
+    !===============================================================================================
     subroutine update_ghost_nodes(self)
 
         ! In/Out variables
@@ -72,9 +80,9 @@ contains
 #endif
 
     end subroutine 
-    !========================================================================================
+    !===============================================================================================
 
-    !========================================================================================
+    !===============================================================================================
     subroutine symmetric(self)
 
         ! Replace T with its symmetric tensor
@@ -105,9 +113,9 @@ contains
         if (self%gl > 0) call self%update_ghost_nodes()
     
     end subroutine symmetric
-    !========================================================================================
+    !===============================================================================================
     
-    !========================================================================================
+    !===============================================================================================
     subroutine destroy(self)
 
         class(tensor), intent(inout) :: self
@@ -120,6 +128,6 @@ contains
 #endif
 
     end subroutine destroy
-    !========================================================================================
+    !===============================================================================================
 
 end module

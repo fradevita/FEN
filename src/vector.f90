@@ -27,12 +27,10 @@ module vector_mod
 
 contains
 
-    !========================================================================================
+    !===============================================================================================
     subroutine allocate(self, G, l)
 
-        ! Procedure to allocate memory for the vector v,
-        ! l is the number of ghost node per side.
-
+        ! Procedure to allocate memory for the vector v, l is the number of ghost node per side.
 
         ! In/Out variables
         class(vector), intent(inout)           :: self
@@ -63,7 +61,7 @@ contains
         self%z%c = 'z'
 #endif
     end subroutine allocate
-    !==============================================================================================
+    !===============================================================================================
 
     !===============================================================================================
     subroutine setToValue(self, val)
@@ -80,24 +78,38 @@ contains
     end subroutine
     !=============================================================================================== 
 
-    !==============================================================================================
+    !===============================================================================================
      subroutine update_ghost_nodes(self)
+
+        use IO_mod
 
         ! Apply boundary condition on scalar components of the vector.
        
         ! In/Out variables
         class(vector), intent(inout) :: self !< input vector field
 
-        call self%x%update_ghost_nodes()
-        call self%y%update_ghost_nodes()
+        if (self%x%gl > 0) then
+            call self%x%update_ghost_nodes()
+        else
+            call print_error_message("Cannot update ghost nodes on scalar "//self%name//"_x.")
+        endif
+        if (self%y%gl > 0) then
+            call self%y%update_ghost_nodes()
+        else
+            call print_error_message("Cannot update ghost nodes on scalar "//self%name//"_y.")
+        endif
 #if DIM==3
-        call self%z%update_ghost_nodes()
+        if (self%z%gl > 0) then
+            call self%z%update_ghost_nodes()
+        else
+            call print_error_message("Cannot update ghost nodes on scalar "//self%name//"_z.")
+        endif
 #endif
 
     end subroutine
-    !==============================================================================================
+    !===============================================================================================
     
-    !==============================================================================================
+    !===============================================================================================
     subroutine destroy(self)
 
         ! Free all memory allocated by vector field v.
@@ -114,6 +126,6 @@ contains
         self%G => Null()
 
     end subroutine destroy
-    !==============================================================================================
+    !===============================================================================================
 
 end module

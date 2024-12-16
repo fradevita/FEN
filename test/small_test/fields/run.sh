@@ -29,6 +29,6 @@ then
 else
     echo "        method test completed."
 fi
-
+python3 convergence_rate.py
 echo 'Field test cases completed.'
 
