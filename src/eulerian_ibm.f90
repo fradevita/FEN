@@ -606,12 +606,12 @@ contains
         else
             ! TODO: for now single phase only, use density
             solid%center_of_mass%Fh(1) = -Fe%x%integral()*density + &
-                                            solid%volume()*solid%center_of_mass%A(1)*density
+                                            solid%volume()*solid%center_of_mass%A(1)
             solid%center_of_mass%Fh(2) = -Fe%y%integral()*density + &
-                                            solid%volume()*solid%center_of_mass%A(2)*density
+                                            solid%volume()*solid%center_of_mass%A(2)
 #if DIM==3
             solid%center_of_mass%Fh(3) = -Fe%z%integral()*density + &
-                                            solid%volume()*solid%center_of_mass%A(3)*density
+                                            solid%volume()*solid%center_of_mass%A(3)
 #else
             solid%center_of_mass%Fh(3) = 0.0_dp
 #endif
