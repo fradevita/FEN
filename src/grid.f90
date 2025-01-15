@@ -220,9 +220,10 @@ contains
 
         ie(1) = minloc(abs(self%x(1:self%Nx) + stagger(1, ind)*self%delta - xl(1)),1)
         ie(2) = minloc(abs(self%y(1:self%Ny) + stagger(2, ind)*self%delta - xl(2)),1)
-        ie(3) = 1
 #if DIM==3
         ie(3) = minloc(abs(self%z(1:self%Nz) + stagger(3, ind)*self%delta - xl(3)),1)
+#else
+        ie(3) = 1
 #endif
 
     end function closest_grid_node
