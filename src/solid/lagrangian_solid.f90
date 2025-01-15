@@ -147,7 +147,7 @@ contains
             forces = self%center_of_mass%Fh + self%center_of_mass%Fs + bf
 
             ! Find new values
-            Vnp1 = self%center_of_mass%V + dt*forces/self%IM
+            Vnp1 = self%center_of_mass%V + dt*0.5_dp*(forces/self%IM + self%center_of_mass%A)
             Xnp1 = self%center_of_mass%X + dt*0.5_dp*(Vnp1 + self%center_of_mass%V)
 
             ! Save traslation and rotation
