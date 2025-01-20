@@ -17,7 +17,7 @@ module solid_mod
         real(dp)              :: density = 1.0_dp !< density of the solid
         real(dp)              :: vol = 1.0_dp     !< volume
         real(dp)              :: mass = 1.0_dp    !< mass
-        real(dp), allocatable :: IM(:)         !< intertial mass vector
+        real(dp), allocatable :: IM(:)            !< intertial mass vector
         type(marker)          :: center_of_mass   !< center of mass of the solid
         integer               :: file_id = -1     !< index of the output file
         character(len=99)     :: name = 'unset'   !< solid name

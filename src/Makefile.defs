@@ -165,7 +165,7 @@ function.o: $(SRC)/function.f90 precision.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for IO module
-IO.o: $(SRC)/IO.f90
+IO.o: $(SRC)/IO.f90 global.o
 	$(FC) $(FLAGS) -c $< -o $(ODIR)/$@
 
 # Rule for precision module

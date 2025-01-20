@@ -40,8 +40,9 @@ contains
 
         ! This function interpolate the value of the scalar field f defined on 
         ! the eulerian grid in the point xl on the lagrangian grid.
-
+#ifdef MPI
         use mpi
+#endif
         use scalar_mod
     
         ! In/Out variables
@@ -128,11 +129,11 @@ contains
             fl = 0.0_dp
 
         end if rank_with_point
-
+#ifdef MPI
         ! Comunicate the interpolated value
         call mpi_allreduce(mpi_in_place, fl, m, mpi_real8, mpi_sum, &
                             mpi_comm_world, ierror)
-        
+#endif
     end function interpolate
     !===============================================================================================
 
