@@ -292,6 +292,15 @@ contains
         end if
 
         ! Get local forces from stresses
+        obj%p_s = pl
+        obj%tau_s(1,:) = tau11
+        obj%tau_s(2,:) = tau12
+        obj%tau_s(3,:) = tau22
+#if DIM==3
+        obj%tau_s(1,:) = tau13
+        obj%tau_s(2,:) = tau23
+        obj%tau_s(3,:) = tau33
+#endif
         Xcm = obj%center_of_mass%X(1:tdof)
         do l = 1,Nfe
             forcElem => obj%forcing_elements(l)

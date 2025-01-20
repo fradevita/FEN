@@ -311,6 +311,8 @@ contains
             self%forcing_elements(t)%A => self%triangles(t)%A
             self%forcing_elements(t)%n => self%triangles(t)%n
         end do
+        allocate(self%p_s(self%numberOfTriangles))
+        allocate(self%tau_s(6,self%numberOfTriangles))
 #endif
 
     end subroutine
@@ -1618,6 +1620,17 @@ contains
         write(file_id,'(A15)') 'VECTORS V float'
         do i = 1,self%numberOfTriangles
             write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%triangles(i)%C%V(1:3)
+        end do
+        write(file_id,'(A15)') 'SCALARS P float'
+        write(file_id,'(A20)') 'LOOKUP_TABLE default'
+        do i = 1,self%numberOfTriangles
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%p_s(i)
+        end do
+        write(file_id,'(A17)') 'TENSORS TAU float'
+        do i = 1,self%numberOfTriangles
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%tau_s(1,i), self%tau_s(2,i), self%tau_s(4,i)
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%tau_s(2,i), self%tau_s(3,i), self%tau_s(5,i)
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%tau_s(4,i), self%tau_s(5,i), self%tau_s(6,i)
         end do
         
         close(file_id)

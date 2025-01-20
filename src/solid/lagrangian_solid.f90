@@ -31,6 +31,8 @@ module lagrangian_solid_mod
         real(dp)                           :: traslation(tdof)     ! center of mass traslation
         real(dp)                           :: rotation(rdof)       ! center of mass rotation
         real(dp), pointer                  :: rotation_center(:)   ! Rotation center coordinates
+        real(dp), allocatable              :: p_s(:)               ! Surface pressure
+        real(dp), allocatable              :: tau_s(:,:)           ! Surface shear stress
         real(dp)                           :: gamma = 0.0_dp
         logical                            :: is_open = .false.
         logical                            :: is_deformable = .false.
