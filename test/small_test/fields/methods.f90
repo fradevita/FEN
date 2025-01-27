@@ -20,9 +20,9 @@ program methods
     ! Variables
     integer         :: r, N, i, j, k, prow = 1, pcol = 8, out_id
     real(dp)        :: L_inf_x, L_inf_y, L_inf_z, L_inf_2
-    real(dp)        :: L_2_x, L_2_y, L_2_z, L_2_2
+    real(dp)        :: L_2_x, L_2_y, L_2_z, L_2_2, dsmax
     type(grid  )    :: G
-    type(scalar)    :: s
+    type(scalar)    :: s, s_check, ds
     type(vector)    :: error
 
 #ifdef MPI
@@ -95,6 +95,24 @@ program methods
         if (myrank == 0) then
             write(out_id,'(I03,",",*(E16.8,:,","))') N, L_inf_x, L_inf_y, L_inf_z, L_2_x, L_2_y, &
                                                      L_2_z, L_inf_2, L_2_2
+        endif
+
+        ! For one case test also read/write methods
+        if (r == 6) then
+            call s%write('s.raw')
+            call s_check%allocate(G, 1)
+            call s_check%read('s.raw')
+            call s_check%write('s_check.raw')
+            call ds%allocate(G)
+            ds%f = abs(      s%f(G%lo(1):G%hi(1),G%lo(2):G%hi(2),G%lo(3):G%hi(3)) - &
+                       s_check%f(G%lo(1):G%hi(1),G%lo(2):G%hi(2),G%lo(3):G%hi(3)))
+            dsmax = ds%max_value()
+#ifdef MPI
+            call mpi_allreduce(mpi_in_place, dsmax, 1, mpi_real8, mpi_max, mpi_comm_world, ierror)
+#endif
+            if (myrank == 0) then 
+                if (dsmax > 0.0_dp) call print_error_message('dsmax greater than zero.')
+            endif
         endif
 
         ! Free memory

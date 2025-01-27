@@ -52,6 +52,7 @@ module scalar_mod
         procedure, pass(self) :: update_ghost_nodes !< fill ghost nodes
         procedure, pass(self) :: max_value          !< compute maximum scalar value
         procedure, pass(self) :: integral           !< compute scalar integral
+        procedure, pass(self) :: read               !< read scalar from file
         procedure, pass(self) :: write              !< write scalar to file
         procedure, pass(self) :: destroy            !< free the memory allocated by the scalar
     end type scalar
@@ -393,6 +394,34 @@ contains
 #endif
 
     end subroutine
+    !==============================================================================================
+
+    !==============================================================================================
+    subroutine read(self, filename)
+
+        use decomp_2d_io, only : decomp_2d_read_one
+
+        class(scalar)   , intent(inout) :: self     !< scalar field to read
+        character(len=*), intent(in)    :: filename !< input file
+
+        integer :: unit_id, reclen
+#ifdef MPI
+        call decomp_2d_read_one(1, self%f(self%G%lo(1):self%G%hi(1), &
+                                          self%G%lo(2):self%G%hi(2), &
+                                          self%G%lo(3):self%G%hi(3)), filename)
+#else
+        inquire(iolength=reclen) self%f(self%G%lo(1):self%G%hi(1), &
+                                        self%G%lo(2):self%G%hi(2), &
+                                        self%G%lo(2):self%G%hi(3))
+        open(newunit = unit_id, file = filename, form='unformatted', status='unknown', &
+                access='direct', action='read', recl=reclen)
+        read (unit_id, rec=1) self%f(self%G%lo(1):self%G%hi(1), &
+                                     self%G%lo(2):self%G%hi(2), &
+                                     self%G%lo(2):self%G%hi(3))
+        close(unit_id)
+#endif
+
+    end subroutine read
     !==============================================================================================
 
     !==============================================================================================
