@@ -1588,12 +1588,15 @@ contains
     !===============================================================================================
     subroutine writeVTK(self, filename)
 
+        use euclidean_mod, only : dotProduct
+
         ! In/out varibales
         class(lagrangian_solid_2D)    , intent(in), target :: self
         character(len=*), intent(in)         :: filename
 
         ! Local variables
         integer                 :: i, file_id
+        real(dp)                :: traction(3), WSS(3)
         type(triangle), pointer :: t
 
         open(newunit = file_id, file = filename)
@@ -1632,6 +1635,21 @@ contains
             write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%tau_s(2,i), self%tau_s(3,i), self%tau_s(5,i)
             write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') self%tau_s(4,i), self%tau_s(5,i), self%tau_s(6,i)
         end do
+        write(file_id,'(A17)') 'VECTORS WSS float'
+        do i = 1,self%numberOfTriangles
+            traction(1) = self%tau_s(1,i)*self%triangles(i)%n(1) + &
+                          self%tau_s(2,i)*self%triangles(i)%n(2) + &
+                          self%tau_s(4,i)*self%triangles(i)%n(3)
+            traction(2) = self%tau_s(2,i)*self%triangles(i)%n(1) + &
+                          self%tau_s(3,i)*self%triangles(i)%n(2) + &
+                          self%tau_s(5,i)*self%triangles(i)%n(3)
+            traction(3) = self%tau_s(4,i)*self%triangles(i)%n(1) + &
+                          self%tau_s(5,i)*self%triangles(i)%n(2) + &
+                          self%tau_s(6,i)*self%triangles(i)%n(3)
+            WSS = traction - dotProduct(traction,self%triangles(i)%n)*self%triangles(i)%n
+            write(file_id,'(E16.8,1x,E16.8,1x,E16.8)') WSS
+        end do
+        
         
         close(file_id)
 
