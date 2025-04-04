@@ -179,6 +179,8 @@ contains
             self%forcing_elements(n)%A => self%edges(n)%l
             self%forcing_elements(n)%n => self%edges(n)%n
         end do
+        allocate(self%p_s(self%number_of_edges))
+        allocate(self%tau_s(6,self%number_of_edges))
 #endif
 
         if (present(name)) self%name = name
@@ -484,6 +486,9 @@ contains
         deallocate(self%mass_point_edges_index)
         deallocate(self%edge_mass_points_index)
         call self%center_of_mass%destroy
+#ifdef IBM
+        deallocate(self%forcing_elements)
+#endif
 
     end subroutine destroy
     !===============================================================================================

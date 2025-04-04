@@ -106,7 +106,7 @@ contains
         use global_mod
 
         ! In/Out variables
-        integer, intent(in) :: step        
+        integer, intent(in) :: step
 
         ! Local variables
         integer               :: i, j, k, b, nb

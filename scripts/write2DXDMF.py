@@ -41,17 +41,17 @@ for n in range(nf):
     f.write('''
     <!-- time step -->
     <Grid Name="Box %d" GridType="Uniform"> # 
-    <Topology TopologyType="2DCORECTMesh" Dimensions="%d %d"/>
-    <Geometry GeometryType="ORIGIN_DXDY">
-      <DataItem Name="Origin" Dimensions="2" NumberType="Float" Precision="4" Format="XML">
-        0 0
+    <Topology TopologyType="2DCORECTMesh" Dimensions="1 %d %d"/>
+    <Geometry GeometryType="ORIGIN_DXDYDZ">
+      <DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">
+        0.0 0.0 0.0
       </DataItem>
-      <DataItem Name="Spacing" Dimensions="2" NumberType="Float" Precision="4" Format="XML">
-	%f %f
+      <DataItem Name="Spacing" Dimensions="3" NumberType="Float" Precision="4" Format="XML">
+	%f %f %f
       </DataItem>
     </Geometry>
     <Time Value="%d" />
-    '''%(n, Ny+1, Nx+1, dx, dy, n))
+    '''%(n, Ny+1, Nx+1, dx, dx, dy, n))
 
     # First velocity component
     f.write('''\n

@@ -17,7 +17,7 @@ x0 = grid["Grid"]["origin"]
 dx = Lx/Nx
 dy = Ly/Ny
 dz = Lz/Nz
-assert(dx == dy)
+assert(abs(dx-dy) < 1.0e-10)
 assert(abs(dx-dz) < 1.0e-10) 
 
 # Output XDMF file

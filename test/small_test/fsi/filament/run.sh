@@ -1,4 +1,4 @@
-echo "Running filament in fluid test case..."
+echo "    running filament in fluid test case..."
 
 python3 mesh.py
 
