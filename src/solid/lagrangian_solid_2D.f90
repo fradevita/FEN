@@ -17,6 +17,8 @@ module lagrangian_solid_2D_mod
         
         real(dp)                    :: A0 = 1.0_dp
         real(dp)                    :: V0 = 1.0_dp
+        real(dp)                    :: kA = 0.0_dp
+        real(dp)                    :: kV = 0.0_dp
 
         integer                     :: numberOfTriangles = 0
         real(dp)                    :: kb = 0.0_dp          
@@ -33,8 +35,8 @@ module lagrangian_solid_2D_mod
         logical                     :: evaluateStretching = .false.
         logical                     :: evaluateBending = .false.
         logical                     :: evaluateAreaConstraint = .false.
+        logical                     :: evaluateTotalAreaConstraint = .false.
         logical                     :: evaluateVolumeConstraint = .false.
-
         
         procedure(selfSub), pass(self), pointer :: computeAdditionalForces => Null()
         procedure(realFun), pass(self), pointer :: getAdditionalEnergy => Null()
@@ -48,6 +50,7 @@ module lagrangian_solid_2D_mod
         procedure, pass(self) :: setStretchingConstant
         procedure, pass(self) :: setBendingConstant
         procedure, pass(self) :: setAreaConstant
+        procedure, pass(self) :: setTotalAreaConstant
         procedure, pass(self) :: setVolumeConstant
         
         procedure, pass(self) :: update
@@ -56,14 +59,17 @@ module lagrangian_solid_2D_mod
         procedure, pass(self) :: compute_internal_forces
         
         procedure, pass(self) :: computeStretchingForces
-        
         procedure, pass(self) :: computeAreaForces
-        
+        procedure, pass(self) :: computeTotalAreaForces
+        procedure, pass(self) :: computeVolumeForces
+
         procedure, pass(self) :: getTotalArea
         procedure, pass(self) :: getTotalVolume
         procedure, pass(self) :: getKineticEnergy
         procedure, pass(self) :: getStretchingEnergy
         procedure, pass(self) :: getAreaEnergy
+        procedure, pass(self) :: getTotalAreaEnergy
+        procedure, pass(self) :: getVolumeEnergy
         procedure, pass(self) :: getPotentialEnergy
         procedure, pass(self) :: getBendingEnergyTheta2
         procedure, pass(self) :: getBendingEnergyCosTheta
@@ -533,6 +539,7 @@ contains
     !===============================================================================================
     subroutine setStretchingConstant(self, Ks, model)
 
+        ! In/Out variables
         class(lagrangian_solid_2D)    , intent(inout)           :: self
         real(dp)        , intent(in   )           :: ks
         character(len=*), intent(in   ), optional :: model
@@ -598,8 +605,9 @@ contains
     !===============================================================================================
     subroutine setAreaConstant(self, ka)
 
+        ! In/Out variables
         class(lagrangian_solid_2D), intent(inout) :: self
-        real(dp)    , intent(in   ) :: ka
+        real(dp)                  , intent(in   ) :: ka
 
         ! local variables
         integer :: n
@@ -613,16 +621,35 @@ contains
     !===============================================================================================
 
     !===============================================================================================
-    subroutine setVolumeConstant(self, kv)
+    subroutine setTotalAreaConstant(self, kA)
 
+        ! In/Out variables
         class(lagrangian_solid_2D), intent(inout) :: self
-        real(dp)    , intent(in   ) :: kv
+        real(dp)                  , intent(in   ) :: ka
 
         ! local variables
         integer :: n
 
         do n = 1,self%numberOfTriangles
-            self%triangles(n)%ka = kv
+            self%kA = kA
+        end do
+        self%evaluateTotalAreaConstraint = .true.
+
+    end subroutine
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine setVolumeConstant(self, kv)
+
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(inout) :: self
+        real(dp)                  , intent(in   ) :: kv
+
+        ! local variables
+        integer :: n
+
+        do n = 1,self%numberOfTriangles
+            self%kv = kv
         end do
         self%evaluateVolumeConstraint = .true.
 
@@ -685,6 +712,12 @@ contains
  
         ! Area-conservation forces
         if (self%evaluateAreaConstraint) call self%computeAreaForces()
+
+        ! Total Area-conservation forces
+        if (self%evaluateTotalAreaConstraint) call self%computeTotalAreaForces()
+
+        ! Volume-conservation forces
+        if (self%evaluateVolumeConstraint) call self%computeVolumeForces()
 
         ! Any other potentials
         if (associated(self%computeAdditionalForces)) call self%computeAdditionalForces()
@@ -1097,6 +1130,137 @@ contains
     !===============================================================================================
     
     !===============================================================================================
+    subroutine computeTotalAreaForces(self)
+
+        use euclidean_mod, only : distanceVector, crossProduct, ex, ey, ez
+  
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(inout), target :: self
+
+        ! Local variables
+        integer                 :: i
+        real(dp)                :: dWadA, B(3,3)
+        type(marker), pointer   :: mp1, mp2, mp3
+        real(dp), dimension(3)  :: r21, r31
+        type(triangle), pointer :: t
+
+
+        ! Potential derivative with respect to A
+        dWadA = self%kA*(self%getTotalArea() - self%A0)/self%A0
+
+        do i = 1,self%numberOfTriangles
+
+            ! Select local triangle
+            t => self%triangles(i)
+
+            ! Select the three vertex
+            mp1 => t%e1%m1
+            mp2 => t%e1%m2
+            if (markersAreEqual(t%e2%m1, t%e1%m1) .or. &
+                markersAreEqual(t%e2%m1, t%e1%m2)) then
+                ! Select the other point
+                mp3 => t%e2%m2
+                ! Check that is a valid one
+                if (markersAreEqual(t%e2%m2, t%e1%m1) .or. &
+                    markersAreEqual(t%e2%m2, t%e1%m2)) then
+                    print *, 'ERROR: also m2 is equal to other vertex'
+                    stop
+                endif
+            else
+                mp3 => t%e2%m1
+            endif
+
+            ! Distance vector
+            r21 = distanceVector(mp1%X, mp2%X)
+            r31 = distanceVector(mp1%X, mp3%X)
+
+            ! Evaluate force on mp1
+            B(1,:) = crossProduct(-ex, r31)
+            B(2,:) = crossProduct(-ey, r31)
+            B(3,:) = crossProduct(-ez, r31)
+            mp1%Fi = mp1%Fi - 0.5_dp*dWadA*(matmul(B, t%n))
+
+            B(1,:) = crossProduct(r21, -ex)
+            B(2,:) = crossProduct(r21, -ey)
+            B(3,:) = crossProduct(r21, -ez)
+            mp1%Fi = mp1%Fi - 0.5_dp*dWadA*(matmul(B, t%n))
+            
+            ! Evaluate force on r2
+            B(1,:) = crossProduct(ex, r31)
+            B(2,:) = crossProduct(ey, r31)
+            B(3,:) = crossProduct(ez, r31)
+            mp2%Fi = mp2%Fi - 0.5_dp*dWadA*(matmul(B, t%n))
+           
+            ! Evaluate force on r3
+            B(1,:) = crossProduct(r21, ex)
+            B(2,:) = crossProduct(r21, ey)
+            B(3,:) = crossProduct(r21, ez)
+            mp3%Fi = mp3%Fi - 0.5_dp*dWadA*(matmul(B, t%n))
+        
+        end do
+
+    end subroutine
+    !===============================================================================================
+
+    !===============================================================================================
+    subroutine computeVolumeForces(self)
+
+        use euclidean_mod, only : distanceVector, crossProduct, ex, ey, ez
+  
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(inout), target :: self
+
+        ! Local variables
+        integer                 :: i
+        real(dp)                :: dWdV, prefactor, B(3,3)
+        type(marker), pointer   :: mp1, mp2, mp3
+        real(dp), dimension(3)  :: r21, r31
+        type(triangle), pointer :: t
+
+        ! Potential derivative with respect to A
+        dWdV = self%kv*(self%getTotalVolume() - self%V0)/self%V0
+        prefactor = -dWdv/6.0_dp
+
+        do i = 1,self%numberOfTriangles
+
+            ! Select local triangle
+            t => self%triangles(i)
+
+            ! Select the three vertex
+            mp1 => t%e1%m1
+            mp2 => t%e1%m2
+            if (markersAreEqual(t%e2%m1, t%e1%m1) .or. &
+                markersAreEqual(t%e2%m1, t%e1%m2)) then
+                ! Select the other point
+                mp3 => t%e2%m2
+                ! Check that is a valid one
+                if (markersAreEqual(t%e2%m2, t%e1%m1) .or. &
+                    markersAreEqual(t%e2%m2, t%e1%m2)) then
+                    print *, 'ERROR: also m2 is equal to other vertex'
+                    stop
+                endif
+            else
+                mp3 => t%e2%m1
+            endif
+
+            mp1%Fi(1) = mp1%Fi(1) + prefactor*(-mp3%X(2)*mp2%X(3) + mp2%X(2)*mp3%X(3))
+            mp1%Fi(2) = mp1%Fi(2) + prefactor*( mp3%X(1)*mp2%X(3) - mp2%X(1)*mp3%X(3))
+            mp1%Fi(3) = mp1%Fi(3) + prefactor*(-mp3%X(1)*mp2%X(2) + mp2%X(1)*mp3%X(2))
+
+            mp2%Fi(1) = mp2%Fi(1) + prefactor*(-mp1%X(2)*mp3%X(3) + mp3%X(2)*mp1%X(3))
+            mp2%Fi(2) = mp2%Fi(2) + prefactor*(-mp3%X(1)*mp1%X(3) + mp1%X(1)*mp3%X(3))
+            mp2%Fi(3) = mp2%Fi(3) + prefactor*( mp3%X(1)*mp1%X(2) - mp1%X(1)*mp3%X(2))
+
+            mp3%Fi(1) = mp3%Fi(1) + prefactor*(-mp2%X(2)*mp1%X(3) + mp1%X(2)*mp2%X(3))
+            mp3%Fi(2) = mp3%Fi(2) + prefactor*( mp2%X(1)*mp1%X(3) - mp1%X(1)*mp2%X(3))
+            mp3%Fi(3) = mp3%Fi(3) + prefactor*(-mp2%X(1)*mp1%X(2) + mp1%X(1)*mp2%X(2))
+            
+        end do
+
+    end subroutine
+    !===============================================================================================
+    
+    !===============================================================================================
     function getKineticEnergy(self) result(Ke)
 
         use euclidean_mod, only : distance, ZEROV
@@ -1156,6 +1320,30 @@ contains
             t => self%triangles(i)
             Wa = Wa + 0.5_dp*t%ka*((t%A - t%A0)/t%A0)**2*t%A0
         end do
+
+    end function
+    !===============================================================================================
+
+    !===============================================================================================
+    function getTotalAreaEnergy(self) result(WA)
+
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(in), target :: self
+        real(dp)                                       :: WA
+
+        WA = 0.5_dp*self%kA*((self%getTotalArea() - self%A0)/self%A0)**2*self%A0
+
+    end function
+    !===============================================================================================
+
+    !===============================================================================================
+    function getVolumeEnergy(self) result(WV)
+        
+        ! In/Out variables
+        class(lagrangian_solid_2D), intent(in), target :: self
+        real(dp)                                       :: WV
+        
+        WV = 0.5_dp*self%kV*((self%getTotalVolume() - self%V0)/self%V0)**2*self%V0
 
     end function
     !===============================================================================================
@@ -1336,19 +1524,23 @@ contains
         real(dp)                         :: W
 
         ! Local variables
-        real(dp) :: Ws, Wb, Wa, Wadd
+        real(dp) :: Ws, Wb, Wa, WTA, WV, Wadd
 
         W = 0.0_dp
         Ws = 0.0_dp
         Wa = 0.0_dp
         Wb = 0.0_dp
+        WTA = 0.0_dp
+        WV = 0.0_dp
 
         ! Add each potential contribution
         if (self%evaluateStretching) Ws = self%getStretchingEnergy()
         if (self%evaluateBending) Wb = self%getBendingEnergy()
         if (self%evaluateAreaConstraint) Wa = self%getAreaEnergy()
+        if (self%evaluateTotalAreaConstraint) WTA = self%getTotalAreaEnergy()
+        if (self%evaluateVolumeConstraint) WV = self%getVolumeEnergy()
 
-        W = Ws + Wa + Wb
+        W = Ws + Wa + Wb + WTA + WV
 
         if (associated(self%getAdditionalEnergy)) then
             Wadd = self%getAdditionalEnergy()
