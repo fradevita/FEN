@@ -47,10 +47,10 @@ for n in range(nf):
     <Topology TopologyType="3DCORECTMesh" Dimensions="%d %d %d"/>
     <Geometry GeometryType="ORIGIN_DXDYDZ">
       <DataItem Name="Origin" Dimensions="3" NumberType="Float" Precision="4" Format="XML">
-        %f %f %f
+        %16.8e %16.8e %16.8e
       </DataItem>
       <DataItem Name="Spacing" Dimensions="2" NumberType="Float" Precision="4" Format="XML">
-	%f %f %f
+	    %16.8e %16.8e %16.8e
       </DataItem>
     </Geometry>
     <Time Value="%d" />
