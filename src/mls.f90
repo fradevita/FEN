@@ -13,16 +13,18 @@ module mls_mod
 
     ! Dimension of the basis vector for the interpolation
     integer, parameter :: m = merge(3, 4, Ndim == 2)
-    
-    ! MLS Shape function
-    real(dp) :: phi(m,Ne)
+
+    ! Support domain size coefficient, as in eq 3.1 of Liu and Gu book.
+    !real(dp), parameter :: alpha_s = 2.0_dp
+    real(dp)            :: alpha_s = 1.6_dp
 
     ! Procedure for weight computation. Available functions are:
-    ! - Weight_W1: cubic spline (default)
-    ! - Weight_W2: quartic spline
-    ! - Weight_W3: exponential
-    procedure(weight_function), pointer :: compute_weight => Weight_W1
+    ! - W1: cubic spline (default)
+    ! - W2: quartic spline
+    ! - W3: exponential
+    procedure(weight_function), pointer :: compute_weight => W1
 
+    ! Interface for the compute_weight subroutine
     interface
         subroutine weight_function(dif, ds, w)
             use precision_mod, only : dp
@@ -33,134 +35,36 @@ module mls_mod
         end subroutine weight_function
     end interface
 
+    private
+    public :: Ne, m, alpha_s, compute_weight, W1, W2, W3, get_phi
+
 contains
 
     !===============================================================================================
-    function interpolate(f, xl, ie, ind) result(fl)
-
-        ! This function interpolate the value of the scalar field f defined on 
-        ! the eulerian grid in the point xl on the lagrangian grid.
-#ifdef MPI
-        use mpi
-#endif
-        use scalar_mod
-    
-        ! In/Out variables
-        integer     , intent(in) :: ie(3), ind
-        real(dp)    , intent(in) :: xl(Ndim)
-        type(scalar), intent(in) :: f
-        
-        ! Local variables
-        integer  :: si, sj, q, ii, jj, kk, ierror
-        real(dp) :: xe, ye, xs(Ndim,Ne), fl(m), ds(Ndim,Ne), fk(Ne), stagger(3)
-#if DIM==3
-        integer  :: sk
-        real(dp) :: ze
-#endif
-        select case (ind)
-        case(0)
-             stagger = 0.0_dp
-        case(1)
-            stagger = [f%G%delta*0.5_dp, 0.0_dp, 0.0_dp]
-        case(2)
-            stagger = [0.0_dp, f%G%delta*0.5_dp, 0.0_dp]
-        case(3)
-            stagger = [0.0_dp, 0.0_dp, f%G%delta*0.5_dp]
-        end select
-
-        ! Select the closest Eulerian point
-        xe = f%G%x(ie(1)) + stagger(1)
-        ye = f%G%y(ie(2)) + stagger(2)
-#if DIM==3
-        ze = f%G%z(ie(3)) + stagger(3)
-#endif
-        ! Select the rank containing the Eulerian point
-        rank_with_point: if ( (ie(2) >= f%G%lo(2) .and. ie(2) <= f%G%hi(2)) .and. &
-                              (ie(3) >= f%G%lo(3) .and. ie(3) <= f%G%hi(3))) then 
-            
-            ! Build the array of positions and f values in the support domain
-            q = 1
-            fk = 0.0_dp
-            kk = 1
-#if DIM==3
-            do sk = -1,1
-                kk = ie(3) + sk
-#endif
-                do sj = -1,1
-                    jj = ie(2) + sj
-                    do si = -1,1
-                        ii = ie(1) + si
-                        xs(1,q) = xe + si*f%G%delta
-                        xs(2,q) = ye + sj*f%G%delta
-                        fk(q) = f%f(ii,jj,kk) 
-                        ds(1,q) = merge(f%G%delta, 2.0_dp*f%G%delta, si == 0)
-                        ds(2,q) = merge(f%G%delta, 2.0_dp*f%G%delta, sj == 0)
-#if DIM==3
-                        xs(3,q) = ze + sk*f%G%delta
-                        ds(3,q) = merge(f%G%delta, 2.0_dp*f%G%delta, sk == 0)
-#endif
-                        q = q + 1
-                    end do
-                end do
-#if DIM==3
-            end do
-#endif      
-
-            ! Size of the support domain
-            ds = 1.60_dp*f%G%delta
-            
-            ! Compute shape function phi
-            call compute_phi(xl, xs, ds)
-
-            ! Compute interpolated value in xl
-            fl = 0.0_dp
-            do q = 1, Ne
-                fl(1) = fl(1) + phi(1,q)*fk(q)
-                fl(2) = fl(2) + phi(2,q)*fk(q)
-                fl(3) = fl(3) + phi(3,q)*fk(q)
-#if DIM==3
-                fl(4) = fl(4) + phi(4,q)*fk(q)
-#endif
-            end do
-
-        else
-
-            ! Set to zero on other ranks
-            fl = 0.0_dp
-
-        end if rank_with_point
-#ifdef MPI
-        ! Comunicate the interpolated value
-        call mpi_allreduce(mpi_in_place, fl, m, mpi_real8, mpi_sum, &
-                            mpi_comm_world, ierror)
-#endif
-    end function interpolate
-    !===============================================================================================
-
-    !===============================================================================================
-    subroutine compute_phi(gpos, x, ds)
+    function get_phi(gpos, x, ds, getDerivatives) result(phi)
 
         ! Compute Moving-Least-Square shape function and its derivatives. 
         ! Routine adapted from: "An introduction to meshfree methods and their 
-        ! programming" by Liu and Gu, chapter 3 appendix.    
-        
+        ! programming" by Liu and Gu, chapter 3 appendix.
+
         ! In/Out variables
         real(dp), intent(in) :: gpos(Ndim), x(Ndim,Ne), ds(Ndim,Ne)
+        logical , intent(in) :: getDerivatives
+        real(dp)             :: phi(m,Ne)
 
         ! Local variables
         integer  :: i, j, k
-        real(dp) :: gp(m,m), A(m,m,m), B(m,Ne,m), c(m), aa(m,m), gam(m,m), ep
+        real(dp) :: gp(m,m), A(m,m,m), B(m,Ne,m), c(m), aa(m,m), gam(m,m)
 
-        ! First compute the basis vector in the interpolation point gpos
+        ! First compute the basis vector in the interpolation points gpos
         call Compute_Basis(gpos, gp)
 
         ! Then compute the matrices A and B
         call Compute_AB(gpos, x, ds, A, B)
-        ep = 1.0e-20_dp
 
         !**** Compute gamma ****************************************************
         gam = 0.0_dp
-
+        
         c = gp(1,:)
         do i = 1,m
             do j = 1,m
@@ -172,66 +76,67 @@ contains
         gam(:,1) = c
         !***********************************************************************
 
-        !**** Compute dgamdx ***************************************************
-        do i = 1,m
-            c(i) = 0.0_dp
-            do j = 1,m
-                c(i) = c(i) + A(i,j,2)*gam(j,1)
+        if (getDerivatives) then
+            !**** Compute dgamdx ***********************************************
+            do i = 1,m
+                c(i) = 0.0_dp
+                do j = 1,m
+                    c(i) = c(i) + A(i,j,2)*gam(j,1)
+                end do
             end do
-        end do
-        do k = 1,m
-            c(k) = gp(2,k) - c(k)
-        end do
-        do i = 1,m
-            do j = 1,m
-                aa(i,j) = A(i,j,1)
+            do k = 1,m
+                c(k) = gp(2,k) - c(k)
             end do
-        end do
+            do i = 1,m
+                do j = 1,m
+                    aa(i,j) = A(i,j,1)
+                end do
+            end do
 
-        c = solve_wbs(ge_wpp(aa,c))
-        gam(:,2) = c
-        !***********************************************************************
+            c = solve_wbs(ge_wpp(aa,c))
+            gam(:,2) = c
+            !*******************************************************************
 
-        !**** Compute dgamdy ***************************************************
-        do i = 1,m
-            c(i) = 0.0_dp
-            do j = 1,m
-                c(i) = c(i) + A(i,j,3)*gam(j,1)
+            !**** Compute dgamdy ***********************************************
+            do i = 1,m
+                c(i) = 0.0_dp
+                do j = 1,m
+                    c(i) = c(i) + A(i,j,3)*gam(j,1)
+                end do
             end do
-        end do
-        do k = 1,m
-            c(k) = gp(3,k) - c(k)
-        end do
-        do i = 1,m
-            do j = 1,m
-                aa(i,j) = A(i,j,1)
+            do k = 1,m
+                c(k) = gp(3,k) - c(k)
             end do
-        end do
-        c = solve_wbs(ge_wpp(aa,c))
-        gam(:,3) = c
-        !***********************************************************************
-
+            do i = 1,m
+                do j = 1,m
+                    aa(i,j) = A(i,j,1)
+                end do
+            end do
+            c = solve_wbs(ge_wpp(aa,c))
+            gam(:,3) = c
+            !*******************************************************************
 #if DIM==3
-        !**** Compute dgammadz *************************************************
-        do i = 1,m
-            c(i) = 0.0_dp
-            do j = 1,m
-                c(i) = c(i) + A(i,j,4)*gam(j,1)
+            !**** Compute dgammadz *********************************************
+            do i = 1,m
+                c(i) = 0.0_dp
+                do j = 1,m
+                    c(i) = c(i) + A(i,j,4)*gam(j,1)
+                end do
             end do
-        end do
-        do k = 1,m
-            c(k) = gp(4,k) - c(k)
-        end do
-        do i = 1,m
-            do j = 1,m
-                aa(i,j) = A(i,j,1)
+            do k = 1,m
+                c(k) = gp(4,k) - c(k)
             end do
-        end do
+            do i = 1,m
+                do j = 1,m
+                    aa(i,j) = A(i,j,1)
+                end do
+            end do
 
-        c = solve_wbs(ge_wpp(aa,c))
-        gam(:,4) = c
-        !***********************************************************************
+            c = solve_wbs(ge_wpp(aa,c))
+            gam(:,4) = c
+            !*******************************************************************
 #endif
+        end if
 
         !**** Compute Phi and its derivatives **********************************
         do i = 1,Ne
@@ -247,8 +152,8 @@ contains
 #endif   
             end do
         end do
-        
-    end subroutine compute_phi
+
+    end function get_phi
     !===============================================================================================
 
     !===============================================================================================
@@ -338,7 +243,7 @@ contains
     !===============================================================================================
 
     !===============================================================================================
-    subroutine Weight_W1(dif, ds, w)
+    subroutine W1(dif, ds, w)
 
         ! Cubic spline weight function. 
         ! Routine adapted from "An introduction to meshfree methods and their 
@@ -416,11 +321,11 @@ contains
 #endif
         end do
         
-    end subroutine Weight_W1
+    end subroutine W1
     !===============================================================================================
 
     !===============================================================================================
-    subroutine Weight_W2(dif, ds, w)
+    subroutine W2(dif, ds, w)
 
         ! Quartic spline weight function. 
         ! Routine adapted from "An introduction to meshfree methods and their 
@@ -495,11 +400,11 @@ contains
 #endif
         end do
         
-    end subroutine Weight_W2
+    end subroutine W2
     !===============================================================================================
 
     !===============================================================================================
-    subroutine Weight_W3(dif, ds, w)
+    subroutine W3(dif, ds, w)
 
         ! Exponential weight function. 
         ! Routine adapted from "An introduction to meshfree methods and their 
@@ -575,7 +480,7 @@ contains
 #endif
         end do
         
-    end subroutine Weight_W3
+    end subroutine W3
     !===============================================================================================
 
     !===============================================================================================

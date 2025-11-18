@@ -71,7 +71,7 @@ contains
         if (allocated(eulerian_solid_list)) call init_eulerian_ibm(eulerian_solid_list, comp_grid)
 
         ! If the list of lagrangian solid has been created, initialize the lagrangian ibm variables 
-        if (allocated(lagrangian_solid_list)) call init_lagrangian_ibm(comp_grid)
+        if (allocated(lagrangian_solid_list)) call init_lagrangian_ibm(comp_grid, lagrangian_solid_list)
 
     end subroutine init_ibm
     !==============================================================================================

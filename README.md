@@ -12,7 +12,7 @@ FEN = Fortran Environment for Numerics. It is a Fortran environment for performi
 
 ### Citing
 
-Please kindly cite this publication if the solver helps for yout research
+Please kindly cite this publications if the solver helps for yout research
 ~~~
 @article{de2021fully,
   title={A fully Eulerian solver for the simulation of multiphase flows with solid bodies: Application to surface gravity waves},
@@ -21,6 +21,15 @@ Please kindly cite this publication if the solver helps for yout research
   volume={438},
   pages={110355},
   year={2021},
+  publisher={Elsevier}
+}
+
+@article{de2025two,
+  title={A two-probe approach for hydrodynamic load evaluation in Immersed Boundary Methods},
+  author={De Vita, Francesco and De Tullio, Marco Donato},
+  journal={Journal of Computational Physics},
+  pages={114486},
+  year={2025},
   publisher={Elsevier}
 }
 ~~~
